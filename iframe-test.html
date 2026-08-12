@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Luna iframe embed test</title>
+  <style>
+    :root {
+      color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f4f6f8;
+      color: #1c2733;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: #1c2733;
+      color: #fff;
+      font-size: 13px;
+    }
+    header h1 { font-size: 14px; margin: 0; font-weight: 600; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge.ok { background: #16a34a; color: #fff; }
+    .badge.err { background: #dc2626; color: #fff; }
+    .badge.pending { background: #d97706; color: #fff; }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 0;
+      height: calc(100vh - 46px);
+    }
+    .frame-wrap { padding: 12px; min-width: 0; }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 1px solid #d7dde3;
+      border-radius: 10px;
+      background: #fff;
+    }
+    aside {
+      border-left: 1px solid #d7dde3;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    aside h2 {
+      margin: 0;
+      padding: 10px 14px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #5b6b7b;
+      border-bottom: 1px solid #eef1f4;
+    }
+    #log {
+      flex: 1;
+      overflow: auto;
+      padding: 10px 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    #log .info { color: #16a34a; }
+    #log .warn { color: #d97706; }
+    #log .msg { color: #2563eb; }
+    #log .err { color: #dc2626; }
+    .controls { padding: 10px 14px; border-top: 1px solid #eef1f4; display: flex; gap: 8px; }
+    button {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid #d7dde3;
+      background: #fff;
+      color: #1c2733;
+      cursor: pointer;
+    }
+    button:hover { background: #f0f3f6; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Luna iframe embed test</h1>
+    <span id="status" class="badge pending">checking…</span>
+    <span style="opacity:.7">parent origin: <span id="parentOrigin"></span></span>
+  </header>
+
+  <div class="layout">
+    <div class="frame-wrap">
+      <iframe
+        id="lunaFrame"
+        src="http://localhost:3000/enterprise"
+        title="Luna chat app"
+        allow="clipboard-write"
+      ></iframe>
+    </div>
+    <aside>
+      <h2>postMessage log (from the app)</h2>
+      <div id="log"></div>
+      <div class="controls">
+        <button id="reloadBtn" type="button">Reload iframe</button>
+        <button id="clearBtn" type="button">Clear log</button>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    (() => {
+      const iframe = document.getElementById("lunaFrame");
+      const statusEl = document.getElementById("status");
+      const logEl = document.getElementById("log");
+      const parentOrigin = document.getElementById("parentOrigin");
+
+      parentOrigin.textContent = window.location.origin;
+
+      function log(type, text) {
+        const line = document.createElement("div");
+        line.className = type;
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function setStatus(label, kind) {
+        statusEl.textContent = label;
+        statusEl.className = "badge " + kind;
+      }
+
+      const loadedAt = Date.now();
+      iframe.addEventListener("load", () => {
+        const elapsed = Date.now() - loadedAt;
+        log("info", `iframe onload fired (+${elapsed}ms) — frame loaded, no CSP block`);
+        setStatus("frame loaded", "ok");
+      });
+
+      // If framing is blocked by CSP frame-ancestors, the browser reports it
+      // to the embedding document via the SecurityPolicyViolationEvent.
+      window.addEventListener("securitypolicyviolation", (e) => {
+        if (e.violatedDirective.includes("frame-ancestors")) {
+          setStatus("BLOCKED", "err");
+          log(
+            "err",
+            `CSP violation — ${e.violatedDirective}: ${e.blockedURI} ` +
+            `(effective directive: ${e.effectiveDirective})`
+          );
+        }
+      });
+
+      // The chat app reports results to its parent via postMessage
+      // (e.g. { action: "submitLunaProject", data: {...} }).
+      window.addEventListener("message", (event) => {
+        // Any message from the iframe is accepted for the test — real parents
+        // should check event.origin === "http://localhost:3000".
+        log("msg", `message from ${event.origin}: ${JSON.stringify(event.data)}`);
+        if (event.data && typeof event.data === "object" && event.data.action) {
+          log("info", `recognized action: ${event.data.action}`);
+        }
+      });
+
+      document.getElementById("reloadBtn").addEventListener("click", () => {
+        setStatus("checking…", "pending");
+        iframe.src = "about:blank";
+        setTimeout(() => { iframe.src = "http://localhost:3000/enterprise"; }, 150);
+      });
+      document.getElementById("clearBtn").addEventListener("click", () => {
+        logEl.innerHTML = "";
+      });
+    })();
+  </script>
+</body>
+</html>

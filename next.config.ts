@@ -1,15 +1,15 @@
 import type { NextConfig } from "next";
 
-/**
- * Origins allowed to embed this app in an <iframe>.
- *
- * The chat UI runs inside the PHP site at https://luna.dzinlynxt.com and
- * talks to its parent page via `window.parent.postMessage`, so the parent
- * origin must be whitelisted here via the CSP `frame-ancestors` directive
- * (the modern replacement for the deprecated `X-Frame-Options` header).
- * `'self'` keeps same-origin embedding working.
- */
-const IFRAME_ANCESTORS = ["'self'", "https://luna.dzinlynxt.com"];
+
+const IFRAME_ANCESTORS = [
+  "'self'",
+  "https://luna.dzinlynxt.com",
+  "https://mydesigns.pro",
+  // A CSP host without a port matches *any* port, so these cover
+  // localhost:3000, localhost:5178, etc. during local development.
+  "http://localhost",
+  "http://127.0.0.1",
+];
 
 const nextConfig: NextConfig = {
   async headers() {
