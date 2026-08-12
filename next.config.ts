@@ -1,11 +1,14 @@
 import type { NextConfig } from "next";
 
 const IFRAME_ANCESTORS = [
-  "'self'", // CRITICAL: Retains the explicit single quotes for CSP validation
+  "'self'",                   // CRITICAL: Retains the explicit single quotes for CSP validation
   "https://dzinlynxt.com",
   "https://mydesigns.pro",
-  "http://localhost",       // Correctly matches your port 80 setup
-  "http://127.0.0.1",
+  // Localhost variants — PHP app on port 80
+  "http://localhost",         // bare hostname (port 80 implied)
+  "http://localhost:80",      // explicit port — some browsers send :80 in Origin header
+  "http://127.0.0.1",        // loopback IP (port 80 implied)
+  "http://127.0.0.1:80",     // explicit port variant
 ];
 
 const nextConfig: NextConfig = {
@@ -15,8 +18,11 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Broad catch-all ensures headers attach to normal paths AND all internal Next.js assets
-        source: "/_next/(.*)|/:path*",
+        // Broad catch-all ensures headers attach to normal paths AND all internal Next.js assets.
+        // NB: `/:path*` alone already covers everything (pages, /_next assets, favicon, …).
+        // Keep separate entries per source — `|` alternation is NOT valid in path-to-regexp
+        // source patterns and silently disables the whole header rule.
+        source: "/:path*",
         headers: [
           {
             key: "Content-Security-Policy",
