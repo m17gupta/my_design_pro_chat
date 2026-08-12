@@ -68,9 +68,10 @@ const briefSlice = createSlice({
       state.revision_comment = action.payload;
     },
     /** Wipe items + context (Start Over / Make Changes). */
-    resetBrief() {
-      return initialState;
-    },
+    resetBrief(state) {
+      state.original = {}
+      state.revision_comment={ files: [], notes: "" }
+    }
   },
 });
 
