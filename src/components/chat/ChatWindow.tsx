@@ -676,7 +676,7 @@ export default function ChatWindow() {
 
       {/* Header */}
       <header className="z-20 flex items-center gap-3 border-b border-zinc-200/70 bg-white/70 px-4 py-3 backdrop-blur-md dark:border-zinc-800/70 dark:bg-zinc-950/70 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
+        {/* <div className="flex min-w-0 items-center gap-3">
           <LunaAvatar pulse={typing} />
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold tracking-tight">Luna</h1>
@@ -703,10 +703,10 @@ export default function ChatWindow() {
               </motion.p>
             </AnimatePresence>
           </div>
-        </div>
+        </div> */}
 
         {/* Mobile progress chip */}
-        <button
+        {/* <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
           aria-expanded={menuOpen}
@@ -728,10 +728,10 @@ export default function ChatWindow() {
             <path d="M22 4L12 14.01l-3-3" />
           </svg>
           {doneCount}/{CHECKLIST.length}
-        </button>
+        </button> */}
 
         {/* Reset */}
-        <motion.button
+        {/* <motion.button
           type="button"
           onClick={startOver}
           whileHover={{ scale: 1.06 }}
@@ -754,7 +754,7 @@ export default function ChatWindow() {
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
             <path d="M3 3v5h5" />
           </svg>
-        </motion.button>
+        </motion.button> */}
       </header>
 
       {/* Mobile checklist dropdown */}
@@ -776,12 +776,12 @@ export default function ChatWindow() {
 
       <div className="flex min-h-0 flex-1">
         {/* Desktop sidebar */}
-        <aside
+        {/* <aside
           aria-label="Intake progress"
           className="hidden w-72 shrink-0 overflow-y-auto border-r border-zinc-200/70 bg-white/40 p-5 lg:block dark:border-zinc-800/70 dark:bg-zinc-950/40"
         >
           <ProgressChecklist completed={completed} currentId={currentId} />
-        </aside>
+        </aside> */}
 
         {/* Chat content */}
         <main id="chat-panel" className="min-w-0 flex-1 overflow-y-auto">
