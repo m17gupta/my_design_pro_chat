@@ -9,6 +9,7 @@ const IFRAME_ANCESTORS = [
   "http://localhost:80",      // explicit port — some browsers send :80 in Origin header
   "http://127.0.0.1",        // loopback IP (port 80 implied)
   "http://127.0.0.1:80",     // explicit port variant
+  "http://dzinly-enterprise.me"
 ];
 
 const nextConfig: NextConfig = {
