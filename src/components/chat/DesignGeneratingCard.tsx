@@ -7,12 +7,7 @@ interface DesignGeneratingCardProps {
   status?: string;
 }
 
-/**
- * Shown after the brief is submitted while the design task runs in the
- * background: a spinner + status text, a pulsing image-shaped placeholder,
- * and an indeterminate progress bar. Replaced by DesignResultCard once the
- * status poll reports "completed" and the render URL is in the store.
- */
+
 export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCardProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const rendering = status === "processing";

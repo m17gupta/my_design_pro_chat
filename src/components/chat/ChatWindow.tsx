@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
-import HandoffPanel from "./HandoffPanel";
 import LunaAvatar from "./LunaAvatar";
 import MessageBubble from "./MessageBubble";
 import ProgressChecklist from "./ProgressChecklist";
 import type { CardResult } from "./QuestionCard";
 import TypingIndicator from "./TypingIndicator";
 import {
+  API_QUESTIONS,
   buildMessage,
   buildRestoredTranscript,
   episodeById,
@@ -20,12 +21,39 @@ import {
   answerQuestion,
   resetBrief,
   selectBriefPayload,
+  setContext,
+  setRevision,
 } from "../../store/briefSlice";
-import { resetEnterprise } from "../../store/enterpriseSlice";
-import { fetchEnterpriseStatus, generateEnterpriseDesign } from "../../store/enterpriseThunk";
+import {
+  resetEnterprise,
+  selectLatestEnterpriseEntry,
+} from "../../store/enterprise/enterpriseSlice";
+import {
+  fetchEnterpriseStatus,
+  generateEnterpriseDesign,
+} from "../../store/enterprise/enterpriseThunk";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { buildApiPayload } from "@/lib/apiBrief";
 
-type Tab = "chat" | "handoff";
+/** Decoded shape of the base64 `?params` query string sent from the site. */
+interface ClientParams {
+  id?: number;
+  work_type?: string;
+  image_url?: string;
+  watermark?: string;
+}
+
+/** URL-safe base64 → JSON object; returns undefined when absent/malformed. */
+function decodeClientParams(raw: string | null): ClientParams | undefined {
+  if (!raw) return undefined;
+  try {
+    const standard = raw.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = standard.padEnd(standard.length + ((4 - (standard.length % 4)) % 4), "=");
+    return JSON.parse(atob(padded)) as ClientParams;
+  } catch {
+    return undefined;
+  }
+}
 
 let idCounter = 0;
 const nextId = () => `m-${Date.now()}-${idCounter++}`;
@@ -42,7 +70,6 @@ const MAX_POLLS = 60;
 const EMPTY_FILES: Record<number, File[]> = {};
 
 export default function ChatWindow() {
-  const [tab, setTab] = useState<Tab>("chat");
   // After a refresh the store rehydrates answered items from sessionStorage;
   // rebuild the whole transcript (assistant questions + user answers) so
   // Redux and the chat stay in sync — empty store keeps the welcome screen.
@@ -52,19 +79,15 @@ export default function ChatWindow() {
     [restoredItems]
   );
 
-  // Flow messages keep their `ep-<episodeId>` id (one appearance per episode)
-  // so uploads and Handoff labels can be keyed by episode id.
+  // Flow messages keep their `ep-<apiKey>` id (one appearance per episode)
+  // so uploads and Handoff labels can be keyed by episode apiKey.
   const [messages, setMessages] = useState<Message[]>(() => restoredTranscript.messages);
   const [currentId, setCurrentId] = useState(restoredTranscript.currentId);
   const [answers, setAnswers] = useState<Record<string, string>>(
     restoredTranscript.answers
   );
-  /** episodeId → (field index → files) */
+  /** apiKey → (field index → files) */
   const [uploads, setUploads] = useState<Record<string, Record<number, File[]>>>({});
-  /** episodeId → (field index → fileKey → Cloudinary URL) */
-  const [fileUrls, setFileUrls] = useState<
-    Record<string, Record<number, Record<string, string>>>
-  >({});
   const [completed, setCompleted] = useState<Set<string>>(
     () => restoredTranscript.completed
   );
@@ -75,20 +98,46 @@ export default function ChatWindow() {
   const [announcement, setAnnouncement] = useState("");
   /** Id of the user message currently being edited — at most one at a time. */
   const [editingId, setEditingId] = useState<string | null>(null);
-  /** messageId → episodeId, so an edited message can be mapped back to its question. */
+  /** messageId → episode apiKey, so an edited message can be mapped back to its question. */
   const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>(
     restoredTranscript.messageEpisodes
   );
   const dispatch = useAppDispatch();
   const briefPayload = useAppSelector(selectBriefPayload);
+  /** The revision comments (notes + upload URLs) from the feedback step. */
+  const revisionComment = useAppSelector((s) => s.chat.revision_comment);
+  const latestEnterpriseEntry = useAppSelector((s) =>
+    selectLatestEnterpriseEntry(s.enterprise)
+  );
   /** Generated design preview URL — populated once status polling completes. */
-  const designImageUrl = useAppSelector((s) => s.enterprise.generatedImage) || undefined;
+  const designImageUrl = latestEnterpriseEntry?.url || undefined;
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<number | null>(null);
   const announcedIdRef = useRef<string | null>(null);
+ const {watermark, image_url, work_type, id,original:chat_original} = briefPayload;
+
   // Guard against double-firing before React re-renders (set in handlers only).
   const busyRef = useRef(false);
+  
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const params = decodeClientParams(searchParams.get("params"));
+    
+    if (!params) return;
+    if(watermark !==undefined && image_url !==undefined && work_type !==undefined && id !==undefined){
+        dispatch(
+      setContext({
+        id: params.id,
+        work_type: params.work_type,
+        image_url: params.image_url,
+        watermark: params.watermark,
+      })
+    );
+    }
+
+  }, [searchParams, watermark, image_url, work_type, id, dispatch]);
 
   const clearTypingTimeout = useCallback(() => {
     if (timeoutRef.current !== null) {
@@ -103,7 +152,7 @@ export default function ChatWindow() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, typing, tab, designImageUrl, scrollToBottom]);
+  }, [messages, typing, designImageUrl, scrollToBottom]);
 
   useEffect(() => clearTypingTimeout, [clearTypingTimeout]);
 
@@ -137,14 +186,12 @@ export default function ChatWindow() {
     dispatch(resetBrief());
     dispatch(resetEnterprise());
     setUploads({});
-    setFileUrls({});
     setCompleted(new Set());
     setGenerated(false);
     setGenerating(false);
     setEditingId(null);
     setMessageEpisodes({});
     announcedIdRef.current = null;
-    setTab("chat");
     setMenuOpen(false);
   }, [clearTypingTimeout, dispatch]);
 
@@ -170,38 +217,49 @@ export default function ChatWindow() {
         dispatch(resetBrief());
         setAnswers({});
         setUploads({});
-        setFileUrls({});
         setCompleted(new Set());
       }
 
       const userMessage: Message = { id: nextId(), role: "user", content: userText };
       setMessages((prev) => [...prev, userMessage]);
-      setMessageEpisodes((prev) => ({ ...prev, [userMessage.id]: ep.id }));
+      setMessageEpisodes((prev) => ({ ...prev, [userMessage.id]: ep.apiKey }));
 
       const checklistId = ep.checklistId;
       if (checklistId) {
         setAnswers((prev) => ({ ...prev, [checklistId]: userText }));
         setCompleted((prev) => new Set(prev).add(checklistId));
       }
-      const apiKey = ep.api?.apiKey;
-      if (apiKey && structuredAnswer !== undefined) {
-        dispatch(answerQuestion({ apiKey, answer: structuredAnswer }));
+      if (ep.api && structuredAnswer !== undefined) {
+        dispatch(answerQuestion({ apiKey: ep.apiKey, answer: structuredAnswer }));
       }
-      if (filesByField && ep.id !== "welcome") {
-        setUploads((prev) => ({ ...prev, [ep.id]: filesByField }));
-        if (urlsByField) {
-          setFileUrls((prev) => ({ ...prev, [ep.id]: urlsByField }));
-        }
+      if (filesByField && ep.apiKey !== "welcome") {
+        setUploads((prev) => ({ ...prev, [ep.apiKey]: filesByField }));
       }
 
-      const nextEpisode = nextEpisodeId(ep.id, userText);
+      // Revision feedback stores `{ files: [uploaded URLs], notes: text }` in
+      // the brief payload so the regeneration POST carries the changes.
+      if (ep.apiKey === "revision") {
+        const urls = urlsByField
+          ? Object.values(urlsByField).flatMap((byKey) => Object.values(byKey))
+          : [];
+        dispatch(setRevision({ files: urls, notes: userText }));
+      }
+
+      const nextEpisode = nextEpisodeId(ep.apiKey, userText);
       setTyping(true);
       clearTypingTimeout();
       timeoutRef.current = window.setTimeout(() => {
         timeoutRef.current = null;
         busyRef.current = false;
         setTyping(false);
-        setMessages((prev) => [...prev, buildMessage(episodeById(nextEpisode))]);
+        setMessages((prev) => {
+          const nextMsg = buildMessage(episodeById(nextEpisode));
+          const count = prev.filter((m) =>
+            m.id.startsWith(nextMsg.id)
+          ).length;
+          const id = count === 0 ? nextMsg.id : `${nextMsg.id}-${count + 1}`;
+          return [...prev, { ...nextMsg, id }];
+        });
         setCurrentId(nextEpisode);
       }, TYPING_MS);
     },
@@ -251,7 +309,7 @@ export default function ChatWindow() {
           setCompleted((prev) => new Set(prev).add(ep.checklistId as string));
         }
         if (ep.api && text) {
-          const apiKey = ep.api.apiKey;
+          const apiKey = ep.apiKey;
           const prevItem = briefPayload.original[apiKey];
           const prevAnswer =
             prevItem && typeof prevItem.answer === "object" ? prevItem.answer : undefined;
@@ -290,7 +348,14 @@ export default function ChatWindow() {
     if (generating) return;
     setGenerating(true);
     try {
-      await dispatch(generateEnterpriseDesign()).unwrap();
+       const payload = buildApiPayload(API_QUESTIONS, chat_original, {
+          // id: chat.id,
+          watermark: watermark,
+          work_type: work_type,
+          image_url: image_url,
+          revision: revisionComment,
+        });
+      await dispatch(generateEnterpriseDesign(payload)).unwrap();
       setGenerated(true);
       toast.success("Your design brief has been sent to Brooke Edwards for review!");
     } catch (error) {
@@ -304,7 +369,7 @@ export default function ChatWindow() {
     } finally {
       setGenerating(false);
     }
-  }, [dispatch, generating]);
+  }, [dispatch, generating, chat_original, watermark, image_url, work_type, revisionComment]);
 
   /**
    * Status polling: once the POST lands a `task_id` in the store, wait 3s,
@@ -312,9 +377,9 @@ export default function ChatWindow() {
    * state (completed / failed). On any error we stop polling and surface a
    * toast instead of hammering the API.
    */
-  const taskId = useAppSelector((s) => s.enterprise.task_id);
+  const taskId = latestEnterpriseEntry?.id;
   /** Backend task lifecycle (queued | processing | completed | failed) — drives the loader text. */
-  const taskStatus = useAppSelector((s) => s.enterprise.taskStatus);
+  const taskStatus = latestEnterpriseEntry?.status;
   const pollRef = useRef<number | null>(null);
   const pollCountRef = useRef(0);
 
@@ -399,7 +464,6 @@ export default function ChatWindow() {
     dispatch(resetBrief());
     dispatch(resetEnterprise());
     setUploads({});
-    setFileUrls({});
     setCompleted(new Set());
     setGenerated(false);
     setGenerating(false);
@@ -423,10 +487,27 @@ export default function ChatWindow() {
     toast.success("Great! Your design will be sent to Brooke Edwards for review.");
   }, []);
 
-  /** "Regenerate With Comments" — restart intake so the user can tweak + resubmit. */
+  /**
+   * "Regenerate With Comments" — keep the design result card in the chat
+   * (it stays above the feedback step) and append the Revision Comments card
+   * below it. Intake answers are kept so the next generation reuses the
+   * original brief + the new revision.
+   */
   const handleDesignRegenerate = useCallback(() => {
-    goBackToQuestions();
-  }, [goBackToQuestions]);
+    clearTypingTimeout();
+    busyRef.current = false;
+    setTyping(false);
+    setEditingId(null);
+    announcedIdRef.current = null;
+
+    const revisionMsg = buildMessage(episodeById("revision"));
+    setMessages((prev) => {
+      const count = prev.filter((m) => m.id.startsWith("ep-revision")).length;
+      const id = count === 0 ? revisionMsg.id : `${revisionMsg.id}-${count + 1}`;
+      return [...prev, { ...revisionMsg, id }];
+    });
+    setCurrentId("revision");
+  }, [clearTypingTimeout]);
 
   /** "Engage Designer" — hand off to the human designer for review. */
   const handleDesignEngage = useCallback(() => {
@@ -442,7 +523,7 @@ export default function ChatWindow() {
         {announcement}
       </span>
       <a
-        href="#tab-panel"
+        href="#chat-panel"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-emerald-700 focus:shadow-lg dark:focus:bg-zinc-900"
       >
         Skip to chat
@@ -479,84 +560,13 @@ export default function ChatWindow() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div
-          role="tablist"
-          aria-label="View"
-          className="mx-auto flex shrink-0 items-center gap-1 rounded-full bg-zinc-100 p-1 dark:bg-zinc-800/70"
-        >
-          {(
-            [
-              { id: "chat", label: "Chat" },
-              // { id: "handoff", label: "Handoff" },
-            ] as const
-          ).map((t) => (
-            <button
-              key={t.id}
-              role="tab"
-              id={`tab-${t.id}`}
-              aria-selected={tab === t.id}
-              aria-controls="tab-panel"
-              onClick={() => setTab(t.id)}
-              className={`relative rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors duration-150 sm:px-4 ${
-                tab === t.id
-                  ? "text-emerald-800 dark:text-emerald-200"
-                  : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-              }`}
-            >
-              {tab === t.id && (
-                <motion.span
-                  layoutId="tab-pill"
-                  className="absolute inset-0 rounded-full bg-white shadow-sm dark:bg-zinc-900"
-                  transition={{ type: "spring", stiffness: 500, damping: 32 }}
-                />
-              )}
-              <span className="relative flex items-center gap-1.5">
-                {t.id === "chat" ? (
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                ) : (
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                )}
-                {t.label}
-              </span>
-            </button>
-          ))}
-        </div>
-
         {/* Mobile progress chip */}
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
           aria-expanded={menuOpen}
           aria-haspopup="true"
-          className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-50 lg:hidden dark:border-emerald-500/30 dark:bg-zinc-900 dark:text-emerald-300"
+          className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-50 lg:hidden dark:border-emerald-500/30 dark:bg-zinc-900 dark:text-emerald-300"
         >
           <svg
             width="12"
@@ -583,7 +593,7 @@ export default function ChatWindow() {
           whileTap={{ scale: 0.92 }}
           aria-label="Start over"
           title="Start over"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-emerald-500/50 dark:hover:text-emerald-400"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-emerald-500/50 dark:hover:text-emerald-400 lg:ml-auto"
         >
           <svg
             width="15"
@@ -628,26 +638,26 @@ export default function ChatWindow() {
           <ProgressChecklist completed={completed} currentId={currentId} />
         </aside>
 
-        {/* Chat / Handoff content */}
-        <main
-          id="tab-panel"
-          role="tabpanel"
-          tabIndex={-1}
-          aria-label={tab === "chat" ? "Chat with Luna" : "Handoff brief"}
-          className="min-w-0 flex-1 overflow-y-auto"
-        >
-          {tab === "chat" ? (
-            <div
-              role="log"
-              aria-label="Chat with Luna"
-              className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6 sm:px-6"
-            >
+        {/* Chat content */}
+        <main id="chat-panel" className="min-w-0 flex-1 overflow-y-auto">
+          <div
+            role="log"
+            aria-label="Chat with Luna"
+            className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6 sm:px-6"
+          >
               <AnimatePresence initial={false}>
                 {messages.map((m, i) => {
                   // Only the most recent message can be answered; historical
                   // attachments render disabled so they can't advance the flow.
                   const isCurrent = i === messages.length - 1;
-                  const episodeKey = m.id.replace(/^ep-/, "");
+                  const episodeApiKey = m.id.replace(/^ep-/, "");
+                  // The intake design result card stays pinned to the original
+                  // summary message (above the revision steps); revision
+                  // summaries always show the confirm + generate card instead.
+                  const showsResultCard = m.id === "ep-summary";
+                  // The revision-summary message renders the dedicated Revision
+                  // Summary card (notes + files + generate / make-changes buttons).
+                  const isRevisionSummary = m.id.startsWith("ep-revision-summary");
                   // Only editable episodes get an edit icon on their user answer
                   // (welcome / overview / photos are marked non-editable).
                   const msgEpId = messageEpisodes[m.id];
@@ -658,7 +668,7 @@ export default function ChatWindow() {
                     <MessageBubble
                       key={m.id}
                       message={m}
-                      filesByField={uploads[episodeKey] ?? EMPTY_FILES}
+                      filesByField={uploads[episodeApiKey] ?? EMPTY_FILES}
                       disabled={typing || !isCurrent}
                       onOption={isCurrent ? advance : undefined}
                       onCardSubmit={isCurrent ? handleCardSubmit : undefined}
@@ -667,12 +677,21 @@ export default function ChatWindow() {
                       generating={generating}
                       onSummaryGenerate={isCurrent ? handleGenerate : undefined}
                       onSummaryChanges={isCurrent ? goBackToQuestions : undefined}
-                      designImageUrl={designImageUrl}
-                      designPending={generated && !designImageUrl}
+                      isRevisionSummary={isRevisionSummary}
+                      designImageUrl={showsResultCard ? designImageUrl : undefined}
+                      designPending={
+                        showsResultCard && generated && !designImageUrl
+                      }
                       designStatus={taskStatus}
-                      onDesignAllINeed={handleDesignAllINeed}
-                      onDesignRegenerate={handleDesignRegenerate}
-                      onDesignEngage={handleDesignEngage}
+                      onDesignAllINeed={
+                        showsResultCard ? handleDesignAllINeed : undefined
+                      }
+                      onDesignRegenerate={
+                        showsResultCard ? handleDesignRegenerate : undefined
+                      }
+                      onDesignEngage={
+                        showsResultCard ? handleDesignEngage : undefined
+                      }
                       editing={canEdit && editingId === m.id}
                       onEditStart={
                         canEdit ? () => handleEditStart(m.id) : undefined
@@ -689,68 +708,10 @@ export default function ChatWindow() {
               <AnimatePresence>{typing && <TypingIndicator key="typing" />}</AnimatePresence>
 
               <div ref={bottomRef} className="h-1" />
-            </div>
-          ) : (
-            <HandoffPanel
-              answers={answers}
-              uploads={uploads}
-              fileUrls={fileUrls}
-              payload={briefPayload}
-              onBackToChat={() => setTab("chat")}
-            />
-          )}
+          </div>
         </main>
       </div>
 
-      {/* Support / handoff footer */}
-      {/* <footer className="z-10 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200/70 bg-white/70 px-4 py-2.5 text-xs text-zinc-500 backdrop-blur-md dark:border-zinc-800/70 dark:bg-zinc-950/70 dark:text-zinc-400 sm:px-6">
-        <a
-          href="#"
-          onClick={(e) => e.preventDefault()}
-          className="group flex items-center gap-1.5 transition-colors hover:text-emerald-600 dark:hover:text-emerald-400"
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-            className="transition-transform duration-150 group-hover:rotate-12"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-            <path d="M12 17h.01" />
-          </svg>
-          Having issues with Luna?
-        </a>
-        <button
-          type="button"
-          onClick={() => setTab("handoff")}
-          className="group flex items-center gap-1.5 font-medium text-zinc-600 transition-colors hover:text-emerald-700 dark:text-zinc-300 dark:hover:text-emerald-400"
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M16 3h5v5" />
-            <path d="M8 21H3v-5" />
-            <path d="M21 3l-7 7" />
-            <path d="M3 21l7-7" />
-          </svg>
-          Message to Design Coordinator Brooke Edwards
-        </button>
-      </footer> */}
     </div>
   );
 }

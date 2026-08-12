@@ -9,9 +9,14 @@ import type {
 } from "./types";
 
 export interface Episode {
-  id: string;
+  /**
+   * Single identifier for this step. For API-bound episodes this IS the
+   * backend schema key (schema.md), so the chat never re-keys the API.
+   */
+  apiKey: string;
   kind: EpisodeKind;
-  content: string;
+  /** Spoken text — unused on card episodes, which render `card.title` instead. */
+  content?: string;
   /** Checklist item completed by answering this episode. */
   checklistId?: string;
   options?: string[];
@@ -21,10 +26,11 @@ export interface Episode {
   editable?: boolean;
   /**
    * API-facing metadata — set on card episodes whose answer is sent upstream.
-   * `question` is the final question string sent to the API (HTML for the two
-   * upload steps, plain text elsewhere); keep it in sync with `card.description`.
+   * `apiKey` lives on the episode itself (omitted here); `question` is the final
+   * question string sent to the API (HTML for the two upload steps, plain text
+   * elsewhere); keep it in sync with `card.description`.
    */
-  api?: ApiQuestionMeta;
+  api?: Omit<ApiQuestionMeta, "apiKey">;
 }
 
 /**
@@ -33,7 +39,7 @@ export interface Episode {
  */
 const EPISODES: Episode[] = [
   {
-    id: "welcome",
+    apiKey: "welcome",
     kind: "ready",
     content:
       "Hi! I'm **Luna**, and I'll help get your project started. I'll quickly gather and organize the information your designer, **Brooke Edwards**, will need to review your request and guide you through the next steps.",
@@ -41,7 +47,7 @@ const EPISODES: Episode[] = [
     editable: false,
   },
   {
-    id: "overview",
+    apiKey: "overview",
     kind: "ready",
     content:
       "To give you an overview of what information I will be gathering so you know what to expect, I will be touching on the following:",
@@ -50,7 +56,7 @@ const EPISODES: Episode[] = [
     editable: false,
   },
   {
-    id: "photos",
+    apiKey: "photos",
     kind: "ready",
     content:
       "First, do you have any additional photo angles of the front yard that you think are helpful for us to see?",
@@ -59,9 +65,8 @@ const EPISODES: Episode[] = [
     editable: false,
   },
   {
-    id: "photos-upload",
+    apiKey: "additional_images_upload",
     kind: "card",
-    content: "Additional House Photos",
     card: {
       title: "Additional House Photos (Optional)",
       description:
@@ -69,7 +74,6 @@ const EPISODES: Episode[] = [
       fields: [{ kind: "upload-grid", count: 4, accept: "image/*" }],
     },
     api: {
-      apiKey: "additional_images_upload",
       name: "Additional House Photos (Optional)",
       // Exact HTML question the API expects (mirrors card.description).
       question:
@@ -80,7 +84,7 @@ const EPISODES: Episode[] = [
     },
   },
   {
-    id: "files",
+    apiKey: "files",
     kind: "ready",
     content:
       "Do you have any other file that would be helpful, like a survey, site plan, and inspirational image?",
@@ -88,9 +92,8 @@ const EPISODES: Episode[] = [
     options: ["Yes I do", "No I don't"],
   },
   {
-    id: "files-upload",
+    apiKey: "supporting_files_upload",
     kind: "card",
-    content: "Supporting Files Upload",
     card: {
       title: "Supporting Files Upload (Optional)",
       description:
@@ -98,7 +101,6 @@ const EPISODES: Episode[] = [
       fields: [{ kind: "upload-grid", count: 4, accept: ".pdf,.dwg,.dxf,image/*" }],
     },
     api: {
-      apiKey: "supporting_files_upload",
       name: "Supporting Files Upload (Optional)",
       // Exact HTML question the API expects (mirrors card.description).
       question:
@@ -108,9 +110,8 @@ const EPISODES: Episode[] = [
     },
   },
   {
-    id: "goals",
+    apiKey: "project_goals_or_brief_description",
     kind: "card",
-    content: "Project Goals / Brief Description",
     checklistId: "goals",
     card: {
       title: "Project Goals/Brief Description",
@@ -119,7 +120,6 @@ const EPISODES: Episode[] = [
       fields: [{ kind: "textarea", placeholder: "Share your thoughts", rows: 4, required: true }],
     },
     api: {
-      apiKey: "project_goals_or_brief_description",
       name: "Project Goals/Brief Description",
       question:
         "In a few sentences, tell me what you'd love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind; I'd love to hear them!",
@@ -128,9 +128,8 @@ const EPISODES: Episode[] = [
     },
   },
   {
-    id: "styles",
+    apiKey: "landscape_design_style_preference",
     kind: "card",
-    content: "Landscape Design Style Preference",
     checklistId: "styles",
     card: {
       title: "Landscape Design Style Preference",
@@ -142,7 +141,6 @@ const EPISODES: Episode[] = [
       ],
     },
     api: {
-      apiKey: "landscape_design_style_preference",
       name: "Landscape Design Style Preference",
       question:
         "Do you have a preferred landscape style or overall look you're drawn to? For example, you might love something clean and modern, classic and timeless, natural and relaxed, or something completely unique to you!",
@@ -151,9 +149,8 @@ const EPISODES: Episode[] = [
     },
   },
   {
-    id: "hardscape",
+    apiKey: "hardscape_material_preferences",
     kind: "card",
-    content: "Hardscape / Material Preferences",
     checklistId: "hardscape",
     card: {
       title: "Hardscape / Material Preferences",
@@ -165,7 +162,6 @@ const EPISODES: Episode[] = [
       ],
     },
     api: {
-      apiKey: "hardscape_material_preferences",
       name: "Hardscape / Material Preferences",
       question:
         "Are there any hardscape materials you'd like me to keep in mind for this design? This could include things like pavers, natural stone, brick, concrete, or even a specific color palette or finish you love; I'd be happy to consider it as I put everything together!",
@@ -174,9 +170,8 @@ const EPISODES: Episode[] = [
     },
   },
   {
-    id: "softscape",
+    apiKey: "softscape_planting_preferences",
     kind: "card",
-    content: "Softscape / Planting Preferences",
     checklistId: "softscape",
     card: {
       title: "Softscape / Planting Preferences",
@@ -188,7 +183,6 @@ const EPISODES: Episode[] = [
       ],
     },
     api: {
-      apiKey: "softscape_planting_preferences",
       name: "Softscape / Planting Preferences",
       question:
         "Are there any plant styles, colors, or types you'd like me to keep in mind? This could include things like low-maintenance plantings, evergreen structure, flowering shrubs, privacy screening, ornamental trees, or any overall look you love. I'd be happy to keep it in mind as I put everything together!",
@@ -197,9 +191,8 @@ const EPISODES: Episode[] = [
     },
   },
   {
-    id: "budget",
+    apiKey: "budget",
     kind: "card",
-    content: "Budget",
     checklistId: "budget",
     card: {
       title: "Budget",
@@ -220,7 +213,6 @@ const EPISODES: Episode[] = [
       ],
     },
     api: {
-      apiKey: "budget",
       name: "Budget",
       question:
         "What investment range feels most comfortable for this project? This will help me tailor the design direction to something that feels like the right fit for you!",
@@ -229,9 +221,8 @@ const EPISODES: Episode[] = [
     },
   },
   {
-    id: "restrictions",
+    apiKey: "important_proprty_information",
     kind: "card",
-    content: "Important Property Information",
     checklistId: "restrictions",
     card: {
       title: "Important Property Information",
@@ -255,7 +246,6 @@ const EPISODES: Episode[] = [
     },
     api: {
       // NB: the API key intentionally mirrors the schema's "proprty" spelling.
-      apiKey: "important_proprty_information",
       name: "Important Property Information",
       question:
         "Is there anything about your property you'd like me to know before I get started on the design?",
@@ -264,58 +254,85 @@ const EPISODES: Episode[] = [
     },
   },
   {
-    id: "summary",
+    apiKey: "summary",
     kind: "summary",
     content:
       "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you've shared with me! Can you please confirm?",
   },
+  {
+    apiKey: "revision",
+    kind: "card",
+    card: {
+      title: "Revision Comments",
+      description:
+        "Please share your revision requests, I will incorporate them into the design.",
+      fields: [
+        {
+          kind: "textarea",
+          placeholder: "Describe the changes you'd like",
+          rows: 4,
+          required: true,
+        },
+        { kind: "upload-grid", count: 4, accept: "image/*" },
+      ],
+    },
+  },
+  {
+    apiKey: "revision-summary",
+    kind: "summary",
+    content:
+      "Thanks! I've noted your revision comments. I'm ready to regenerate the design with these changes.",
+  },
 ];
 
-const BY_ID = new Map(EPISODES.map((e) => [e.id, e]));
+const BY_ID = new Map(EPISODES.map((e) => [e.apiKey, e]));
 
 /**
  * The eight API-bound intake questions, in EPISODES (schema) order.
- * Consumed by the design-brief payload builder.
+ * `apiKey` is hoisted from the episode itself so the payload keys always
+ * match schema.md. Consumed by the design-brief payload builder.
  */
 export const API_QUESTIONS: ApiQuestionMeta[] = EPISODES.filter(
   (e) => e.api !== undefined
-).map((e) => e.api as ApiQuestionMeta);
+).map((e) => ({ ...(e.api as ApiQuestionMeta), apiKey: e.apiKey }));
 
 export { EPISODES };
 
-export function episodeById(id: string): Episode {
-  const ep = BY_ID.get(id);
-  if (!ep) throw new Error(`Unknown episode: ${id}`);
+export function episodeById(apiKey: string): Episode {
+  const ep = BY_ID.get(apiKey);
+  if (!ep) throw new Error(`Unknown episode: ${apiKey}`);
   return ep;
 }
 
-/** Resolve the next episode id after the user answers the current one. */
-export function nextEpisodeId(id: string, answer?: string): string {
-  switch (id) {
+/** Resolve the next episode apiKey after the user answers the current one. */
+export function nextEpisodeId(apiKey: string, answer?: string): string {
+  switch (apiKey) {
     case "welcome":
       return "overview";
     case "overview":
       return "photos";
     case "photos":
-      return answer === "Yes I do" ? "photos-upload" : "files";
-    case "photos-upload":
+      return answer === "Yes I do" ? "additional_images_upload" : "files";
+    case "additional_images_upload":
       return "files";
     case "files":
-      return answer === "Yes I do" ? "files-upload" : "goals";
-    case "files-upload":
-      return "goals";
-    case "goals":
-      return "styles";
-    case "styles":
-      return "hardscape";
-    case "hardscape":
-      return "softscape";
-    case "softscape":
+      return answer === "Yes I do" ? "supporting_files_upload" : "project_goals_or_brief_description";
+    case "supporting_files_upload":
+      return "project_goals_or_brief_description";
+    case "project_goals_or_brief_description":
+      return "landscape_design_style_preference";
+    case "landscape_design_style_preference":
+      return "hardscape_material_preferences";
+    case "hardscape_material_preferences":
+      return "softscape_planting_preferences";
+    case "softscape_planting_preferences":
       return "budget";
     case "budget":
-      return "restrictions";
-    case "restrictions":
+      return "important_proprty_information";
+    case "important_proprty_information":
       return "summary";
+    case "revision":
+      return "revision-summary";
     default:
       return "summary";
   }
@@ -324,9 +341,12 @@ export function nextEpisodeId(id: string, answer?: string): string {
 /** Build the assistant Message for an episode. */
 export function buildMessage(episode: Episode): Message {
   return {
-    id: `ep-${episode.id}`,
+    id: `ep-${episode.apiKey}`,
     role: "assistant",
-    content: episode.kind === "card" && episode.card ? episode.card.title : episode.content,
+    content:
+      episode.kind === "card" && episode.card
+        ? episode.card.title
+        : episode.content ?? "",
     kind: episode.kind,
     options: episode.options,
     card: episode.card,
@@ -338,7 +358,7 @@ export function buildMessage(episode: Episode): Message {
 /** A transcript reconstructed from the restored Redux brief items. */
 export interface RestoredTranscript {
   messages: Message[];
-  /** Restored user-bubble id → episode id (for edit gating). */
+  /** Restored user-bubble id → episode apiKey (for edit gating). */
   messageEpisodes: Record<string, string>;
   /** checklistId → restored answer text (for summary + Handoff). */
   answers: Record<string, string>;
@@ -347,14 +367,7 @@ export interface RestoredTranscript {
   completed: Set<string>;
 }
 
-/**
- * Rebuild the chat transcript from the restored design-brief items so a
- * refresh shows every answered question in the flow, not just the checklist.
- *
- * Branch answers (photos / files) are inferred from the upload item's
- * presence: answered upload → "Yes I do", otherwise "No I don't". The resume
- * point reuses the same `nextEpisodeId` logic as the live flow.
- */
+
 export function buildRestoredTranscript(
   original: Record<string, ApiBriefItem>
 ): RestoredTranscript {
@@ -376,9 +389,9 @@ export function buildRestoredTranscript(
   };
 
   const pushUserAnswer = (ep: Episode, text: string) => {
-    const id = `m-restored-${ep.id}`;
+    const id = `m-restored-${ep.apiKey}`;
     messages.push({ id, role: "user", content: text });
-    messageEpisodes[id] = ep.id;
+    messageEpisodes[id] = ep.apiKey;
     if (ep.checklistId) {
       answers[ep.checklistId] = text;
       completed.add(ep.checklistId);
@@ -412,7 +425,7 @@ export function buildRestoredTranscript(
   const mark = (ep: Episode, userText: string) => {
     pushAssistant(ep);
     pushUserAnswer(ep, userText);
-    advance(ep.id, userText);
+    advance(ep.apiKey, userText);
   };
 
   // photos branch: shown whenever any question was answered (the flow is
@@ -421,11 +434,10 @@ export function buildRestoredTranscript(
   const photoUploaded = isAnswered("additional_images_upload");
   mark(photosEp, photoUploaded ? "Yes I do" : "No I don't");
   if (photoUploaded) {
-    const upEp = episodeById("photos-upload");
+    const upEp = episodeById("additional_images_upload");
     const item = original["additional_images_upload"] as ApiBriefItem;
-    pushAssistant(upEp, item?.answer);
-    pushUserAnswer(upEp, answerToText(item));
-    advance(upEp.id);
+    pushAssistant(upEp, item?.answer);      pushUserAnswer(upEp, answerToText(item));
+      advance(upEp.apiKey);
   }
 
   // files branch: only if the user got past photos (any later key answered).
@@ -443,18 +455,18 @@ export function buildRestoredTranscript(
     const filesUploaded = isAnswered("supporting_files_upload");
     mark(filesEp, filesUploaded ? "Yes I do" : "No I don't");
     if (filesUploaded) {
-      const upEp = episodeById("files-upload");
+      const upEp = episodeById("supporting_files_upload");
       const item = original["supporting_files_upload"] as ApiBriefItem;
       pushAssistant(upEp, item?.answer);
       pushUserAnswer(upEp, answerToText(item));
-      advance(upEp.id);
+      advance(upEp.apiKey);
     }
   }
 
   // Remaining card episodes, in flow order, only when answered.
   for (const ep of EPISODES) {
     if (!ep.api) continue;
-    const key = ep.api.apiKey;
+    const key = ep.apiKey;
     if (key === "additional_images_upload" || key === "supporting_files_upload") {
       continue;
     }
@@ -462,7 +474,7 @@ export function buildRestoredTranscript(
       const item = original[key] as ApiBriefItem;
       pushAssistant(ep, item?.answer);
       pushUserAnswer(ep, answerToText(item));
-      advance(ep.id);
+      advance(ep.apiKey);
     }
   }
 

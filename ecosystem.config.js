@@ -4,7 +4,7 @@ module.exports = {
       name: "chat-app",
 
       script: "node_modules/next/dist/bin/next",
-      args: "start -p 3000",
+      args: "start -p 5178",
 
       cwd: "/home/dzinlynxt-luna/htdocs/luna.dzinlynxt.com/my_design_pro_chat",
 

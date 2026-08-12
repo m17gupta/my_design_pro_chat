@@ -1,28 +1,31 @@
 "use client";
 
+import { useAppSelector } from "@/store/hooks";
 import { motion } from "framer-motion";
 
 interface DesignResultCardProps {
   /** Generated design preview URL from the completed status result. */
-  imageUrl: string;
+  // imageUrl: string;
   onAllINeed: () => void;
   onRegenerate: () => void;
   onEngageDesigner: () => void;
 }
 
-/**
- * Shown after the design task completes: the generated render with three
- * follow-up actions (all done / regenerate with comments / engage designer).
- */
 const BUTTON_CLASS =
-  "inline-flex items-center gap-1.5 rounded-xl bg-[#37474f] px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-[#263238] dark:bg-[#546e7a] dark:hover:bg-[#455a64]";
+  "inline-flex items-center gap-1.5 rounded-xl bg-[#37474f] px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-colors enabled:hover:bg-[#263238] disabled:cursor-not-allowed disabled:opacity-40 disabled:saturate-50 disabled:shadow-none dark:bg-[#546e7a] enabled:dark:hover:bg-[#455a64]";
 
 export default function DesignResultCard({
-  imageUrl,
+  // imageUrl,
   onAllINeed,
   onRegenerate,
   onEngageDesigner,
 }: DesignResultCardProps) {
+
+  const { entries } = useAppSelector((state) => state.enterprise);
+  const mainImage = entries.find((entry) => entry.type === "original");
+  const revisions = entries.filter((entry) => entry.type === "revision");
+  // Once a revision exists, the original render's actions are locked.
+  const disabled = revisions.length > 0;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -39,7 +42,7 @@ export default function DesignResultCard({
         <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={imageUrl}
+            src={mainImage?.url??""}
             alt="Generated design preview of your front yard"
             loading="lazy"
             decoding="async"
@@ -51,9 +54,10 @@ export default function DesignResultCard({
           <motion.button
             type="button"
             onClick={onAllINeed}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={disabled ? undefined : { scale: 1.03 }}
+            whileTap={disabled ? undefined : { scale: 0.95 }}
             className={BUTTON_CLASS}
+            disabled={disabled}
           >
             <svg
               width="14"
@@ -74,9 +78,10 @@ export default function DesignResultCard({
           <motion.button
             type="button"
             onClick={onRegenerate}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={disabled ? undefined : { scale: 1.03 }}
+            whileTap={disabled ? undefined : { scale: 0.95 }}
             className={BUTTON_CLASS}
+            disabled={disabled}
           >
             <svg
               width="14"
@@ -98,9 +103,10 @@ export default function DesignResultCard({
           <motion.button
             type="button"
             onClick={onEngageDesigner}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={disabled ? undefined : { scale: 1.03 }}
+            whileTap={disabled ? undefined : { scale: 0.95 }}
             className={BUTTON_CLASS}
+            disabled={disabled}
           >
             <svg
               width="14"

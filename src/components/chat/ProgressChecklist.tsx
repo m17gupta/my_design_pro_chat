@@ -1,5 +1,6 @@
 "use client";
 
+import { episodeById } from "./flow";
 import { CHECKLIST } from "./types";
 
 interface ProgressChecklistProps {
@@ -27,7 +28,11 @@ export default function ProgressChecklist({
       <ol className="space-y-1">
         {CHECKLIST.map((item) => {
           const isDone = completed.has(item.id);
-          const isActive = currentId === item.id && !isDone;
+          // currentId is an episode apiKey — highlight via its checklist item.
+          const activeChecklistId = currentId
+            ? episodeById(currentId).checklistId ?? null
+            : null;
+          const isActive = activeChecklistId === item.id && !isDone;
           return (
             <li
               key={item.id}

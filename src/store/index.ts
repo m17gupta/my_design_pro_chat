@@ -7,11 +7,13 @@ import {
 } from "../lib/apiBrief";
 import { isAnswerEmpty } from "../lib/briefDisplay";
 import briefReducer, { resetBrief, type BriefState } from "./briefSlice";
-import enterpriseReducer, { resetEnterprise, type EnterpriseState } from "./enterpriseSlice";
+import enterpriseReducer, { resetEnterprise, type EnterpriseState } from "./enterprise/enterpriseSlice";
+import type { EnterpriseEntry } from "./enterprise/enterpriseType";
 
 /** Versioned sessionStorage key — bump to invalidate old shapes. */
 export const BRIEF_STORAGE_KEY = "luna-brief-v1";
-export const ENTERPRISE_STORAGE_KEY = "luna-enterprise-v1";
+/** v2 — the persisted blob is the schema-shaped entries array, not the old flat task fields. */
+export const ENTERPRISE_STORAGE_KEY = "luna-enterprise-v2";
 
 const isBrowser = typeof window !== "undefined";
 
@@ -22,9 +24,11 @@ const isBrowser = typeof window !== "undefined";
  */
 export function payloadFromState(state: BriefState): ApiBriefPayload {
   return buildApiPayload(API_QUESTIONS, state.original, {
-    watermark: state.watermark,
-    work_type: state.work_type,
-    image_url: state.image_url,
+    id: state.id ?? 0,
+    watermark: state.watermark ?? "",
+    work_type: state.work_type ?? "",
+    image_url: state.image_url ?? "",
+    revision: state.revision_comment,
   });
 }
 
@@ -42,11 +46,12 @@ export function stateFromPayload(payload: ApiBriefPayload): BriefState {
     }
   });
   return {
+    id: payload.id,
     original,
     watermark: payload.watermark,
     work_type: payload.work_type,
     image_url: payload.image_url,
-    revision_comment: {},
+    revision_comment: payload.revision_comment ?? { files: [], notes: "" },
   };
 }
 
@@ -71,7 +76,10 @@ export function loadPersistedEnterpriseState(): EnterpriseState | undefined {
   try {
     const raw = window.sessionStorage.getItem(ENTERPRISE_STORAGE_KEY);
     if (!raw) return undefined;
-    return JSON.parse(raw) as EnterpriseState;
+    // v2 stores exactly the schema-shaped history array (revisonSchema.md).
+    const entries = JSON.parse(raw) as EnterpriseEntry[];
+    if (!Array.isArray(entries)) return undefined;
+    return { entries, lifecycle: "idle", error: null };
   } catch {
     return undefined;
   }
@@ -102,9 +110,11 @@ const persistBriefMiddleware: Middleware = (storeApi) => (next) => (action) => {
       if (type === resetEnterprise.type) {
         window.sessionStorage.removeItem(ENTERPRISE_STORAGE_KEY);
       } else {
+        // Persist exactly the schema-shaped history array (revisonSchema.md)
+        // so the blob can be replayed to the backend; UI helpers are not stored.
         window.sessionStorage.setItem(
           ENTERPRISE_STORAGE_KEY,
-          JSON.stringify(storeApi.getState().enterprise)
+          JSON.stringify(storeApi.getState().enterprise.entries)
         );
       }
     }

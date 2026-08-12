@@ -9,12 +9,20 @@ import type {
  * (the chat itself never collects them); defaults are used until wired up.
  */
 export interface BriefContext {
+  /** Job id from the host app / API. */
+  id?: number;
+
   /** Logo URL stamped on the generated design. */
   watermark?: string;
+
   /** e.g. "front-yard". */
   work_type?: string;
+
   /** Main property photo URL (provided by the host app / API). */
   image_url?: string;
+
+  /** Revision comments from the post-render feedback step. */
+  revision?: RevisionComment;
 }
 
 export interface ApiBriefItem {
@@ -27,13 +35,20 @@ export interface ApiBriefItem {
     | { value: string[]; notes: string };
 }
 
+/** Revision comments collected after an initial design render. */
+export interface RevisionComment {
+  files: string[];
+  notes: string;
+}
+
 /** The exact payload shape the design API expects (see schema.md). */
 export interface ApiBriefPayload {
+  id: number;
   watermark: string;
   work_type: string;
   image_url: string;
   original: Record<string, ApiBriefItem>;
-  revision_comment: Record<string, never>;
+  revision_comment: RevisionComment;
 }
 
 export const DEFAULT_WATERMARK = "http://mydesigns.pro/img/luna-logo.png";
@@ -116,15 +131,18 @@ export function buildApiPayload(
 ): ApiBriefPayload {
   const original: Record<string, ApiBriefItem> = {};
   questions.forEach((q) => {
-    original[q.apiKey] = items[q.apiKey] ?? buildQuestionItem(q);
+    const item = items[q.apiKey] ?? buildQuestionItem(q);
+    if (Array.isArray(item.answer) && item.answer.length === 0) return;
+    original[q.apiKey] = item;
   });
 
   return {
+    id: context.id ?? 0,
     // `||` (not `??`) so an empty-string context value means "not set" → default.
     watermark: context.watermark || DEFAULT_WATERMARK,
     work_type: context.work_type || DEFAULT_WORK_TYPE,
     image_url: context.image_url ?? "",
     original,
-    revision_comment: {},
+    revision_comment: context.revision ?? { files: [], notes: "" },
   };
 }

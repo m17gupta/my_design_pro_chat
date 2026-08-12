@@ -60,7 +60,11 @@ export type AnswerValue =
 /** How a question's answer is serialized for the design API. */
 export type ApiAnswerShape = "urls" | "text" | "files-notes" | "value-notes";
 
-/** API-facing metadata attached to a card episode. */
+/**
+ * API-facing metadata attached to a card episode. `apiKey` is the episode's
+ * identifier (hoisted from the episode in flow.ts) and the exact snake_case
+ * key the API expects — always matching schema.md.
+ */
 export interface ApiQuestionMeta {
   /** Exact snake_case key the API expects (e.g. "additional_images_upload"). */
   apiKey: string;

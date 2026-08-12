@@ -11,6 +11,7 @@ import {
   type ApiBriefItem,
   type ApiBriefPayload,
   type BriefContext,
+  type RevisionComment,
 } from "../lib/apiBrief";
 
 /**
@@ -20,19 +21,21 @@ import {
  * selector fills them with empty defaults so all 8 keys are always present.
  */
 export interface BriefState {
-  watermark: string;
-  work_type: string;
-  image_url: string;
+  id:number |null,
+  watermark: string |null;
+  work_type: string |null;
+  image_url: string |null;
   original: Record<string, ApiBriefItem>;
-  revision_comment: Record<string, never>;
+  revision_comment: RevisionComment;
 }
 
 const initialState: BriefState = {
-  watermark: "http://mydesigns.pro/img/luna-logo.png",
-  work_type: "front-yard",
-  image_url: "https://mydesigns.pro/tmp/image-_2__1786340041.png",
+  id:null,
+  watermark: null,
+  work_type: null,
+  image_url: "https://mydesigns.pro/tmp/image-_2__1786514733.png",
   original: {}, 
-  revision_comment: {},
+  revision_comment: { files: [], notes: "" },
 };
 
 const briefSlice = createSlice({
@@ -49,11 +52,17 @@ const briefSlice = createSlice({
         state.original[meta.apiKey] = buildQuestionItem(meta, action.payload.answer);
       }
     },
-    /** Merge top-level context fields (watermark / work_type / image_url). */
+    
+    /** Merge top-level context fields (id / watermark / work_type / image_url). */
     setContext(state, action: PayloadAction<BriefContext>) {
+      if (action.payload.id !== undefined) state.id = action.payload.id;
       if (action.payload.watermark !== undefined) state.watermark = action.payload.watermark;
       if (action.payload.work_type !== undefined) state.work_type = action.payload.work_type;
-      if (action.payload.image_url !== undefined) state.image_url = action.payload.image_url;
+      // if (action.payload.image_url !== undefined) state.image_url = action.payload.image_url;
+    },
+    /** Record the revision comments (files + notes) from the feedback step. */
+    setRevision(state, action: PayloadAction<RevisionComment>) {
+      state.revision_comment = action.payload;
     },
     /** Wipe items + context (Start Over / Make Changes). */
     resetBrief() {
@@ -62,7 +71,7 @@ const briefSlice = createSlice({
   },
 });
 
-export const { answerQuestion, setContext, resetBrief } = briefSlice.actions;
+export const { answerQuestion, setContext, setRevision, resetBrief } = briefSlice.actions;
 export default briefSlice.reducer;
 
 /** Shape used by selectors (a slice of the root state). */
@@ -80,8 +89,10 @@ export const selectBriefPayload = createSelector(
   (state: BriefSliceState) => state.chat,
   (brief): ApiBriefPayload =>
     buildApiPayload(API_QUESTIONS, brief.original, {
-      watermark: brief.watermark,
-      work_type: brief.work_type,
-      image_url: brief.image_url,
+      id: brief?.id??0,
+      watermark: brief.watermark??"",
+      work_type: brief.work_type??"",
+      image_url: brief.image_url??"",
+      revision: brief.revision_comment,
     })
 );
