@@ -34,6 +34,8 @@ import {
 } from "../../store/enterprise/enterpriseThunk";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { buildApiPayload } from "@/lib/apiBrief";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 /** Decoded shape of the base64 `?params` query string sent from the site. */
 interface ClientParams {
@@ -70,9 +72,7 @@ const MAX_POLLS = 60;
 const EMPTY_FILES: Record<number, File[]> = {};
 
 export default function ChatWindow() {
-  // After a refresh the store rehydrates answered items from sessionStorage;
-  // rebuild the whole transcript (assistant questions + user answers) so
-  // Redux and the chat stay in sync — empty store keeps the welcome screen.
+  
   const restoredItems = useAppSelector((s) => s.chat.original);
   const restoredTranscript = useMemo(
     () => buildRestoredTranscript(restoredItems),
@@ -116,7 +116,7 @@ export default function ChatWindow() {
   const timeoutRef = useRef<number | null>(null);
   const announcedIdRef = useRef<string | null>(null);
  const {watermark, image_url, work_type, id,original:chat_original} = briefPayload;
-
+  const {entries}= useSelector((state:RootState)=>state.enterprise)
   // Guard against double-firing before React re-renders (set in handlers only).
   const busyRef = useRef(false);
   
@@ -483,16 +483,19 @@ export default function ChatWindow() {
 
   /** "This is All I Need" — the initial render is approved as-is. */
   const handleDesignAllINeed = useCallback(() => {
-    setGenerated(true);
-    toast.success("Great! Your design will be sent to Brooke Edwards for review.");
-  }, []);
+       const data={
+         id:id,
+         original:chat_original,
+         design:entries,
+         action:"this_is_all_i_need"
+       }
+       console.log("[Luna] handleDesignAllINeed called", { data });
+       window.parent.postMessage({ action: 'submitLunaProject', data: data }, '*');
+       console.log("[Luna] postMessage sent to parent");
 
-  /**
-   * "Regenerate With Comments" — keep the design result card in the chat
-   * (it stays above the feedback step) and append the Revision Comments card
-   * below it. Intake answers are kept so the next generation reuses the
-   * original brief + the new revision.
-   */
+  }, [id, chat_original, entries]);
+
+
   const handleDesignRegenerate = useCallback(() => {
     clearTypingTimeout();
     busyRef.current = false;
@@ -511,8 +514,15 @@ export default function ChatWindow() {
 
   /** "Engage Designer" — hand off to the human designer for review. */
   const handleDesignEngage = useCallback(() => {
-    setGenerated(true);
-    toast.success("Brooke Edwards has been engaged to review your design.");
+    const data={
+         id:id,
+         original:chat_original,
+         design:entries,
+         action:'engage_designer'
+       }
+       console.log("[Luna] handleDesignEngage called", { data });
+       window.parent.postMessage({ action: 'submitLunaProject', data: data }, '*');
+       console.log("[Luna] postMessage sent to parent");
   }, []);
 
   const doneCount = completed.size;
