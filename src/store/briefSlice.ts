@@ -33,7 +33,7 @@ const initialState: BriefState = {
   id:null,
   watermark: null,
   work_type: null,
-  image_url: null,
+  image_url: "https://mydesigns.pro/tmp/image-_2__1786514733.png",
   original: {}, 
   revision_comment: { files: [], notes: "" },
 };
@@ -58,7 +58,7 @@ const briefSlice = createSlice({
       if (action.payload.id !== undefined) state.id = action.payload.id;
       if (action.payload.watermark !== undefined) state.watermark = action.payload.watermark;
       if (action.payload.work_type !== undefined) state.work_type = action.payload.work_type;
-       if (action.payload.image_url !== undefined) state.image_url = action.payload.image_url;
+      //  if (action.payload.image_url !== undefined) state.image_url = action.payload.image_url;
     },
     /** Record the 1786514733.png"revision comments (files + notes) from the feedback step. */
     setRevision(state, action: PayloadAction<RevisionComment>) {

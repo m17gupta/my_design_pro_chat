@@ -1,0 +1,66 @@
+{
+
+    "watermark": "http://mydesigns.pro/img/luna-logo.png",
+    "work_type": "color-material",
+    "image_url": "https://dzinlyv2.s3.us-east-2.amazonaws.com/liv/projects/4311/front/designs/Area_02_Stone_1782152717.png",
+    "original": {
+        "additional_images_upload": {
+            "name": "Additional House Photos (Optional)",
+            "question": "<p class='mb-3'>Great, your main photo has been received! If you have additional photos of <b>this same side of your home taken</b> from different angles, distances, or perspectives (such as closer shots or views from the left or right while still facing this same elevation), please upload them here.</p> <p>These additional photos help us better understand your home's architecture and create the most accurate design possible.</p>",
+            "answer": []
+        },
+        "supporting_files_upload": {
+            "name": "Supporting Files Upload (Optional)",
+            "question": "<p class='mb-3'>Have any project files you'd like to share? Feel free to upload them here!</p> <p class='mb-3'>This could include <b>surveys, site plans, PDFs, SketchUp models (.SKP), architectural drawings, inspiration images, or any other documents</b> that will help us better understand your project.</p> <p>If you don't have any supporting files, simply continue to the next step, you can always add them later!</p>",
+            "answer": []
+        },
+        "project_goals_or_brief_description": {
+            "name": "Project Goals/Brief Description",
+            "question": "In a few sentences, tell me what you'd love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind; I'd love to hear them!",
+            "answer": "change exterior house"
+        },
+        "landscape_design_style_preference": {
+            "name": "Landscape Design Style Preference",
+            "question": "Do you have a preferred landscape style or overall look you're drawn to? For example, you might love something clean and modern, classic and timeless, natural and relaxed, or something completely unique to you!",
+            "answer": {
+                "files": [],
+                "notes": "modern, classic"
+            }
+        },
+        "hardscape_material_preferences": {
+            "name": "Hardscape / Material Preferences",
+            "question": "Are there any hardscape materials you'd like me to keep in mind for this design? This could include things like pavers, natural stone, brick, concrete, or even a specific color palette or finish you love; I'd be happy to consider it as I put everything together!",
+            "answer": {
+                "files": [],
+                "notes": "use stone into wall"
+            }
+        },
+        "softscape_planting_preferences": {
+            "name": "Softscape / Planting Preferences",
+            "question": "Are there any plant styles, colors, or types you'd like me to keep in mind? This could include things like low-maintenance plantings, evergreen structure, flowering shrubs, privacy screening, ornamental trees, or any overall look you love. I'd be happy to keep it in mind as I put everything together!",
+            "answer": {
+                "files": [],
+                "notes": "privacy screening,"
+            }
+        },
+        "budget": {
+            "name": "Budget",
+            "question": "What investment range feels most comfortable for this project? This will help me tailor the design direction to something that feels like the right fit for you!",
+            "answer": "$50,000-$75,000"
+        },
+        "important_proprty_information": {
+            "name": "Important Property Information",
+            "question": "Is there anything about your property you'd like me to know before I get started on the design?",
+            "answer": {
+                "value": [
+                    "Utility lines"
+                ],
+                "notes": ""
+            }
+        }
+    },
+    "revision_comment": {
+        "files": [],
+        "notes": ""
+    }
+}

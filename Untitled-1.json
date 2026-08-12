@@ -1,0 +1,52 @@
+{
+    "watermark": "http://mydesigns.pro/img/luna-logo.png",
+    "work_type": "front-yard",
+    "image_url": "https://mydesigns.pro/tmp/image-_2__1786514733.png",
+    "original": {
+        "project_goals_or_brief_description": {
+            "name": "Project Goals/Brief Description",
+            "question": "In a few sentences, tell me what you’d love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind; I’d love to hear them!",
+            "answer": "change in exterior house"
+        },
+        "landscape_design_style_preference": {
+            "name": "Landscape Design Style Preference",
+            "question": "Do you have a preferred landscape style or overall look you’re drawn to? For example, you might love something clean and modern, classic and timeless, natural and relaxed, or something completely unique to you!",
+            "answer": {
+                "files": [],
+                "notes": "classic and timeless"
+            }
+        },
+        "hardscape_material_preferences": {
+            "name": "Hardscape / Material Preferences",
+            "question": "Are there any hardscape materials you’d like me to keep in mind for this design? This could include things like pavers, natural stone, brick, concrete, or even a specific color palette or finish you love; I’d be happy to consider it as I put everything together!",
+            "answer": {
+                "files": [],
+                "notes": "pavers, natural stone, brick,"
+            }
+        },
+        "softscape_planting_preferences": {
+            "name": "Softscape / Planting Preferences",
+            "question": "Are there any plant styles, colors, or types you’d like me to keep in mind? This could include things like low-maintenance plantings, evergreen structure, flowering shrubs, privacy screening, ornamental trees, or any overall look you love. I’d be happy to keep it in mind as I put everything together!",
+            "answer": {
+                "files": [],
+                "notes": "evergreen structure,"
+            }
+        },
+        "budget": {
+            "name": "Budget",
+            "question": "What investment range feels most comfortable for this project? This will help me tailor the design direction to something that feels like the right fit for you!",
+            "answer": "$25,000-$50,000"
+        },
+        "important_proprty_information": {
+            "name": "Important Property Information",
+            "question": "Is there anything about your property you’d like me to know before I get started on the design?",
+            "answer": {
+                "value": [
+                    "Easements"
+                ],
+                "notes": ""
+            }
+        }
+    },
+    "revision_comment": {}
+}
