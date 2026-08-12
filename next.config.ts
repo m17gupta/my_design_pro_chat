@@ -55,9 +55,9 @@ const nextConfig: NextConfig = {
               // API calls — allows all HTTPS so the app can reach any backend
               "connect-src 'self' https:",
               // ✅ KEY FIX: Allow Cloudinary images (res.cloudinary.com) and blobs
-              "img-src 'self' data: blob: https://res.cloudinary.com",
+              "img-src 'self' data: https://res.cloudinary.com",
               // Audio/video if ever needed
-              "media-src 'self' blob: https://res.cloudinary.com",
+              "media-src 'self' data: https://res.cloudinary.com",
               // Web workers (Next.js uses them internally)
               "worker-src 'self' blob:",
               // Frames the app itself can load
