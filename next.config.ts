@@ -10,7 +10,7 @@ const IFRAME_ANCESTORS = [
   "http://127.0.0.1",        // loopback IP (port 80 implied)
   "http://127.0.0.1:80",     // explicit port variant
   "http://dzinly-enterprise.me",
-  https://res.cloudinary.com"
+  "https://res.cloudinary.com"
 ];
  
 const nextConfig: NextConfig = {
