@@ -31,25 +31,39 @@ const nextConfig: NextConfig = {
     return [
       {
         // Broad catch-all ensures headers attach to normal paths AND all internal Next.js assets.
-        // NB: `/:path*` alone already covers everything (pages, /_next assets, favicon, …).
-        // Keep separate entries per source — `|` alternation is NOT valid in path-to-regexp
-        // source patterns and silently disables the whole header rule.
         source: "/:path*",
         headers: [
           {
             key: "Content-Security-Policy",
-            // frame-ancestors: controls who can embed this app in iframes.
-            // img-src: explicitly allows Cloudinary images that are blocked by CSP.
-            // default-src + script-src + style-src + font-src: safe baseline for the app.
+            // ─────────────────────────────────────────────────────────────────
+            // NGINX NOTE: If your Nginx config also sets a Content-Security-Policy
+            // header for this Next.js app, REMOVE it from Nginx to avoid conflict.
+            // Two CSP headers → browser picks the most restrictive one.
+            //
+            // In your Nginx server block for THIS Next.js site, make sure you do
+            // NOT have:  add_header Content-Security-Policy "...";
+            // ─────────────────────────────────────────────────────────────────
             value: [
+              // Who can embed this app in an <iframe>
               `frame-ancestors ${IFRAME_ANCESTORS.join(" ")}`,
+              // Fallback for unspecified directives
               "default-src 'self'",
+              // JS — unsafe-inline needed for Next.js inline scripts; unsafe-eval for some libs
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              // CSS — unsafe-inline needed for styled-jsx / Tailwind / inline styles
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              // Google Fonts glyphs
               "font-src 'self' https://fonts.gstatic.com",
+              // API calls — allows all HTTPS so the app can reach any backend
               "connect-src 'self' https:",
-              // Allow images from self, data URIs, blob URLs and Cloudinary
+              // ✅ KEY FIX: Allow Cloudinary images (res.cloudinary.com)
               "img-src 'self' data: blob: https://res.cloudinary.com",
+              // Audio/video if ever needed
+              "media-src 'self' blob: https://res.cloudinary.com",
+              // Web workers (Next.js uses them internally)
+              "worker-src 'self' blob:",
+              // Frames the app itself can load
+              "frame-src 'self' https:",
             ].join("; "),
           },
           // CRITICAL: We comment out or exclude X-Frame-Options here.
