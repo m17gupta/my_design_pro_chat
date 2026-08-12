@@ -1,115 +1,136 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import toast from "react-hot-toast";
-import RevisionSummaryCard from "./RevisionSummaryCard";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { generateEnterpriseDesign } from "@/store/enterprise/enterpriseThunk";
 import type { EnterpriseEntry } from "@/store/enterprise/enterpriseType";
-import { buildApiPayload } from "@/lib/apiBrief";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
-import { API_QUESTIONS } from "../chat/flow";
+import { revisionRoundFromMessage } from "../chat/flow";
+import RevisionResultCard, {
+  type SubmitAction,
+} from "./RevisionResultCard";
+import RevisionSummaryCard from "./RevisionSummaryCard";
 
-// interface RevisionDesignProps {
-//   /** Optional override — called instead of the default generate dispatch. */
-//   onGenerate?: (entry: EnterpriseEntry) => void;
-//   /** Optional override — called when the user wants to edit the comments. */
-//   onMakeChanges?: (entry: EnterpriseEntry) => void;
-// }
+export interface DerivedRevisionRound {
+  /** 1-based loop round. */
+  round: number;
+  /** This round's revision entry — undefined until its Generate is submitted. */
+  entry?: EnterpriseEntry;
+}
 
-
-const RevisionDesign = () => {
-  const dispatch = useAppDispatch();
-  const { entries } = useAppSelector((state) => state.enterprise);
-  /** Id of the entry whose Generate action is currently in flight. */
-  const [generatingId, setGeneratingId] = useState<string | null>(null);
- const { watermark, image_url, work_type, original: chat_original, revision_comment } = useSelector((state: RootState) => state.chat);
-
-  // Only revision entries carry questions; the original is questions: [].
+/**
+ * Selector/deriver: given a revision-summary message id + the Redux entries,
+ * return the round and the entry bound to it. Rounds always map by index into
+ * the `type: "revision"` entries, so a round never borrows another round's
+ * data (each `RevisionResultCard` binds to its own entry by id).
+ */
+export function deriveRevisionRound(
+  messageId: string,
+  entries: EnterpriseEntry[]
+): DerivedRevisionRound | null {
+  const round = revisionRoundFromMessage(messageId);
+  if (!round) return null;
   const revisions = entries.filter((entry) => entry.type === "revision");
+  return { round, entry: revisions[round - 1] };
+}
 
-  const handleGenerate = useCallback(
-    async (entry: EnterpriseEntry) => {
-      // if (onGenerate) {
-      //   onGenerate(entry);
-      //   return;
-      // }
-      if (generatingId) return;
-      setGeneratingId(entry.id);
-      console.log("generate revision--", entry);
-      const payload = buildApiPayload(API_QUESTIONS, chat_original, {
-        // id: chat.id,
-        watermark: watermark ?? "",
-        work_type: work_type ?? "",
-        image_url: entries[entries.length - 1]?.url ?? "",
-        revision: revision_comment,
-      });
-      console.log("generate payload--", payload);
-      try {
-        await dispatch(generateEnterpriseDesign(payload)).unwrap();
-        toast.success(
-          "Your design brief has been sent to Brooke Edwards for review!"
-        );
-      } catch (error) {
-        toast.error(
-          typeof error === "string"
-            ? error
-            : error instanceof Error
-              ? error.message
-              : "Failed to submit the design brief"
-        );
-      } finally {
-        setGeneratingId(null);
-      }
-    },
-    [dispatch, generatingId, chat_original, watermark, image_url, work_type, revision_comment]
-  );
+interface RevisionDesignProps {
+  /** The `ep-revision-summary[-N]` message this round is rendered for. */
+  messageId: string;
+  /** Redux `enterprise.entries` — the single source of truth for rounds. */
+  entries: EnterpriseEntry[];
+  /** Fallback comments (notes + files) until this round's entry exists. */
+  fallbackNotes: string;
+  fallbackFiles: string[];
+  /** Whether this message is the latest revision-summary (the current round). */
+  isCurrent: boolean;
+  /** Satisfaction rating for this round's entry (0 = unrated). */
+  rating: number;
+  onRate: (value: number) => void;
+  /** Set once a terminal action was submitted — locks every result card. */
+  submittedAction: SubmitAction | null;
+  /** True while this round's generate POST is in flight (entry not appended yet). */
+  pendingGenerate: boolean;
+  /** True when the round cap is reached — disables Regenerate on the result card. */
+  regenerateDisabled: boolean;
+  onGenerate: () => void;
+  onMakeChanges: () => void;
+  onAllINeed: (rating: number) => void;
+  onRegenerate: () => void;
+  onEngageDesigner: (rating: number) => void;
+}
 
-  const handleMakeChanges = useCallback(() => {
-    //   if (onMakeChanges) {
-    //     onMakeChanges(entry);
-    //     return;
-    //   }
-    toast("Open the chat to edit your revision comments.");
-  }, []);
+/**
+ * Per-round orchestrator: renders the Revision Summary card ("what you asked
+ * for") + Revision Result card ("what you got") for exactly one loop round.
+ * Pure — reads nothing from Redux, every value arrives via props.
+ */
+export default function RevisionDesign({
+  messageId,
+  entries,
+  fallbackNotes,
+  fallbackFiles,
+  isCurrent,
+  rating,
+  onRate,
+  submittedAction,
+  pendingGenerate,
+  regenerateDisabled,
+  onGenerate,
+  onMakeChanges,
+  onAllINeed,
+  onRegenerate,
+  onEngageDesigner,
+}: RevisionDesignProps) {
+  const derived = deriveRevisionRound(messageId, entries);
+  if (!derived) return null;
+  const { round, entry } = derived;
 
-  if (revisions.length === 0) return null;
+  // The round's comments come from its own entry once it exists; before that
+  // (comments just submitted, generate not started) they come from the
+  // chat.revision_comment fallback. Rounds are never mixed.
+  const notes = entry?.questions[0]?.answer.notes ?? fallbackNotes;
+  const files = entry?.questions[0]?.answer.files ?? fallbackFiles;
+
+  const status = entry?.status;
+  const hasImage = Boolean(entry?.url);
+  // Spinner while the task is in flight: an entry without an image that hasn't
+  // reached a terminal status (matches the result card's own loading state).
+  const inFlight =
+    Boolean(entry) &&
+    !hasImage &&
+    status !== "failed" &&
+    status !== "completed";
+  const completed = entry?.status === "completed";
+  const generating = pendingGenerate || inFlight;
+
+  // History rounds (and completed current rounds) keep the summary read-only;
+  // a failed entry stays clickable so the same round can be retried.
+  const disabled = generating || completed || !isCurrent;
+  const showActions = isCurrent && !completed;
 
   return (
     <div className="flex w-full flex-col gap-4">
-      {revisions.map((entry) => {
-        // Combine the notes across the entry's questions (usually one).
-        const notes = entry.questions
-          .map((q) => q.answer.notes.trim())
-          .filter(Boolean)
-          .join("\n\n");
-        // Total uploaded files across the entry's questions.
-        const filesCount = entry.questions.reduce(
-          (sum, q) => sum + (q.answer.files?.length ?? 0),
-          0
-        );
-        // Keep the Generate action busy until the entry has a rendered image
-        // (status polling fills `url` once the backend task completes). A
-        // failed entry stays clickable so it can be retried.
-        const hasImage = Boolean(entry.url);
-        const stuckFailed = !hasImage && entry.status === "failed";
-        const generating = generatingId === entry.id || (!hasImage && !stuckFailed);
-        const disabled = generating;
-        return (
-          <RevisionSummaryCard
-            key={entry.id}
-            notes={notes}
-            filesCount={filesCount}
-            generating={generating}
-            disabled={disabled}
-            onGenerate={() => handleGenerate(entry)}
-            onChanges={handleMakeChanges}
-          />
-        );
-      })}
+      <RevisionSummaryCard
+        round={round}
+        notes={notes}
+        filesCount={files.length}
+        generating={generating}
+        disabled={disabled}
+        showActions={showActions}
+        onGenerate={onGenerate}
+        onChanges={onMakeChanges}
+      />
+      {entry && (
+        <RevisionResultCard
+          entry={entry}
+          round={round}
+          rating={rating}
+          onRate={onRate}
+          locked={!isCurrent || Boolean(submittedAction)}
+          regenerateDisabled={regenerateDisabled}
+          submittedAction={submittedAction}
+          onAllINeed={onAllINeed}
+          onRegenerate={onRegenerate}
+          onEngageDesigner={onEngageDesigner}
+        />
+      )}
     </div>
   );
-};
-
-export default RevisionDesign;
+}

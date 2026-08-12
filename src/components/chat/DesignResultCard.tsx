@@ -1,11 +1,15 @@
 "use client";
 
-import { useAppSelector } from "@/store/hooks";
 import { motion } from "framer-motion";
+import type { SubmitAction } from "@/components/revisionDesign/RevisionResultCard";
 
 interface DesignResultCardProps {
   /** Generated design preview URL from the completed status result. */
-  // imageUrl: string;
+  imageUrl: string;
+  /** Disabled only while the entry itself is pending/failed — never because a revision exists. */
+  disabled?: boolean;
+  /** Set once a terminal action was submitted — locks buttons + confirms. */
+  submittedAction?: SubmitAction | null;
   onAllINeed: () => void;
   onRegenerate: () => void;
   onEngageDesigner: () => void;
@@ -14,18 +18,22 @@ interface DesignResultCardProps {
 const BUTTON_CLASS =
   "inline-flex items-center gap-1.5 rounded-xl bg-[#37474f] px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-colors enabled:hover:bg-[#263238] disabled:cursor-not-allowed disabled:opacity-40 disabled:saturate-50 disabled:shadow-none dark:bg-[#546e7a] enabled:dark:hover:bg-[#455a64]";
 
+/**
+ * Original (intake) render result card — shown on the `ep-summary` message.
+ * Pure presentational: the image, disabled state, and submit confirmation all
+ * arrive via props; it never reads the store and never locks itself just
+ * because revisions exist (the revision loop lives on its own cards).
+ */
 export default function DesignResultCard({
-  // imageUrl,
+  imageUrl,
+  disabled = false,
+  submittedAction = null,
   onAllINeed,
   onRegenerate,
   onEngageDesigner,
 }: DesignResultCardProps) {
+  const interactive = !disabled && !submittedAction;
 
-  const { entries } = useAppSelector((state) => state.enterprise);
-  const mainImage = entries.find((entry) => entry.type === "original");
-  const revisions = entries.filter((entry) => entry.type === "revision");
-  // Once a revision exists, the original render's actions are locked.
-  const disabled = revisions.length > 0;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -34,15 +42,35 @@ export default function DesignResultCard({
       className="w-full overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
     >
       <div className="p-4 sm:p-5">
-        <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
-          Before I get this project over to your design coordinator, I have taken the
-          liberty of generating an initial render of how I interpreted your requests.
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
+            Before I get this project over to your design coordinator, I have taken the
+            liberty of generating an initial render of how I interpreted your requests.
+          </p>
+          {submittedAction && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+              Submitted to your design team
+            </span>
+          )}
+        </div>
 
         <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={mainImage?.url??""}
+            src={imageUrl}
             alt="Generated design preview of your front yard"
             loading="lazy"
             decoding="async"
@@ -54,10 +82,10 @@ export default function DesignResultCard({
           <motion.button
             type="button"
             onClick={onAllINeed}
-            whileHover={disabled ? undefined : { scale: 1.03 }}
-            whileTap={disabled ? undefined : { scale: 0.95 }}
+            whileHover={interactive ? { scale: 1.03 } : undefined}
+            whileTap={interactive ? { scale: 0.95 } : undefined}
             className={BUTTON_CLASS}
-            disabled={disabled}
+            disabled={!interactive}
           >
             <svg
               width="14"
@@ -78,10 +106,10 @@ export default function DesignResultCard({
           <motion.button
             type="button"
             onClick={onRegenerate}
-            whileHover={disabled ? undefined : { scale: 1.03 }}
-            whileTap={disabled ? undefined : { scale: 0.95 }}
+            whileHover={interactive ? { scale: 1.03 } : undefined}
+            whileTap={interactive ? { scale: 0.95 } : undefined}
             className={BUTTON_CLASS}
-            disabled={disabled}
+            disabled={!interactive}
           >
             <svg
               width="14"
@@ -103,10 +131,10 @@ export default function DesignResultCard({
           <motion.button
             type="button"
             onClick={onEngageDesigner}
-            whileHover={disabled ? undefined : { scale: 1.03 }}
-            whileTap={disabled ? undefined : { scale: 0.95 }}
+            whileHover={interactive ? { scale: 1.03 } : undefined}
+            whileTap={interactive ? { scale: 0.95 } : undefined}
             className={BUTTON_CLASS}
-            disabled={disabled}
+            disabled={!interactive}
           >
             <svg
               width="14"

@@ -81,34 +81,45 @@ function buildRevisionQuestion(revision: RevisionComment): EnterpriseQuestion {
 }
 
 
+/**
+ * Generate (or regenerate) a design. The thunk arg carries the brief payload
+ * plus an optional `round` — the 1-based revision round this generate belongs
+ * to. `round` is not persisted on the entry; the slice reads it from
+ * `action.meta.arg` to decide whether to replace that round's previous entry.
+ */
 export const generateEnterpriseDesign = createAsyncThunk<
   EnterpriseEntry,
-  ApiBriefPayload,
+  { payload: ApiBriefPayload; round?: number },
   { rejectValue: string }
->("enterprise/generateDesign", async (payload, { getState, rejectWithValue }) => {
-  const { enterprise } = getState() as EnterpriseThunkState;
-  try {
-    const result = await submitDesignBrief(payload);
-    const data = result.data as EnterpriseResponse;
-    // First submission is the "original" design; every later call is a revision.
-    const type: EnterpriseEntry["type"] =
-      enterprise.entries.length > 0 ? "revision" : "original";
-    return {
-      id: data.task_id,
-      url: data.generatedImage,
-      status: data.status ?? "",
-      type,
-      questions:
-        type === "original"
-          ? []
-          : [buildRevisionQuestion(payload.revision_comment)],
-    };
-  } catch (error) {
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to submit the design brief"
-    );
+>(
+  "enterprise/generateDesign",
+  async ({ payload }, { getState, rejectWithValue }) => {
+    const { enterprise } = getState() as EnterpriseThunkState;
+    try {
+      const result = await submitDesignBrief(payload);
+      const data = result.data as EnterpriseResponse;
+      // First submission is the "original" design; every later call is a revision.
+      const type: EnterpriseEntry["type"] =
+        enterprise.entries.length > 0 ? "revision" : "original";
+      return {
+        id: data.task_id,
+        url: data.generatedImage,
+        status: data.status ?? "",
+        type,
+        questions:
+          type === "original"
+            ? []
+            : [buildRevisionQuestion(payload.revision_comment)],
+      };
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error
+          ? error.message
+          : "Failed to submit the design brief"
+      );
+    }
   }
-});
+);
 
 //fetch the status based on the task_id 
 export const fetchEnterpriseStatus = createAsyncThunk<

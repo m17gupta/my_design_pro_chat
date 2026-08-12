@@ -13,9 +13,14 @@ import {
   API_QUESTIONS,
   buildMessage,
   buildRestoredTranscript,
+  countRevisionRounds,
   episodeById,
+  episodeMessageId,
   nextEpisodeId,
+  revisionRoundFromMessage,
 } from "./flow";
+import { deriveRevisionRound } from "../revisionDesign/RevisionDesign";
+import type { SubmitAction } from "../revisionDesign/RevisionResultCard";
 import { CHECKLIST, type AnswerValue, type Message } from "./types";
 import {
   answerQuestion,
@@ -61,6 +66,8 @@ let idCounter = 0;
 const nextId = () => `m-${Date.now()}-${idCounter++}`;
 
 const TYPING_MS = 950;
+/** Max revision loop rounds — beyond this, Regenerate is capped. */
+const MAX_REVISION_ROUNDS = 3;
 
 /** First status poll fires 3s after the task starts; every POLL_MS after that. */
 const POLL_START_MS = 3000;
@@ -92,7 +99,6 @@ export default function ChatWindow() {
     () => restoredTranscript.completed
   );
   const [typing, setTyping] = useState(false);
-  const [generated, setGenerated] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -102,6 +108,12 @@ export default function ChatWindow() {
   const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>(
     restoredTranscript.messageEpisodes
   );
+  /** Per-entry satisfaction rating, keyed by entry.id (submitted with the project). */
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+  /** Set once a terminal action is submitted — locks every result card. */
+  const [submittedAction, setSubmittedAction] = useState<SubmitAction | null>(null);
+  /** Revision round whose generate POST is in flight (entry not yet appended). */
+  const [pendingRevisionGenerate, setPendingRevisionGenerate] = useState<number | null>(null);
   const dispatch = useAppDispatch();
   const briefPayload = useAppSelector(selectBriefPayload);
   /** The revision comments (notes + upload URLs) from the feedback step. */
@@ -109,8 +121,6 @@ export default function ChatWindow() {
   const latestEnterpriseEntry = useAppSelector((s) =>
     selectLatestEnterpriseEntry(s.enterprise)
   );
-  /** Generated design preview URL — populated once status polling completes. */
-  const designImageUrl = latestEnterpriseEntry?.url || undefined;
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<number | null>(null);
@@ -152,7 +162,7 @@ export default function ChatWindow() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, typing, designImageUrl, scrollToBottom]);
+  }, [messages, typing, scrollToBottom]);
 
   useEffect(() => clearTypingTimeout, [clearTypingTimeout]);
 
@@ -187,10 +197,12 @@ export default function ChatWindow() {
     dispatch(resetEnterprise());
     setUploads({});
     setCompleted(new Set());
-    setGenerated(false);
     setGenerating(false);
     setEditingId(null);
     setMessageEpisodes({});
+    setRatings({});
+    setSubmittedAction(null);
+    setPendingRevisionGenerate(null);
     announcedIdRef.current = null;
     setMenuOpen(false);
   }, [clearTypingTimeout, dispatch]);
@@ -233,7 +245,13 @@ export default function ChatWindow() {
         dispatch(answerQuestion({ apiKey: ep.apiKey, answer: structuredAnswer }));
       }
       if (filesByField && ep.apiKey !== "welcome") {
-        setUploads((prev) => ({ ...prev, [ep.apiKey]: filesByField }));
+        // Revision rounds are keyed by their round-specific message id so each
+        // loop's uploaded files never leak into the next round's comments card.
+        const key =
+          ep.apiKey === "revision"
+            ? episodeMessageId("revision", countRevisionRounds(messages))
+            : ep.apiKey;
+        setUploads((prev) => ({ ...prev, [key]: filesByField }));
       }
 
       // Revision feedback stores `{ files: [uploaded URLs], notes: text }` in
@@ -254,16 +272,23 @@ export default function ChatWindow() {
         setTyping(false);
         setMessages((prev) => {
           const nextMsg = buildMessage(episodeById(nextEpisode));
-          const count = prev.filter((m) =>
-            m.id.startsWith(nextMsg.id)
-          ).length;
-          const id = count === 0 ? nextMsg.id : `${nextMsg.id}-${count + 1}`;
+          // One summary per revision round — suffix by the round's comment-card
+          // count so round N always lands on `ep-revision-summary[-N]`.
+          const id =
+            nextEpisode === "revision-summary"
+              ? episodeMessageId("revision-summary", countRevisionRounds(prev))
+              : (() => {
+                  const count = prev.filter(
+                    (m) => m.id === nextMsg.id || m.id.startsWith(`${nextMsg.id}-`)
+                  ).length;
+                  return count === 0 ? nextMsg.id : `${nextMsg.id}-${count + 1}`;
+                })();
           return [...prev, { ...nextMsg, id }];
         });
         setCurrentId(nextEpisode);
       }, TYPING_MS);
     },
-    [typing, currentId, clearTypingTimeout, dispatch]
+    [typing, currentId, messages, clearTypingTimeout, dispatch]
   );
 
   const advance = useCallback((rawAnswer: string) => commit(rawAnswer), [commit]);
@@ -355,8 +380,7 @@ export default function ChatWindow() {
           image_url: image_url,
           revision: revisionComment,
         });
-      await dispatch(generateEnterpriseDesign(payload)).unwrap();
-      setGenerated(true);
+      await dispatch(generateEnterpriseDesign({ payload })).unwrap();
       toast.success("Your design brief has been sent to Brooke Edwards for review!");
     } catch (error) {
       toast.error(
@@ -400,15 +424,11 @@ export default function ChatWindow() {
         if (res.status === "completed") {
           toast.success("Your design is ready!");
         } else {
-          // Back to the summary card so the user can retry.
-          setGenerated(false);
           toast.error(res.error ?? "Design generation failed. Please try again.");
         }
       }
     } catch (error) {
       stopPolling();
-      // Back to the summary card so the user can retry.
-      setGenerated(false);
       toast.error(
         typeof error === "string"
           ? error
@@ -429,7 +449,6 @@ export default function ChatWindow() {
         pollCountRef.current += 1;
         if (pollCountRef.current > MAX_POLLS) {
           stopPolling();
-          setGenerated(false);
           toast.error(
             "Design generation is taking longer than expected. Please try again."
           );
@@ -465,9 +484,11 @@ export default function ChatWindow() {
     dispatch(resetEnterprise());
     setUploads({});
     setCompleted(new Set());
-    setGenerated(false);
     setGenerating(false);
     setEditingId(null);
+    setRatings({});
+    setSubmittedAction(null);
+    setPendingRevisionGenerate(null);
     announcedIdRef.current = null;
 
     setTyping(true);
@@ -481,21 +502,57 @@ export default function ChatWindow() {
     }, TYPING_MS);
   }, [messages, clearTypingTimeout, dispatch]);
 
+  /**
+   * Terminal submit — posts the project back to the host with the full design
+   * history and this round's rating, then locks the whole result UI.
+   */
+  const submitLunaProject = useCallback(
+    (action: SubmitAction, rating: number) => {
+      const data = {
+        id,
+        original: chat_original,
+        design: entries,
+        rating,
+        action,
+      };
+      console.log(`[Luna] submitLunaProject (${action})`, { data });
+      window.parent.postMessage({ action: "submitLunaProject", data }, "*");
+      setSubmittedAction(action);
+    },
+    [id, chat_original, entries]
+  );
+
   /** "This is All I Need" — the initial render is approved as-is. */
   const handleDesignAllINeed = useCallback(() => {
-       const data={
-         id:id,
-         original:chat_original,
-         design:entries,
-         action:"this_is_all_i_need"
-       }
-       console.log("[Luna] handleDesignAllINeed called", { data });
-       window.parent.postMessage({ action: 'submitLunaProject', data: data }, '*');
-       console.log("[Luna] postMessage sent to parent");
+    const originalEntry = entries.find((entry) => entry.type === "original");
+    submitLunaProject("this_is_all_i_need", ratings[originalEntry?.id ?? ""] ?? 0);
+  }, [submitLunaProject, entries, ratings]);
 
-  }, [id, chat_original, entries]);
+  /** "Engage Designer" — hand off to the human designer for review. */
+  const handleDesignEngage = useCallback(() => {
+    const originalEntry = entries.find((entry) => entry.type === "original");
+    submitLunaProject("engage_designer", ratings[originalEntry?.id ?? ""] ?? 0);
+  }, [submitLunaProject, entries, ratings]);
 
+  const handleRevisionAllINeed = useCallback(
+    (rating: number) => submitLunaProject("this_is_all_i_need", rating),
+    [submitLunaProject]
+  );
 
+  const handleRevisionEngage = useCallback(
+    (rating: number) => submitLunaProject("engage_designer", rating),
+    [submitLunaProject]
+  );
+
+  /** Record the satisfaction rating for one revision entry (keyed by entry.id). */
+  const handleRate = useCallback((entryId: string, value: number) => {
+    setRatings((prev) => ({ ...prev, [entryId]: value }));
+  }, []);
+
+  /**
+   * "Regenerate With Comments" — start the next revision loop round by pushing
+   * a fresh `ep-revision[-N]` comments card (capped at MAX_REVISION_ROUNDS).
+   */
   const handleDesignRegenerate = useCallback(() => {
     clearTypingTimeout();
     busyRef.current = false;
@@ -503,29 +560,107 @@ export default function ChatWindow() {
     setEditingId(null);
     announcedIdRef.current = null;
 
+    const round = countRevisionRounds(messages) + 1;
+    if (round > MAX_REVISION_ROUNDS) {
+      toast("More than 3 revisions — please engage your designer for further changes.");
+      return;
+    }
     const revisionMsg = buildMessage(episodeById("revision"));
-    setMessages((prev) => {
-      const count = prev.filter((m) => m.id.startsWith("ep-revision")).length;
-      const id = count === 0 ? revisionMsg.id : `${revisionMsg.id}-${count + 1}`;
-      return [...prev, { ...revisionMsg, id }];
-    });
+    const id = episodeMessageId("revision", round);
+    setMessages((prev) => [...prev, { ...revisionMsg, id }]);
     setCurrentId("revision");
-  }, [clearTypingTimeout]);
+  }, [clearTypingTimeout, messages]);
 
-  /** "Engage Designer" — hand off to the human designer for review. */
-  const handleDesignEngage = useCallback(() => {
-    const data={
-         id:id,
-         original:chat_original,
-         design:entries,
-         action:'engage_designer'
-       }
-       console.log("[Luna] handleDesignEngage called", { data });
-       window.parent.postMessage({ action: 'submitLunaProject', data: data }, '*');
-       console.log("[Luna] postMessage sent to parent");
-  }, []);
+  /**
+   * Generate a revision round (round N) — same single generate + polling path
+   * as the original, driven from the round's own comments (or its entry's
+   * questions on retry).
+   */
+  const handleRevisionGenerate = useCallback(
+    async (round: number) => {
+      if (pendingRevisionGenerate !== null) return;
+      setPendingRevisionGenerate(round);
+      const revisions = entries.filter((entry) => entry.type === "revision");
+      const entry = revisions[round - 1];
+      const notes = entry?.questions[0]?.answer.notes ?? revisionComment.notes;
+      const files = entry?.questions[0]?.answer.files ?? revisionComment.files;
+      const payload = buildApiPayload(API_QUESTIONS, chat_original, {
+        watermark: watermark ?? "",
+        work_type: work_type ?? "",
+        image_url: entries[entries.length - 1]?.url ?? "",
+        revision: { files, notes },
+      });
+      try {
+        await dispatch(generateEnterpriseDesign({ payload, round })).unwrap();
+        toast.success("Your design brief has been sent to Brooke Edwards for review!");
+      } catch (error) {
+        setPendingRevisionGenerate(null);
+        toast.error(
+          typeof error === "string"
+            ? error
+            : error instanceof Error
+              ? error.message
+              : "Failed to submit the design brief"
+        );
+      }
+    },
+    [pendingRevisionGenerate, entries, revisionComment, chat_original, watermark, work_type, dispatch]
+  );
+
+  /**
+   * "I'd Like To Make Changes" — jump back to this round's comments card,
+   * pre-filled with the round's own notes/files, so edits can be re-submitted.
+   */
+  const handleMakeChanges = useCallback(
+    (round: number) => {
+      clearTypingTimeout();
+      busyRef.current = false;
+      setTyping(false);
+      setEditingId(null);
+      announcedIdRef.current = null;
+
+      const commentId = episodeMessageId("revision", round);
+      const revisions = entries.filter((entry) => entry.type === "revision");
+      const entry = revisions[round - 1];
+      const notes = entry?.questions[0]?.answer.notes ?? revisionComment.notes;
+      const files = entry?.questions[0]?.answer.files ?? revisionComment.files;
+
+      // Truncate back to (and including) this round's comments card — dropping
+      // the round's summary and any later rounds — so re-submitting edits
+      // re-creates the summary without duplicating messages. The card is
+      // re-hydrated with the round's notes/files via initialAnswer.
+      const idx = messages.findIndex((m) => m.id === commentId);
+      if (idx < 0) return;
+      setMessages((prev) => {
+        const i = prev.findIndex((m) => m.id === commentId);
+        const base = i >= 0 ? prev.slice(0, i + 1) : prev;
+        return base.map((m) =>
+          m.id === commentId
+            ? { ...m, initialAnswer: { files, notes } }
+            : m
+        );
+      });
+      setCurrentId("revision");
+      setPendingRevisionGenerate(null);
+      // Scroll to the freshly-editable comments card.
+      window.setTimeout(() => {
+        document
+          .getElementById(`msg-${commentId}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 60);
+    },
+    [messages, entries, revisionComment, clearTypingTimeout]
+  );
 
   const doneCount = completed.size;
+
+  // The latest revision-summary message is the *current* round; earlier rounds
+  // stay visible above as locked history.
+  const revisionSummaries = messages.filter(
+    (m) => revisionRoundFromMessage(m.id) > 0
+  );
+  const lastRevisionSummaryId =
+    revisionSummaries[revisionSummaries.length - 1]?.id;
 
   return (
     <div className="flex h-dvh flex-col">
@@ -662,23 +797,44 @@ export default function ChatWindow() {
                   const isCurrent = i === messages.length - 1;
                   const episodeApiKey = m.id.replace(/^ep-/, "");
                   // The intake design result card stays pinned to the original
-                  // summary message (above the revision steps); revision
-                  // summaries always show the confirm + generate card instead.
+                  // summary message (above the revision steps).
                   const showsResultCard = m.id === "ep-summary";
-                  // The revision-summary message renders the dedicated Revision
-                  // Summary card (notes + files + generate / make-changes buttons).
-                  const isRevisionSummary = m.id.startsWith("ep-revision-summary");
+                  // Revision-summary messages render this round's dedicated
+                  // Revision Summary + Revision Result card pair.
+                  const revisionRound = revisionRoundFromMessage(m.id);
+                  const isRevisionSummary = revisionRound > 0;
+                  const isCurrentRevision =
+                    isRevisionSummary && m.id === lastRevisionSummaryId;
+                  const revisionDerived = isRevisionSummary
+                    ? deriveRevisionRound(m.id, entries)
+                    : null;
+                  const revisionEntry = revisionDerived?.entry;
+                  // Revision comment cards are keyed by their round message id
+                  // so each round's uploaded files stay with their own round.
+                  const filesKey =
+                    m.id.startsWith("ep-revision") && !isRevisionSummary
+                      ? m.id
+                      : episodeApiKey;
                   // Only editable episodes get an edit icon on their user answer
                   // (welcome / overview / photos are marked non-editable).
                   const msgEpId = messageEpisodes[m.id];
                   const msgEpisode = msgEpId ? episodeById(msgEpId) : undefined;
                   const canEdit =
                     m.role === "user" && (msgEpisode?.editable ?? true);
+                  // Key by initialAnswer too, so "I'd Like To Make Changes"
+                  // re-mounts the comments card with its pre-filled fields.
+                  const bubbleKey = m.initialAnswer
+                    ? `${m.id}-prefilled`
+                    : m.id;
                   return (
+                    <div
+                      key={bubbleKey}
+                      id={`msg-${m.id}`}
+                      className="w-full scroll-mt-20"
+                    >
                     <MessageBubble
-                      key={m.id}
                       message={m}
-                      filesByField={uploads[episodeApiKey] ?? EMPTY_FILES}
+                      filesByField={uploads[filesKey] ?? EMPTY_FILES}
                       disabled={typing || !isCurrent}
                       onOption={isCurrent ? advance : undefined}
                       onCardSubmit={isCurrent ? handleCardSubmit : undefined}
@@ -688,9 +844,49 @@ export default function ChatWindow() {
                       onSummaryGenerate={isCurrent ? handleGenerate : undefined}
                       onSummaryChanges={isCurrent ? goBackToQuestions : undefined}
                       isRevisionSummary={isRevisionSummary}
-                      designImageUrl={showsResultCard ? designImageUrl : undefined}
-                      designPending={
-                        showsResultCard && generated && !designImageUrl
+                      isCurrentRevision={isCurrentRevision}
+                      revisionNotes={revisionComment.notes}
+                      revisionFiles={revisionComment.files}
+                      revisionRating={
+                        revisionEntry ? ratings[revisionEntry.id] ?? 0 : 0
+                      }
+                      onRevisionRate={
+                        isCurrentRevision && revisionEntry
+                          ? (value) => handleRate(revisionEntry.id, value)
+                          : undefined
+                      }
+                      submittedAction={submittedAction}
+                      revisionPendingGenerate={
+                        isRevisionSummary &&
+                        pendingRevisionGenerate === revisionRound
+                      }
+                      revisionRegenerateDisabled={
+                        countRevisionRounds(messages) >= MAX_REVISION_ROUNDS
+                      }
+                      onRevisionGenerate={
+                        isCurrentRevision
+                          ? () => handleRevisionGenerate(revisionRound)
+                          : undefined
+                      }
+                      onRevisionMakeChanges={
+                        isCurrentRevision
+                          ? () => handleMakeChanges(revisionRound)
+                          : undefined
+                      }
+                      onRevisionAllINeed={
+                        isCurrentRevision && revisionEntry
+                          ? handleRevisionAllINeed
+                          : undefined
+                      }
+                      onRevisionRegenerate={
+                        isCurrentRevision && revisionEntry
+                          ? handleDesignRegenerate
+                          : undefined
+                      }
+                      onRevisionEngage={
+                        isCurrentRevision && revisionEntry
+                          ? handleRevisionEngage
+                          : undefined
                       }
                       designStatus={taskStatus}
                       onDesignAllINeed={
@@ -711,6 +907,7 @@ export default function ChatWindow() {
                       }
                       onEditCancel={canEdit ? handleEditCancel : undefined}
                     />
+                    </div>
                   );
                 })}
               </AnimatePresence>

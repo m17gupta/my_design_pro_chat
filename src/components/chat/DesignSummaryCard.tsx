@@ -2,14 +2,14 @@
 
 import { motion } from "framer-motion";
 import { CHECKLIST } from "./types";
-import { useAppSelector } from "@/store/hooks";
 
 interface DesignSummaryCardProps {
   answers: Record<string, string>;
   uploadTotal: number;
   /** True while the brief POST to the design API is in flight. */
   generating?: boolean;
-  // disabled?: boolean;
+  /** Disabled comes from the original entry's status (never read from Redux). */
+  disabled?: boolean;
   /**
    * Hide the action buttons while keeping the summary grid in the chat
    * (e.g. once the design has been generated — the result card takes over).
@@ -23,16 +23,11 @@ export default function DesignSummaryCard({
   answers,
   uploadTotal,
   generating = false,
-  // disabled = false,
+  disabled = false,
   showActions = true,
   onGenerate,
   onChanges,
 }: DesignSummaryCardProps) {
-    const { entries } = useAppSelector((state) => state.enterprise);
-    const mainImage = entries.filter((entry) => entry.type === "original");
-  // const revisions = entries.filter((entry) => entry.type === "revision");
-  // Once a revision exists, the original render's actions are locked.
-  const disabled = mainImage.length > 0;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}

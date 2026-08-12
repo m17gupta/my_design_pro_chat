@@ -5,9 +5,13 @@ import {
   EPISODES,
   buildMessage,
   buildRestoredTranscript,
+  countRevisionRounds,
   episodeById,
+  episodeMessageId,
   nextEpisodeId,
+  revisionRoundFromMessage,
 } from "./flow";
+import type { Message } from "./types";
 
 /** Minimal API item — only `answer` matters for restore routing. */
 function item(answer: ApiBriefItem["answer"]): ApiBriefItem {
@@ -141,6 +145,65 @@ describe("buildMessage", () => {
   it("uses the card title as the message content for card episodes", () => {
     const msg = buildMessage(episodeById("additional_images_upload"));
     expect(msg.content).toBe("Additional House Photos (Optional)");
+  });
+});
+
+describe("revision loop round ids", () => {
+  it("builds round-suffixed message ids (round 1 keeps the base id)", () => {
+    expect(episodeMessageId("revision", 1)).toBe("ep-revision");
+    expect(episodeMessageId("revision", 2)).toBe("ep-revision-2");
+    expect(episodeMessageId("revision-summary", 1)).toBe("ep-revision-summary");
+    expect(episodeMessageId("revision-summary", 3)).toBe("ep-revision-summary-3");
+  });
+
+  it("counts revision comment cards without counting their summaries", () => {
+    const ids = [
+      "ep-welcome",
+      "ep-revision",
+      "ep-revision-summary",
+      "ep-revision-2",
+      "ep-revision-summary-2",
+      "ep-revision-3",
+      "ep-revision-summary-3",
+    ];
+    expect(
+      countRevisionRounds(ids.map((id) => ({ id } as Pick<Message, "id">)))
+    ).toBe(3);
+    expect(
+      countRevisionRounds(
+        [{ id: "ep-revision-summary" } as Pick<Message, "id">]
+      )
+    ).toBe(0);
+  });
+
+  it("derives the round from a revision-summary message id", () => {
+    expect(revisionRoundFromMessage("ep-revision-summary")).toBe(1);
+    expect(revisionRoundFromMessage("ep-revision-summary-2")).toBe(2);
+    expect(revisionRoundFromMessage("ep-revision-summary-3")).toBe(3);
+    expect(revisionRoundFromMessage("ep-revision")).toBe(0);
+    expect(revisionRoundFromMessage("ep-summary")).toBe(0);
+  });
+
+  it("simulates a 3-round loop with unique per-round message ids", () => {
+    // Round 1: regenerate → comments → summary.
+    let ids: Pick<Message, "id">[] = [];
+    for (let round = 1; round <= 3; round += 1) {
+      ids = [
+        ...ids,
+        { id: episodeMessageId("revision", round) },
+        { id: episodeMessageId("revision-summary", countRevisionRounds(ids) + 1) },
+      ];
+    }
+    const allIds = ids.map((m) => m.id);
+    expect(allIds).toEqual([
+      "ep-revision",
+      "ep-revision-summary",
+      "ep-revision-2",
+      "ep-revision-summary-2",
+      "ep-revision-3",
+      "ep-revision-summary-3",
+    ]);
+    expect(new Set(allIds).size).toBe(allIds.length);
   });
 });
 

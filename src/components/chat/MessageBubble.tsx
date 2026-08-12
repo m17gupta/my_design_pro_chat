@@ -11,6 +11,7 @@ import OptionButtons from './OptionButtons'
 import QuestionCard, { type CardResult } from './QuestionCard'
 import { CHECKLIST, type Message } from './types'
 import RevisionDesign from '../revisionDesign/RevisionDesign'
+import type { SubmitAction } from '../revisionDesign/RevisionResultCard'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store'
 
@@ -30,15 +31,30 @@ interface MessageBubbleProps {
   onSummaryChanges?: () => void
   /** True for the post-revision summary message — renders the Revision Summary card. */
   isRevisionSummary?: boolean
-  /** Generated design preview URL — when present the result card renders below the summary card. */
-  designImageUrl?: string
-  /** True between brief submission and image-ready — shows the generating loader. */
-  designPending?: boolean
   /** Backend task lifecycle (queued | processing) for the loader status text. */
   designStatus?: string
   onDesignAllINeed?: () => void
   onDesignRegenerate?: () => void
   onDesignEngage?: () => void
+  /** Revision loop — per-round wiring for `ep-revision-summary[-N]` messages. */
+  isCurrentRevision?: boolean
+  /** Fallback comments (notes + files) until this round's entry exists. */
+  revisionNotes?: string
+  revisionFiles?: string[]
+  /** Satisfaction rating for this round's entry (0 = unrated). */
+  revisionRating?: number
+  onRevisionRate?: (value: number) => void
+  /** Set once a terminal action was submitted — locks every result card. */
+  submittedAction?: SubmitAction | null
+  /** True while this round's generate POST is in flight (entry not appended yet). */
+  revisionPendingGenerate?: boolean
+  /** True when the round cap is reached — disables Regenerate on the result card. */
+  revisionRegenerateDisabled?: boolean
+  onRevisionGenerate?: () => void
+  onRevisionMakeChanges?: () => void
+  onRevisionAllINeed?: (rating: number) => void
+  onRevisionRegenerate?: () => void
+  onRevisionEngage?: (rating: number) => void
   /** User-message inline editing. */
   editing?: boolean
   onEditStart?: () => void
@@ -104,12 +120,23 @@ export const MessageBubble = ({
   onSummaryGenerate,
   onSummaryChanges,
   isRevisionSummary = false,
-  designImageUrl,
-  designPending = false,
   designStatus = '',
   onDesignAllINeed,
   onDesignRegenerate,
   onDesignEngage,
+  isCurrentRevision = false,
+  revisionNotes = '',
+  revisionFiles = [],
+  revisionRating = 0,
+  onRevisionRate,
+  submittedAction = null,
+  revisionPendingGenerate = false,
+  revisionRegenerateDisabled = false,
+  onRevisionGenerate,
+  onRevisionMakeChanges,
+  onRevisionAllINeed,
+  onRevisionRegenerate,
+  onRevisionEngage,
   editing = false,
   onEditStart,
   onEditSave,
@@ -118,10 +145,24 @@ export const MessageBubble = ({
   const isUser = message.role === 'user'
   const reduceMotion = useReducedMotion() ?? false
   const editRef = useRef<HTMLTextAreaElement>(null)
-  // Once a generation is in flight (or the image is ready), the summary's two
-  // action buttons are hidden — the generating/result card takes over.
-  const summaryActionsHidden = Boolean(designPending || designImageUrl)
   const { entries } = useSelector((state: RootState) => state.enterprise)
+  // The intake (original) entry drives the summary + result card below it.
+  const originalEntry = entries.find((entry) => entry.type === "original")
+  const originalPending = Boolean(
+    originalEntry &&
+      (originalEntry.status === "queued" ||
+        originalEntry.status === "processing" ||
+        originalEntry.status === "")
+  )
+  // Once the original entry exists and isn't failed, the intake summary's two
+  // action buttons are hidden — the generating/result card takes over. A
+  // failed entry keeps them visible so the generate can be retried.
+  const summaryActionsHidden =
+    originalEntry !== undefined && originalEntry.status !== "failed"
+  // The intake summary's actions stay disabled while the original entry is
+  // pending or done; a failed entry stays enabled so it can be retried.
+  const summaryDisabled =
+    originalEntry !== undefined && originalEntry.status !== "failed"
   // Cards type out their title + description in the bubble; the card below
   // then shows only the answer fields.
   const displayText =
@@ -332,40 +373,54 @@ export const MessageBubble = ({
           transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           className='mt-3 w-full'
         >
-          <>
-            {
+          {isRevisionSummary ? (
+            <RevisionDesign
+              messageId={message.id}
+              entries={entries}
+              fallbackNotes={revisionNotes}
+              fallbackFiles={revisionFiles}
+              isCurrent={isCurrentRevision}
+              rating={revisionRating}
+              onRate={onRevisionRate ?? (() => {})}
+              submittedAction={submittedAction}
+              pendingGenerate={revisionPendingGenerate}
+              regenerateDisabled={revisionRegenerateDisabled}
+              onGenerate={onRevisionGenerate ?? (() => {})}
+              onMakeChanges={onRevisionMakeChanges ?? (() => {})}
+              onAllINeed={onRevisionAllINeed ?? (() => {})}
+              onRegenerate={onRevisionRegenerate ?? (() => {})}
+              onEngageDesigner={onRevisionEngage ?? (() => {})}
+            />
+          ) : (
+            <>
               <DesignSummaryCard
                 answers={answers}
                 uploadTotal={uploadTotal}
                 generating={generating}
-                // disabled={disabled}
+                disabled={summaryDisabled}
                 showActions={!summaryActionsHidden}
                 onGenerate={onSummaryGenerate ?? (() => {})}
                 onChanges={onSummaryChanges ?? (() => {})}
               />
-            }
-            {designPending && (
-              <div className='mt-3'>
-                <DesignGeneratingCard status={designStatus} />
-              </div>
-            )}
-            {
-              <div className='mt-3'>
-                {entries && 
-                entries?.length > 0 && 
-                entries[0]?.url && (
+              {originalPending && (
+                <div className='mt-3'>
+                  <DesignGeneratingCard status={designStatus} />
+                </div>
+              )}
+              {originalEntry?.url && (
+                <div className='mt-3'>
                   <DesignResultCard
-                    // imageUrl={designImageUrl}
+                    imageUrl={originalEntry.url}
+                    disabled={originalPending}
+                    submittedAction={submittedAction}
                     onAllINeed={onDesignAllINeed ?? (() => {})}
                     onRegenerate={onDesignRegenerate ?? (() => {})}
                     onEngageDesigner={onDesignEngage ?? (() => {})}
                   />
-                )}
-              </div>
-            }
-
-            <RevisionDesign />
-          </>
+                </div>
+              )}
+            </>
+          )}
         </motion.div>
       )}
     </div>

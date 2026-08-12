@@ -355,6 +355,37 @@ export function buildMessage(episode: Episode): Message {
   };
 }
 
+/**
+ * Canonical message id for an episode. Round 1 keeps the base id
+ * (`ep-revision`, `ep-revision-summary`); later rounds get a counter suffix
+ * (`ep-revision-2`, `ep-revision-summary-2`, …) so every loop iteration of
+ * the revision flow renders as a distinct message in the transcript.
+ */
+export function episodeMessageId(apiKey: string, round?: number): string {
+  const base = `ep-${apiKey}`;
+  return round === undefined || round <= 1 ? base : `${base}-${round}`;
+}
+
+/**
+ * Number of revision-comment cards (`ep-revision`, `ep-revision-2`, …) in a
+ * transcript. Summaries (`ep-revision-summary[-N]`) are deliberately excluded
+ * so the count always reflects how many loop rounds have been started.
+ */
+export function countRevisionRounds(messages: Pick<Message, "id">[]): number {
+  return messages.filter(
+    (m) => m.id === "ep-revision" || /^ep-revision-\d+$/.test(m.id)
+  ).length;
+}
+
+/** 1-based round of a revision-summary message id; 0 when the id is not one. */
+export function revisionRoundFromMessage(messageId: string): number {
+  if (messageId === "ep-revision-summary") return 1;
+  const match = /^ep-revision-summary-(\d+)$/.exec(messageId);
+  if (!match) return 0;
+  const round = parseInt(match[1], 10);
+  return Number.isFinite(round) ? round : 0;
+}
+
 /** A transcript reconstructed from the restored Redux brief items. */
 export interface RestoredTranscript {
   messages: Message[];
