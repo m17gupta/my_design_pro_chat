@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-
+ 
 const IFRAME_ANCESTORS = [
   "'self'",                   // CRITICAL: Retains the explicit single quotes for CSP validation
   "https://dzinlynxt.com",
@@ -9,13 +9,14 @@ const IFRAME_ANCESTORS = [
   "http://localhost:80",      // explicit port — some browsers send :80 in Origin header
   "http://127.0.0.1",        // loopback IP (port 80 implied)
   "http://127.0.0.1:80",     // explicit port variant
-  "http://dzinly-enterprise.me"
+  "http://dzinly-enterprise.me",
+  "https://res.cloudinary.com"
 ];
-
+ 
 const nextConfig: NextConfig = {
   // Disables the X-Powered-By header for enhanced security runtime setup
   poweredByHeader: false,
-
+ 
   // Allow Next.js <Image> to load from Cloudinary
   images: {
     remotePatterns: [
@@ -26,7 +27,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-
+ 
   async headers() {
     return [
       {
@@ -39,9 +40,6 @@ const nextConfig: NextConfig = {
             // NGINX NOTE: If your Nginx config also sets a Content-Security-Policy
             // header for this Next.js app, REMOVE it from Nginx to avoid conflict.
             // Two CSP headers → browser picks the most restrictive one.
-            //
-            // In your Nginx server block for THIS Next.js site, make sure you do
-            // NOT have:  add_header Content-Security-Policy "...";
             // ─────────────────────────────────────────────────────────────────
             value: [
               // Who can embed this app in an <iframe>
@@ -56,7 +54,7 @@ const nextConfig: NextConfig = {
               "font-src 'self' https://fonts.gstatic.com",
               // API calls — allows all HTTPS so the app can reach any backend
               "connect-src 'self' https:",
-              // ✅ KEY FIX: Allow Cloudinary images (res.cloudinary.com)
+              // ✅ KEY FIX: Allow Cloudinary images (res.cloudinary.com) and blobs
               "img-src 'self' data: blob: https://res.cloudinary.com",
               // Audio/video if ever needed
               "media-src 'self' blob: https://res.cloudinary.com",
@@ -66,19 +64,10 @@ const nextConfig: NextConfig = {
               "frame-src 'self' https:",
             ].join("; "),
           },
-          // CRITICAL: We comment out or exclude X-Frame-Options here.
-          // If you see it anywhere else in this file, delete it entirely!
-          /*
-          {
-            key: "X-Frame-Options",
-            value: "SAMEORIGIN",
-          }
-          */
         ],
       },
     ];
   },
 };
-
-export default nextConfig;
  
+export default nextConfig;
