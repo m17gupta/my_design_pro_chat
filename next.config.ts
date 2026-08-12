@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 
 const IFRAME_ANCESTORS = [
-  "'self'",
+  "self",
   "https://luna.dzinlynxt.com",
   "https://mydesigns.pro",
   // A CSP host without a port matches *any* port, so these cover
