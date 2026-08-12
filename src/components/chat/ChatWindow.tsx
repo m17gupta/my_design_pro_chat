@@ -48,6 +48,7 @@ interface ClientParams {
   work_type?: string;
   image_url?: string;
   watermark?: string;
+  value?: string;
 }
 
 /** URL-safe base64 → JSON object; returns undefined when absent/malformed. */
@@ -81,6 +82,8 @@ const EMPTY_FILES: Record<number, File[]> = {};
 export default function ChatWindow() {
   
   const restoredItems = useAppSelector((s) => s.chat.original);
+  // Whether the first-mount restore (below) has already applied persisted data.
+  const didRestoreRef = useRef(false);
   const restoredTranscript = useMemo(
     () => buildRestoredTranscript(restoredItems),
     [restoredItems]
@@ -88,16 +91,21 @@ export default function ChatWindow() {
 
   // Flow messages keep their `ep-<apiKey>` id (one appearance per episode)
   // so uploads and Handoff labels can be keyed by episode apiKey.
-  const [messages, setMessages] = useState<Message[]>(() => restoredTranscript.messages);
-  const [currentId, setCurrentId] = useState(restoredTranscript.currentId);
-  const [answers, setAnswers] = useState<Record<string, string>>(
-    restoredTranscript.answers
-  );
+  //
+  // NB: the initializers start from a FRESH (welcome-only) transcript instead
+  // of the restored one. The server renders this same fresh state (it cannot
+  // see sessionStorage), so starting restored here would make the client's
+  // first render differ from the server HTML and throw a hydration error on
+  // every refresh. The persisted Redux brief is applied right after mount by
+  // the restore effect below — the store (s.chat) still holds all the data.
+  const [messages, setMessages] = useState<Message[]>(() => [
+    buildMessage(episodeById("welcome")),
+  ]);
+  const [currentId, setCurrentId] = useState("welcome");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   /** apiKey → (field index → files) */
   const [uploads, setUploads] = useState<Record<string, Record<number, File[]>>>({});
-  const [completed, setCompleted] = useState<Set<string>>(
-    () => restoredTranscript.completed
-  );
+  const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [typing, setTyping] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -105,9 +113,7 @@ export default function ChatWindow() {
   /** Id of the user message currently being edited — at most one at a time. */
   const [editingId, setEditingId] = useState<string | null>(null);
   /** messageId → episode apiKey, so an edited message can be mapped back to its question. */
-  const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>(
-    restoredTranscript.messageEpisodes
-  );
+  const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>({});
   /** Per-entry satisfaction rating, keyed by entry.id (submitted with the project). */
   const [ratings, setRatings] = useState<Record<string, number>>({});
   /** Set once a terminal action is submitted — locks every result card. */
@@ -132,22 +138,51 @@ export default function ChatWindow() {
   
   const searchParams = useSearchParams();
 
+  // Apply ?params context on first mount only. If the incoming id differs
+  // from what is persisted, clear the old session so the new project starts
+  // fresh instead of showing stale answers.
+  const contextAppliedRef = useRef(false);
   useEffect(() => {
+    if (contextAppliedRef.current) return;
+    contextAppliedRef.current = true;
+
     const params = decodeClientParams(searchParams.get("params"));
-    
     if (!params) return;
-    if(watermark !==undefined && image_url !==undefined && work_type !==undefined && id !==undefined){
-        dispatch(
+
+    // // If a different project arrives, wipe the old session before applying.
+    // if (params.id !== undefined && id !== null && params.id !== id) {
+    //   dispatch(resetBrief());
+    //   dispatch(resetEnterprise());
+    // }
+
+    dispatch(
       setContext({
         id: params.id,
         work_type: params.work_type,
         image_url: params.image_url,
         watermark: params.watermark,
+        value: params.value,
       })
     );
-    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  }, [searchParams, watermark, image_url, work_type, id, dispatch]);
+  // Apply persisted data right after mount (or when the store is rehydrated
+  // from sessionStorage). The UI starts fresh so server + client HTML match;
+  // this effect is the single place that swaps in the restored transcript.
+  useEffect(() => {
+    if (didRestoreRef.current) return;
+    const anyAnswered = Object.values(restoredItems).some(
+      (item) => item !== undefined
+    );
+    if (!anyAnswered) return; // nothing to restore
+    didRestoreRef.current = true;
+    setMessages(restoredTranscript.messages);
+    setCurrentId(restoredTranscript.currentId);
+    setAnswers(restoredTranscript.answers);
+    setCompleted(restoredTranscript.completed);
+    setMessageEpisodes(restoredTranscript.messageEpisodes);
+  }, [restoredItems, restoredTranscript]);
 
   const clearTypingTimeout = useCallback(() => {
     if (timeoutRef.current !== null) {
@@ -223,13 +258,17 @@ export default function ChatWindow() {
       const ep = episodeById(currentId);
 
       // Clicking "I am ready to proceed →" on the welcome screen starts a fresh
-      // intake: wipe the Redux brief (and its sessionStorage copy) plus any
-      // restored/display state before recording the first answer.
+      // intake: wipe the Redux brief (and its sessionStorage copy), the design
+      // history (enterprise entries), plus any restored/display state before
+      // recording the first answer.
       if (currentId === "welcome") {
         dispatch(resetBrief());
+        dispatch(resetEnterprise());
         setAnswers({});
         setUploads({});
         setCompleted(new Set());
+        setRatings({});
+        setSubmittedAction(null);
       }
 
       const userMessage: Message = { id: nextId(), role: "user", content: userText };
@@ -663,7 +702,7 @@ export default function ChatWindow() {
     revisionSummaries[revisionSummaries.length - 1]?.id;
 
   return (
-    <div className="flex h-dvh flex-col">
+    <div>
       <span aria-live="polite" className="sr-only">
         {announcement}
       </span>
@@ -674,88 +713,7 @@ export default function ChatWindow() {
         Skip to chat
       </a>
 
-      {/* Header */}
-      <header className="z-20 flex items-center gap-3 border-b border-zinc-200/70 bg-white/70 px-4 py-3 backdrop-blur-md dark:border-zinc-800/70 dark:bg-zinc-950/70 sm:px-6">
-        {/* <div className="flex min-w-0 items-center gap-3">
-          <LunaAvatar pulse={typing} />
-          <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold tracking-tight">Luna</h1>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.p
-                key={typing ? "busy" : "idle"}
-                initial={{ opacity: 0, y: 2 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -2 }}
-                transition={{ duration: 0.15 }}
-                className="flex items-center gap-1.5 truncate text-xs text-zinc-500 dark:text-zinc-400"
-              >
-                {typing ? (
-                  "Luna is typing…"
-                ) : (
-                  <>
-                    <span className="relative flex h-2 w-2 shrink-0">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                    </span>
-                    <span className="truncate">Your virtual AI designer</span>
-                  </>
-                )}
-              </motion.p>
-            </AnimatePresence>
-          </div>
-        </div> */}
 
-        {/* Mobile progress chip */}
-        {/* <button
-          type="button"
-          onClick={() => setMenuOpen((v) => !v)}
-          aria-expanded={menuOpen}
-          aria-haspopup="true"
-          className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-50 lg:hidden dark:border-emerald-500/30 dark:bg-zinc-900 dark:text-emerald-300"
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <path d="M22 4L12 14.01l-3-3" />
-          </svg>
-          {doneCount}/{CHECKLIST.length}
-        </button> */}
-
-        {/* Reset */}
-        {/* <motion.button
-          type="button"
-          onClick={startOver}
-          whileHover={{ scale: 1.06 }}
-          whileTap={{ scale: 0.92 }}
-          aria-label="Start over"
-          title="Start over"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-emerald-500/50 dark:hover:text-emerald-400 lg:ml-auto"
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-          </svg>
-        </motion.button> */}
-      </header>
 
       {/* Mobile checklist dropdown */}
       <AnimatePresence>
@@ -774,17 +732,9 @@ export default function ChatWindow() {
         )}
       </AnimatePresence>
 
-      <div className="flex min-h-0 flex-1">
-        {/* Desktop sidebar */}
-        {/* <aside
-          aria-label="Intake progress"
-          className="hidden w-72 shrink-0 overflow-y-auto border-r border-zinc-200/70 bg-white/40 p-5 lg:block dark:border-zinc-800/70 dark:bg-zinc-950/40"
-        >
-          <ProgressChecklist completed={completed} currentId={currentId} />
-        </aside> */}
-
+      <div>
         {/* Chat content */}
-        <main id="chat-panel" className="min-w-0 flex-1 overflow-y-auto">
+        <main id="chat-panel">
           <div
             role="log"
             aria-label="Chat with Luna"
@@ -918,7 +868,6 @@ export default function ChatWindow() {
           </div>
         </main>
       </div>
-
     </div>
   );
 }

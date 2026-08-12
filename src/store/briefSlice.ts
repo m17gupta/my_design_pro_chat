@@ -25,6 +25,7 @@ export interface BriefState {
   watermark: string |null;
   work_type: string |null;
   image_url: string |null;
+  value: string |null;
   original: Record<string, ApiBriefItem>;
   revision_comment: RevisionComment;
 }
@@ -34,6 +35,7 @@ const initialState: BriefState = {
   watermark: null,
   work_type: null,
   image_url: "",
+  value: null,
   original: {}, 
   revision_comment: { files: [], notes: "" },
 };
@@ -53,12 +55,13 @@ const briefSlice = createSlice({
       }
     },
     
-    /** Merge top-level context fields (id / watermark / work_type / image_url). */
+    /** Merge top-level context fields (id / watermark / work_type / image_url / value). */
     setContext(state, action: PayloadAction<BriefContext>) {
       if (action.payload.id !== undefined) state.id = action.payload.id;
       if (action.payload.watermark !== undefined) state.watermark = action.payload.watermark;
       if (action.payload.work_type !== undefined) state.work_type = action.payload.work_type;
       if (action.payload.image_url !== undefined) state.image_url = action.payload.image_url;
+      if (action.payload.value !== undefined) state.value = action.payload.value;
     },
     /** Record the 1786514733.png"revision comments (files + notes) from the feedback step. */
     setRevision(state, action: PayloadAction<RevisionComment>) {
@@ -93,6 +96,7 @@ export const selectBriefPayload = createSelector(
       watermark: brief.watermark??"",
       work_type: brief.work_type??"",
       image_url: brief.image_url??"",
+      value: brief.value??"",
       revision: brief.revision_comment,
     })
 );

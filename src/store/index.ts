@@ -28,6 +28,7 @@ export function payloadFromState(state: BriefState): ApiBriefPayload {
     watermark: state.watermark ?? "",
     work_type: state.work_type ?? "",
     image_url: state.image_url ?? "",
+    value: state.value ?? "",
     revision: state.revision_comment,
   });
 }
@@ -51,6 +52,7 @@ export function stateFromPayload(payload: ApiBriefPayload): BriefState {
     watermark: payload.watermark,
     work_type: payload.work_type,
     image_url: payload.image_url,
+    value: payload.value ?? null,
     revision_comment: payload.revision_comment ?? { files: [], notes: "" },
   };
 }

@@ -21,6 +21,9 @@ export interface BriefContext {
   /** Main property photo URL (provided by the host app / API). */
   image_url?: string;
 
+  /** Generic value string passed from the host app. */
+  value?: string;
+
   /** Revision comments from the post-render feedback step. */
   revision?: RevisionComment;
 }
@@ -47,6 +50,7 @@ export interface ApiBriefPayload {
   watermark: string;
   work_type: string;
   image_url: string;
+  value: string;
   original: Record<string, ApiBriefItem>;
   revision_comment: RevisionComment;
 }
@@ -142,6 +146,7 @@ export function buildApiPayload(
     watermark: context.watermark || DEFAULT_WATERMARK,
     work_type: context.work_type || DEFAULT_WORK_TYPE,
     image_url: context.image_url ?? "",
+    value: context.value ?? "",
     original,
     revision_comment: context.revision ?? { files: [], notes: "" },
   };

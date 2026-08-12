@@ -146,7 +146,7 @@ export default function RevisionResultCard({
         </div>
 
         {/* Satisfaction rating — stored per entry, keyed by entry.id. */}
-        <div className="mt-4">
+        {/* <div className="mt-4">
           <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">
             Overall, how satisfied are you with this concept?
           </p>
@@ -181,7 +181,7 @@ export default function RevisionResultCard({
               );
             })}
           </div>
-        </div>
+        </div> */}
 
         {/* Three actions — the only exit points from the revision loop. */}
         <div className="mt-4 flex flex-wrap items-center gap-3">

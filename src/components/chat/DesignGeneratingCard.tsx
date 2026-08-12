@@ -1,6 +1,8 @@
 "use client";
 
+import { RootState } from "@/store";
 import { motion, useReducedMotion } from "framer-motion";
+import { useSelector } from "react-redux";
 
 interface DesignGeneratingCardProps {
   /** Backend task lifecycle: queued | processing ("" before the first poll). */
@@ -16,8 +18,16 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
     ? "Your initial render is being created — this usually takes a minute or two."
     : "Your request is in the queue — the render will appear right here as soon as it's ready.";
 
+
+     const {entries}= useSelector((state:RootState)=>state.enterprise)
+     const original= entries.find((entry) => entry.type === "original");
+     
   return (
-    <motion.div
+    <>
+   { original  &&
+   original?.status &&
+   original?.status==="pending" &&
+   <motion.div
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 380, damping: 30 }}
@@ -92,6 +102,7 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
           />
         </div>
       </div>
-    </motion.div>
+    </motion.div>}
+    </>
   );
 }

@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 import type { SubmitAction } from "@/components/revisionDesign/RevisionResultCard";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 interface DesignResultCardProps {
   /** Generated design preview URL from the completed status result. */
@@ -32,7 +34,11 @@ export default function DesignResultCard({
   onRegenerate,
   onEngageDesigner,
 }: DesignResultCardProps) {
-  const interactive = !disabled && !submittedAction;
+  const { entries } = useSelector((state: RootState) => state.enterprise)
+ 
+
+  const revision = entries.filter(item=>item.type=="revision")
+  const interactive = !disabled && !submittedAction && revision.length === 0;
 
   return (
     <motion.div
