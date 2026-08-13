@@ -47,12 +47,7 @@ const enterpriseSlice = createSlice({
         state.lifecycle = "pending";
         state.error = null;
         const entry = action.payload;
-        // A regenerate of an existing round (retry after failure, or edits via
-        // "I'd Like To Make Changes") submits a *new* task — replace that
-        // round's previous non-terminal entry instead of appending, so round
-        // indexing stays aligned with the UI (one loop iteration = one entry).
-        // A fresh round (no entry at that index yet, or the previous one is
-        // already completed) always appends.
+     
         const round = action.meta.arg.round;
         if (round !== undefined && round > 0) {
           const revisions = state.entries.filter((e) => e.type === "revision");
@@ -71,6 +66,19 @@ const enterpriseSlice = createSlice({
       .addCase(generateEnterpriseDesign.rejected, (state, action) => {
         state.lifecycle = "failed";
         state.error = action.payload ?? "Failed to submit the design brief";
+        const round = action.meta.arg.round;
+        if (round !== undefined && round > 0) {
+          const revisions = state.entries.filter((e) => e.type === "revision");
+          const prev = revisions[round - 1];
+          if (prev) {
+            const idx = state.entries.indexOf(prev);
+            if (idx >= 0) {
+              state.entries.splice(idx, 1);
+            }
+          }
+        } else {
+          state.entries.pop();
+        }
       })
       .addCase(fetchEnterpriseStatus.fulfilled, (state, action) => {
         // Keep the matching entry in sync with the backend task lifecycle

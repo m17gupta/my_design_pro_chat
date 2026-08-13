@@ -7,6 +7,7 @@ import type {
   Message,
   QuestionCardSpec,
 } from "./types";
+import type { EnterpriseEntry } from "../../store/enterprise/enterpriseType";
 
 export interface Episode {
   /**
@@ -400,7 +401,8 @@ export interface RestoredTranscript {
 
 
 export function buildRestoredTranscript(
-  original: Record<string, ApiBriefItem>
+  original: Record<string, ApiBriefItem>,
+  entries: EnterpriseEntry[] = []
 ): RestoredTranscript {
   const isEmpty = (apiKey: string): boolean => {
     const item = original[apiKey];
@@ -415,13 +417,14 @@ export function buildRestoredTranscript(
 
   const pushAssistant = (ep: Episode, initialAnswer?: AnswerValue) => {
     const msg = buildMessage(ep);
+    msg.isRestored = true;
     if (initialAnswer !== undefined) msg.initialAnswer = initialAnswer;
     messages.push(msg);
   };
 
   const pushUserAnswer = (ep: Episode, text: string) => {
     const id = `m-restored-${ep.apiKey}`;
-    messages.push({ id, role: "user", content: text });
+    messages.push({ id, role: "user", content: text, isRestored: true });
     messageEpisodes[id] = ep.apiKey;
     if (ep.checklistId) {
       answers[ep.checklistId] = text;
@@ -510,11 +513,51 @@ export function buildRestoredTranscript(
   }
 
   // Resume point — the next episode the user must answer.
-  const currentId = nextEpisodeId(lastId, lastAnswer);
-  if (currentId === "summary") {
-    messages.push(buildMessage(episodeById("summary")));
+  // Marked as restored so it renders immediately (no typewriter re-run on refresh).
+  let currentId = nextEpisodeId(lastId, lastAnswer);
+
+  const revisionEntries = entries.filter((e) => e.type === "revision");
+  if (currentId === "summary" && revisionEntries.length > 0) {
+    const summaryMsg = buildMessage(episodeById("summary"));
+    summaryMsg.isRestored = true;
+    messages.push(summaryMsg);
+
+    revisionEntries.forEach((entry, idx) => {
+      const round = idx + 1;
+      
+      // 1. Assistant revision card
+      const revCard = buildMessage(episodeById("revision"));
+      const cardMsgId = episodeMessageId("revision", round);
+      revCard.id = cardMsgId;
+      revCard.isRestored = true;
+      messages.push(revCard);
+
+      // 2. User revision answer
+      const userMsgId = `m-restored-${cardMsgId}`;
+      const notes = entry.questions[0]?.answer.notes ?? "";
+      messages.push({
+        id: userMsgId,
+        role: "user",
+        content: notes,
+        isRestored: true,
+      });
+      messageEpisodes[userMsgId] = "revision";
+
+      // 3. Assistant revision summary
+      const revSummary = buildMessage(episodeById("revision-summary"));
+      const summaryMsgId = episodeMessageId("revision-summary", round);
+      revSummary.id = summaryMsgId;
+      revSummary.isRestored = true;
+      messages.push(revSummary);
+    });
+
+    currentId = "revision-summary";
   } else {
-    messages.push(buildMessage(episodeById(currentId)));
+    const resumeMsg = currentId === "summary"
+      ? buildMessage(episodeById("summary"))
+      : buildMessage(episodeById(currentId));
+    resumeMsg.isRestored = true;
+    messages.push(resumeMsg);
   }
 
   return { messages, messageEpisodes, answers, currentId, completed };

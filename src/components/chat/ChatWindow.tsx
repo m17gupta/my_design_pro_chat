@@ -82,9 +82,10 @@ const EMPTY_FILES: Record<number, File[]> = {};
 export default function ChatWindow() {
   
   const restoredItems = useAppSelector((s) => s.chat.original);
+  const { entries } = useSelector((state: RootState) => state.enterprise);
   const restoredTranscript = useMemo(
-    () => buildRestoredTranscript(restoredItems),
-    [restoredItems]
+    () => buildRestoredTranscript(restoredItems, entries),
+    [restoredItems, entries]
   );
 
   // Flow messages keep their `ep-<apiKey>` id (one appearance per episode)
@@ -121,7 +122,6 @@ export default function ChatWindow() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<number | null>(null);
   const {watermark, image_url, work_type, id,original:chat_original} = briefPayload;
-  const {entries}= useSelector((state:RootState)=>state.enterprise);
   const busyRef = useRef(false);
   const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>({});
   
@@ -827,8 +827,37 @@ export default function ChatWindow() {
                   // (welcome / overview / photos are marked non-editable).
                   const msgEpId = messageEpisodes[m.id];
                   const msgEpisode = msgEpId ? episodeById(msgEpId) : undefined;
+                  const hasCompletedEntry = entries.some(
+                    (entry) => entry.status === "completed"
+                  );
+                  const isFlowChat = msgEpId && [
+                    "welcome",
+                    "overview",
+                    "photos",
+                    "additional_images_upload",
+                    "files",
+                    "supporting_files_upload",
+                    "project_goals_or_brief_description",
+                    "landscape_design_style_preference",
+                    "hardscape_material_preferences",
+                    "softscape_planting_preferences",
+                    "budget",
+                    "important_proprty_information",
+                  ].includes(msgEpId);
+
+                  const revisionEntries = entries.filter(
+                    (entry) => entry.type === "revision"
+                  );
+                  const hideRevisionEdit =
+                    msgEpId === "revision" &&
+                    revisionEntries.length === 1 &&
+                    revisionEntries[0].status === "completed";
+
                   const canEdit =
-                    m.role === "user" && (msgEpisode?.editable ?? true);
+                    m.role === "user" &&
+                    (msgEpisode?.editable ?? true) &&
+                    !(isFlowChat && hasCompletedEntry) &&
+                    !hideRevisionEdit;
                   // Key by initialAnswer too, so "I'd Like To Make Changes"
                   // re-mounts the comments card with its pre-filled fields.
                   const bubbleKey = m.initialAnswer

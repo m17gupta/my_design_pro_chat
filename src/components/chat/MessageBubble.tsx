@@ -176,9 +176,11 @@ export const MessageBubble = ({
 
   // The revision summary renders as a card instead of a typed bubble, so the
   // typewriter is skipped entirely and the card appears immediately.
+  // Restored messages (from sessionStorage on refresh) also skip the typewriter
+  // so the chat snaps back to its previous state without replaying animations.
   const typed = useTypewriter(
     displayText,
-    !isUser && !isRevisionSummary,
+    !isUser && !isRevisionSummary && !message.isRestored,
     reduceMotion
   )
   const done = isUser || typed === displayText
@@ -205,16 +207,24 @@ export const MessageBubble = ({
       {!isRevisionSummary && (
         <motion.div
           initial={
-            reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.96 }
+            message.isRestored
+              ? { opacity: 1, y: 0, scale: 1 }
+              : reduceMotion
+              ? { opacity: 0 }
+              : { opacity: 0, y: 12, scale: 0.96 }
           }
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.15 } }}
-          transition={{
-            type: 'spring',
-            stiffness: 380,
-            damping: 30,
-            mass: 0.9
-          }}
+          transition={
+            message.isRestored
+              ? { duration: 0 }
+              : {
+                  type: 'spring',
+                  stiffness: 380,
+                  damping: 30,
+                  mass: 0.9
+                }
+          }
           className={`flex w-full items-start ${
             isUser ? 'justify-end' : 'justify-start'
           }`}
@@ -318,7 +328,7 @@ export const MessageBubble = ({
                       Cancel
                     </button>
                   </>
-                ) : (
+                ) : onEditStart ? (
                   <button
                     type='button'
                     onClick={onEditStart}
@@ -341,15 +351,25 @@ export const MessageBubble = ({
                       <path d='M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z' />
                     </svg>
                   </button>
-                )}
+                ) : null}
               </div>
             )}
             {done && message.kind === 'card' && message.card && (
               <motion.div
-                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+                initial={
+                  message.isRestored
+                    ? { opacity: 1, y: 0 }
+                    : reduceMotion
+                    ? { opacity: 0 }
+                    : { opacity: 0, y: 12 }
+                }
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                transition={
+                  message.isRestored
+                    ? { duration: 0 }
+                    : { type: 'spring', stiffness: 380, damping: 30 }
+                }
                 className='mt-3 w-full'
               >
                 <QuestionCard
@@ -376,10 +396,20 @@ export const MessageBubble = ({
 
       {done && message.kind === 'summary' && (
         <motion.div
-          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+          initial={
+            message.isRestored
+              ? { opacity: 1, y: 0 }
+              : reduceMotion
+              ? { opacity: 0 }
+              : { opacity: 0, y: 12 }
+          }
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, transition: { duration: 0.15 } }}
-          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+          transition={
+            message.isRestored
+              ? { duration: 0 }
+              : { type: 'spring', stiffness: 380, damping: 30 }
+          }
           className='mt-3 w-full'
         >
           {isRevisionSummary ? (

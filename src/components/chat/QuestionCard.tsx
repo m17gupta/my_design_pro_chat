@@ -404,28 +404,30 @@ function QuestionCard({
         })}
       </div>
 
-      <div className="mt-4 flex items-center justify-end gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-        {onCancel && (
-          <button
+      {!disabled && (
+        <div className="mt-4 flex items-center justify-end gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700 dark:border-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-200"
+            >
+              Cancel
+            </button>
+          )}
+          <motion.button
             type="button"
-            onClick={onCancel}
-            className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700 dark:border-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-200"
+            onClick={submit}
+            disabled={!canContinue}
+            whileHover={canContinue ? { scale: 1.03 } : undefined}
+            whileTap={canContinue ? { scale: 0.95 } : undefined}
+            transition={{ type: "spring", stiffness: 500, damping: 24 }}
+            className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/25 transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
           >
-            Cancel
-          </button>
-        )}
-        <motion.button
-          type="button"
-          onClick={submit}
-          disabled={!canContinue}
-          whileHover={canContinue ? { scale: 1.03 } : undefined}
-          whileTap={canContinue ? { scale: 0.95 } : undefined}
-          transition={{ type: "spring", stiffness: 500, damping: 24 }}
-          className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/25 transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-        >
-          {onCancel ? "Save Changes" : hasOnlyUploads ? "Continue →" : "Next →"}
-        </motion.button>
-      </div>
+            {onCancel ? "Save Changes" : hasOnlyUploads ? "Continue →" : "Next →"}
+          </motion.button>
+        </div>
+      )}
     </motion.div>
   );
 }

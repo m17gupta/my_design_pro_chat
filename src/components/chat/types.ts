@@ -107,6 +107,12 @@ export interface Message {
   showChecklist?: boolean;
   /** The checklist item this episode collects an answer for. */
   checklistId?: string;
+  /**
+   * When true, this message was restored from the persisted session (sessionStorage).
+   * Animated components (typewriter, enter transitions) should skip their
+   * animations so the restored chat appears instantly.
+   */
+  isRestored?: boolean;
 }
 
 /** One item of the persistent intake checklist. */

@@ -112,7 +112,7 @@ export default function DesignSummaryCard({
       </div>
 
       {showActions && (
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className="mt-4 flex flex-wrap justify-center gap-3 w-full">
           <motion.button
             type="button"
             onClick={onGenerate}
@@ -144,7 +144,7 @@ export default function DesignSummaryCard({
             )}
             {generating ? "Generating…" : "Yes, Generate My Design"}
           </motion.button>
-          <motion.button
+          {/* <motion.button
             type="button"
             onClick={onChanges}
             disabled={disabled}
@@ -167,7 +167,7 @@ export default function DesignSummaryCard({
               <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
             I’d Like To Make Changes
-          </motion.button>
+          </motion.button> */}
         </div>
       )}
     </motion.div>
