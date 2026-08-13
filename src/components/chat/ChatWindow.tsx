@@ -82,8 +82,6 @@ const EMPTY_FILES: Record<number, File[]> = {};
 export default function ChatWindow() {
   
   const restoredItems = useAppSelector((s) => s.chat.original);
-  // Whether the first-mount restore (below) has already applied persisted data.
-  const didRestoreRef = useRef(false);
   const restoredTranscript = useMemo(
     () => buildRestoredTranscript(restoredItems),
     [restoredItems]
@@ -98,77 +96,109 @@ export default function ChatWindow() {
   const [uploads, setUploads] = useState<Record<string, Record<number, File[]>>>({});
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [typing, setTyping] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
-  /** Id of the user message currently being edited — at most one at a time. */
-  const [editingId, setEditingId] = useState<string | null>(null);
-  /** messageId → episode apiKey, so an edited message can be mapped back to its question. */
-  const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>({});
-  /** Per-entry satisfaction rating, keyed by entry.id (submitted with the project). */
-  const [ratings, setRatings] = useState<Record<string, number>>({});
-  /** Set once a terminal action is submitted — locks every result card. */
+  const announcedIdRef = useRef<string | null>(null);
+
+  // Enterprise status poll
+  const [pollCount, setPollCount] = useState(0);
   const [submittedAction, setSubmittedAction] = useState<SubmitAction | null>(null);
-  /** Revision round whose generate POST is in flight (entry not yet appended). */
-  const [pendingRevisionGenerate, setPendingRevisionGenerate] = useState<number | null>(null);
+  const [pendingRevisionGenerate, setPendingRevisionGenerate] = useState<number | null>(
+    null
+  );
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+
   const dispatch = useAppDispatch();
   const briefPayload = useAppSelector(selectBriefPayload);
-  /** The revision comments (notes + upload URLs) from the feedback step. */
   const revisionComment = useAppSelector((s) => s.chat.revision_comment);
   const latestEnterpriseEntry = useAppSelector((s) =>
     selectLatestEnterpriseEntry(s.enterprise)
   );
 
+  const [generating, setGenerating] = useState(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<number | null>(null);
-  const announcedIdRef = useRef<string | null>(null);
- const {watermark, image_url, work_type, id,original:chat_original} = briefPayload;
-  const {entries}= useSelector((state:RootState)=>state.enterprise)
-  // Guard against double-firing before React re-renders (set in handlers only).
+  const {watermark, image_url, work_type, id,original:chat_original} = briefPayload;
+  const {entries}= useSelector((state:RootState)=>state.enterprise);
   const busyRef = useRef(false);
+  const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>({});
   
   const searchParams = useSearchParams();
 
-  // Apply ?params context on first mount only. If the incoming id differs
-  // from what is persisted, clear the old session so the new project starts
-  // fresh instead of showing stale answers.
-  const contextAppliedRef = useRef(false);
+  // Initialize or restore messages and context on client mount after hydration completes.
+  // Wipes the Redux store and sessionStorage if the project id has changed.
+  const didInitializeRef = useRef(false);
   useEffect(() => {
-    if (contextAppliedRef.current) return;
-    contextAppliedRef.current = true;
+    if (didInitializeRef.current) return;
+    didInitializeRef.current = true;
 
     const params = decodeClientParams(searchParams.get("params"));
-    if (!params) return;
 
-    dispatch(
-      setContext({
-        id: params.id,
-        work_type: params.work_type,
-        image_url: params.image_url,
-        watermark: params.watermark,
-        value: params.value,
-      })
-    );
+    let isNewSession = false;
+    let incomingProjectId = "";
+
+    if (params) {
+      // The project id is the single session identifier: a fresh, unique id
+      // from the host means a brand-new project, while a refresh keeps the
+      // same id so the persisted transcript can be restored.
+      incomingProjectId = params.id ? String(params.id) : "";
+
+      const lastProjectId = window.sessionStorage.getItem("luna-project-id-v1");
+
+      if (lastProjectId && lastProjectId !== incomingProjectId) {
+        isNewSession = true;
+      }
+
+      // Persist the current value for future mismatch comparison on refresh.
+      if (incomingProjectId) {
+        window.sessionStorage.setItem("luna-project-id-v1", incomingProjectId);
+      }
+    }
+
+    if (isNewSession) {
+      // Clear persistence and memory stores
+      window.sessionStorage.removeItem("luna-brief-v1");
+      window.sessionStorage.removeItem("luna-enterprise-v2");
+      dispatch(resetBrief());
+      dispatch(resetEnterprise());
+
+      // Start fresh welcome message
+      setMessages([buildMessage(episodeById("welcome"))]);
+      setCurrentId("welcome");
+      setAnswers({});
+      setCompleted(new Set());
+      setMessageEpisodes({});
+    } else {
+      // Restore from persisted state
+      const anyAnswered = Object.values(restoredItems).some(
+        (item) => item !== undefined
+      );
+      if (anyAnswered) {
+        setMessages(restoredTranscript.messages);
+        setCurrentId(restoredTranscript.currentId);
+        setAnswers(restoredTranscript.answers);
+        setCompleted(restoredTranscript.completed);
+        setMessageEpisodes(restoredTranscript.messageEpisodes);
+      } else {
+        setMessages([buildMessage(episodeById("welcome"))]);
+      }
+    }
+
+    if (params) {
+      dispatch(
+        setContext({
+          id: params.id,
+          work_type: params.work_type,
+          image_url: params.image_url,
+          watermark: params.watermark,
+          value: params.value,
+        })
+      );
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Initialize or restore messages on client mount after hydration completes
-  useEffect(() => {
-    if (didRestoreRef.current) return;
-    didRestoreRef.current = true;
-    const anyAnswered = Object.values(restoredItems).some(
-      (item) => item !== undefined
-    );
-    if (anyAnswered) {
-      setMessages(restoredTranscript.messages);
-      setCurrentId(restoredTranscript.currentId);
-      setAnswers(restoredTranscript.answers);
-      setCompleted(restoredTranscript.completed);
-      setMessageEpisodes(restoredTranscript.messageEpisodes);
-    } else {
-      setMessages([buildMessage(episodeById("welcome"))]);
-    }
-  }, [restoredItems, restoredTranscript]);
 
   const clearTypingTimeout = useCallback(() => {
     if (timeoutRef.current !== null) {
