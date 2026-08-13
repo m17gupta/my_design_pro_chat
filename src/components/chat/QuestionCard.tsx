@@ -25,6 +25,7 @@ interface QuestionCardProps {
   onSubmit: (result: CardResult) => void;
   /** Hide the title/description block when Luna already typed it in a bubble. */
   showHeader?: boolean;
+  onCancel?: () => void;
 }
 
 function QuestionCard({
@@ -34,6 +35,7 @@ function QuestionCard({
   disabled = false,
   onSubmit,
   showHeader = true,
+  onCancel,
 }: QuestionCardProps) {
   // Compute initial states from initialAnswer
   const initTextByField = useMemo(() => {
@@ -77,10 +79,32 @@ function QuestionCard({
     return [];
   }, [initialAnswer]);
 
+  const initUrlsByField = useMemo(() => {
+    const map: Record<number, Record<string, CloudinaryUploadResult>> = {};
+    if (!initialAnswer) return map;
+
+    const urls = Array.isArray(initialAnswer)
+      ? initialAnswer
+      : typeof initialAnswer === "object" && "files" in initialAnswer
+      ? initialAnswer.files
+      : [];
+
+    urls.forEach((url, i) => {
+      const slot = i % 4; // Distribute across slots
+      if (!map[slot]) {
+        map[slot] = {};
+      }
+      const key = `restored-${i}`;
+      map[slot][key] = { url, publicId: "" };
+    });
+
+    return map;
+  }, [initialAnswer]);
+
   const [uploads, setUploads] = useState<Record<number, File[]>>(filesByField);
   const [urlsByField, setUrlsByField] = useState<
     Record<number, Record<string, CloudinaryUploadResult>>
-  >({});
+  >(initUrlsByField);
   const [textByField, setTextByField] = useState<Record<number, string>>(initTextByField);
   const [radio, setRadio] = useState<string | null>(initRadio);
   const [checks, setChecks] = useState<Set<string>>(initChecks);
@@ -140,12 +164,14 @@ function QuestionCard({
    * checkbox → { value, notes }, textarea + upload → { files, notes }.
    */
   const buildAnswer = (): AnswerValue => {
-    const urlsOf = (idx: number) =>
-      Object.values(urlsByField[idx] ?? {}).map((r) => r.url);
+    const allUrls = () =>
+      Object.values(urlsByField).flatMap((slotMap) =>
+        Object.values(slotMap ?? {}).map((r) => r.url)
+      );
 
     if (spec.fields.length === 1) {
       const field = spec.fields[0];
-      if (field.kind === "upload-grid") return urlsOf(0);
+      if (field.kind === "upload-grid") return allUrls();
       if (field.kind === "textarea") return (textByField[0] ?? "").trim();
       if (field.kind === "radio") return radio ?? "";
       if (field.kind === "checkbox") return { value: [...checks], notes: notes.trim() };
@@ -153,7 +179,7 @@ function QuestionCard({
     const textIdx = spec.fields.findIndex((f) => f.kind === "textarea");
     const uploadIdx = spec.fields.findIndex((f) => f.kind === "upload-grid");
     return {
-      files: uploadIdx >= 0 ? urlsOf(uploadIdx) : [],
+      files: uploadIdx >= 0 ? allUrls() : [],
       notes: textIdx >= 0 ? (textByField[textIdx] ?? "").trim() : "",
     };
   };
@@ -226,7 +252,7 @@ function QuestionCard({
       className="w-full rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
     >
       {showHeader && (
-        <>
+        <div className="w-full">
           <h3 className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             {spec.title}
           </h3>
@@ -240,10 +266,10 @@ function QuestionCard({
               </p>
             ))}
           </div>
-        </>
+        </div>
       )}
 
-      <div className="question-fields mt-4 space-y-4">
+      <div className="question-fields mt-4 w-full space-y-4">
         {spec.fields.map((field, i) => {
           if (field.kind === "upload-grid") {
             return (
@@ -379,6 +405,15 @@ function QuestionCard({
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700 dark:border-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            Cancel
+          </button>
+        )}
         <motion.button
           type="button"
           onClick={submit}
@@ -388,7 +423,7 @@ function QuestionCard({
           transition={{ type: "spring", stiffness: 500, damping: 24 }}
           className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/25 transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
         >
-          {hasOnlyUploads ? "Continue →" : "Next →"}
+          {onCancel ? "Save Changes" : hasOnlyUploads ? "Continue →" : "Next →"}
         </motion.button>
       </div>
     </motion.div>

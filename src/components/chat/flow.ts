@@ -513,6 +513,8 @@ export function buildRestoredTranscript(
   const currentId = nextEpisodeId(lastId, lastAnswer);
   if (currentId === "summary") {
     messages.push(buildMessage(episodeById("summary")));
+  } else {
+    messages.push(buildMessage(episodeById(currentId)));
   }
 
   return { messages, messageEpisodes, answers, currentId, completed };

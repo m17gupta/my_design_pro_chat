@@ -9,7 +9,7 @@ import { renderInline } from './formatText'
 import LunaAvatar from './LunaAvatar'
 import OptionButtons from './OptionButtons'
 import QuestionCard, { type CardResult } from './QuestionCard'
-import { CHECKLIST, type Message } from './types'
+import { CHECKLIST, type Message, type AnswerValue } from './types'
 import RevisionDesign from '../revisionDesign/RevisionDesign'
 import type { SubmitAction } from '../revisionDesign/RevisionResultCard'
 import { useSelector } from 'react-redux'
@@ -20,8 +20,10 @@ interface MessageBubbleProps {
   /** Uploads per field index for question-card messages. */
   filesByField?: Record<number, File[]>
   disabled?: boolean
+  initialAnswer?: AnswerValue
   onOption?: (value: string) => void
   onCardSubmit?: (result: CardResult) => void
+  onCardCancel?: () => void
   /** Recorded answers for the design-summary rows. */
   answers?: Record<string, string>
   /** True while the brief POST to the design API is in flight. */
@@ -112,8 +114,10 @@ export const MessageBubble = ({
   message,
   filesByField = {},
   disabled = false,
+  initialAnswer,
   onOption,
   onCardSubmit,
+  onCardCancel,
   answers = {},
   generating = false,
   uploadTotal = 0,
@@ -152,7 +156,7 @@ export const MessageBubble = ({
     originalEntry &&
       (originalEntry.status === "queued" ||
         originalEntry.status === "processing" ||
-        originalEntry.status === "")
+        originalEntry.status === "pending")
   )
   // Once the original entry exists and isn't failed, the intake summary's two
   // action buttons are hidden — the generating/result card takes over. A
@@ -222,8 +226,12 @@ export const MessageBubble = ({
           )}
 
           <div
-            className={`flex max-w-[85%] flex-col sm:max-w-[75%] ${
-              isUser ? 'items-end' : 'items-start'
+            className={`flex flex-col ${
+              isUser
+                ? 'max-w-[85%] sm:max-w-[75%] items-end'
+                : message.kind === 'card'
+                ? 'w-full sm:max-w-[85%] items-start'
+                : 'max-w-[85%] sm:max-w-[75%] items-start'
             }`}
           >
             <div
@@ -233,7 +241,7 @@ export const MessageBubble = ({
                   : 'rounded-bl-md border border-zinc-200/80 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100'
               } ${editing ? 'w-full ring-2 ring-emerald-400/70' : ''} ${
                 isUser && !editing ? 'hidden' : ''
-              }`}
+              } ${message.kind === 'card' ? 'w-full' : ''}`}
             >
               {isUser && editing ? (
                 <textarea
@@ -336,6 +344,26 @@ export const MessageBubble = ({
                 )}
               </div>
             )}
+            {done && message.kind === 'card' && message.card && (
+              <motion.div
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                className='mt-3 w-full'
+              >
+                <QuestionCard
+                  key={`${message.id}-${disabled ? 'disabled' : 'editing'}`}
+                  spec={message.card}
+                  filesByField={filesByField}
+                  initialAnswer={initialAnswer ?? message.initialAnswer}
+                  disabled={disabled}
+                  showHeader={false}
+                  onSubmit={onCardSubmit ?? (() => {})}
+                  onCancel={onCardCancel}
+                />
+              </motion.div>
+            )}
           </div>
 
           {/* {isUser && (
@@ -343,25 +371,6 @@ export const MessageBubble = ({
               You
             </div>
           )} */}
-        </motion.div>
-      )}
-
-      {done && message.kind === 'card' && message.card && (
-        <motion.div
-          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, transition: { duration: 0.15 } }}
-          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-          className='mt-3 w-full'
-        >
-          <QuestionCard
-            spec={message.card}
-            filesByField={filesByField}
-            initialAnswer={message.initialAnswer}
-            disabled={disabled}
-            showHeader={false}
-            onSubmit={onCardSubmit ?? (() => {})}
-          />
         </motion.div>
       )}
 
@@ -402,7 +411,7 @@ export const MessageBubble = ({
                 onGenerate={onSummaryGenerate ?? (() => {})}
                 onChanges={onSummaryChanges ?? (() => {})}
               />
-              {originalPending && (
+              {(
                 <div className='mt-3'>
                   <DesignGeneratingCard status={designStatus} />
                 </div>

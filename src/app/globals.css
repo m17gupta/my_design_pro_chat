@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f7f4;
+  --background: #ffffff;
   --foreground: #171717;
 }
 
@@ -10,7 +10,34 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Override emerald with slate-grey theme colors */
+  --color-emerald-50: #f4f6f7;
+  --color-emerald-100: #e9ecee;
+  --color-emerald-200: #cbd5db;
+  --color-emerald-300: #9cb1bc;
+  --color-emerald-400: #6f8895;
+  --color-emerald-500: #4a5e68;
+  --color-emerald-600: #3b4d56;
+  --color-emerald-700: #2d3b42;
+  --color-emerald-800: #1e282d;
+  --color-emerald-900: #101618;
+  --color-emerald-950: #080b0c;
+
+  /* Override teal with slate-grey theme colors for seamless gradients */
+  --color-teal-50: #f4f6f7;
+  --color-teal-100: #e9ecee;
+  --color-teal-200: #cbd5db;
+  --color-teal-300: #9cb1bc;
+  --color-teal-400: #6f8895;
+  --color-teal-500: #4a5e68;
+  --color-teal-600: #3b4d56;
+  --color-teal-700: #2d3b42;
+  --color-teal-800: #1e282d;
+  --color-teal-900: #101618;
+  --color-teal-950: #080b0c;
 }
+
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -20,10 +47,7 @@
 }
 
 body {
-  background:
-    radial-gradient(60rem 30rem at 110% -10%, rgba(16, 185, 129, 0.08), transparent 60%),
-    radial-gradient(50rem 25rem at -10% 110%, rgba(13, 148, 136, 0.07), transparent 60%),
-    var(--background);
+  background: #ffffff;
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }

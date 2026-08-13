@@ -330,15 +330,24 @@ export default function ChatWindow() {
    */
   const handleEditStart = useCallback(
     (messageId: string) => {
-      if (editingId !== null && editingId !== messageId) {
+      const epId = messageEpisodes[messageId];
+      let targetId = messageId;
+      if (epId) {
+        const ep = episodeById(epId);
+        if (ep.kind === "card") {
+          targetId = `ep-${epId}`;
+        }
+      }
+
+      if (editingId !== null && editingId !== targetId) {
         toast.error(
           "Only one answer can be edited at a time — save or cancel the current edit first."
         );
         return;
       }
-      setEditingId(editingId === messageId ? null : messageId);
+      setEditingId(editingId === targetId ? null : targetId);
     },
-    [editingId]
+    [editingId, messageEpisodes]
   );
 
   /** Apply an edited answer to the transcript, checklist summary, and API payload. */
@@ -389,6 +398,39 @@ export default function ChatWindow() {
       setEditingId(null);
     },
     [messageEpisodes, briefPayload, dispatch]
+  );
+
+  const handleCardEditSave = useCallback(
+    (cardMessageId: string, result: CardResult) => {
+      const text = result.answerText.trim();
+      const epId = cardMessageId.replace(/^ep-/, "");
+
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.role === "user" && messageEpisodes[m.id] === epId) {
+            return { ...m, content: text };
+          }
+          return m;
+        })
+      );
+
+      if (epId) {
+        const ep = episodeById(epId);
+        if (ep.checklistId) {
+          setAnswers((prev) => ({ ...prev, [ep.checklistId as string]: text }));
+          setCompleted((prev) => new Set(prev).add(ep.checklistId as string));
+        }
+        if (ep.api) {
+          const apiKey = ep.apiKey;
+          dispatch(answerQuestion({ apiKey, answer: result.answer }));
+        }
+        const filesKey = cardMessageId.startsWith("ep-revision") ? cardMessageId : ep.apiKey;
+        setUploads((prev) => ({ ...prev, [filesKey]: result.files }));
+      }
+
+      setEditingId(null);
+    },
+    [messageEpisodes, dispatch]
   );
 
   const handleEditCancel = useCallback(() => setEditingId(null), []);
@@ -762,18 +804,29 @@ export default function ChatWindow() {
                   const bubbleKey = m.initialAnswer
                     ? `${m.id}-prefilled`
                     : m.id;
-                  return (
-                    <div
-                      key={bubbleKey}
-                      id={`msg-${m.id}`}
-                      className="w-full scroll-mt-20"
-                    >
-                    <MessageBubble
-                      message={m}
-                      filesByField={uploads[filesKey] ?? EMPTY_FILES}
-                      disabled={typing || !isCurrent}
-                      onOption={isCurrent ? advance : undefined}
-                      onCardSubmit={isCurrent ? handleCardSubmit : undefined}
+                   const isCardBeingEdited = msgEpId && editingId === `ep-${msgEpId}`;
+                   if (isCardBeingEdited) return null;
+
+                   return (
+                     <div
+                       key={bubbleKey}
+                       id={`msg-${m.id}`}
+                       className="w-full scroll-mt-20"
+                     >
+                     <MessageBubble
+                       message={m}
+                       filesByField={uploads[filesKey] ?? EMPTY_FILES}
+                       disabled={typing || (!isCurrent && editingId !== m.id)}
+                       onOption={isCurrent ? advance : undefined}
+                       onCardSubmit={
+                         isCurrent
+                           ? handleCardSubmit
+                           : editingId === m.id
+                           ? (result) => handleCardEditSave(m.id, result)
+                           : undefined
+                       }
+                       onCardCancel={editingId === m.id ? handleEditCancel : undefined}
+                       initialAnswer={briefPayload.original[episodeApiKey]?.answer}
                       answers={answers}
                       uploadTotal={uploadTotal}
                       generating={generating}

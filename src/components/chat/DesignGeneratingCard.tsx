@@ -2,6 +2,7 @@
 
 import { RootState } from "@/store";
 import { motion, useReducedMotion } from "framer-motion";
+import { useMemo } from "react";
 import { useSelector } from "react-redux";
 
 interface DesignGeneratingCardProps {
@@ -12,22 +13,29 @@ interface DesignGeneratingCardProps {
 
 export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCardProps) {
   const reduceMotion = useReducedMotion() ?? false;
-  const rendering = status === "processing";
+  const { entries } = useSelector((state: RootState) => state.enterprise);
+  const original = entries.find((entry) => entry.type === "original");
+  
+  const currentStatus = original?.status || status;
+  const isGenerating =
+    original &&
+    (currentStatus === "pending" ||
+      currentStatus === "queued" ||
+      currentStatus === "processing" ||
+      currentStatus === "");
+
+  const rendering = currentStatus === "processing";
   const title = rendering ? "Rendering your design…" : "Preparing your design…";
   const subtitle = rendering
     ? "Your initial render is being created — this usually takes a minute or two."
     : "Your request is in the queue — the render will appear right here as soon as it's ready.";
 
+  if (!isGenerating) {
+    return null;
+  }
 
-     const {entries}= useSelector((state:RootState)=>state.enterprise)
-     const original= entries.find((entry) => entry.type === "original");
-     
   return (
-    <>
-   { original  &&
-   original?.status &&
-   original?.status==="pending" &&
-   <motion.div
+    <motion.div
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 380, damping: 30 }}
@@ -102,7 +110,6 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
           />
         </div>
       </div>
-    </motion.div>}
-    </>
+    </motion.div>
   );
 }
