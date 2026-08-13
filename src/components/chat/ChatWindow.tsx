@@ -91,16 +91,7 @@ export default function ChatWindow() {
 
   // Flow messages keep their `ep-<apiKey>` id (one appearance per episode)
   // so uploads and Handoff labels can be keyed by episode apiKey.
-  //
-  // NB: the initializers start from a FRESH (welcome-only) transcript instead
-  // of the restored one. The server renders this same fresh state (it cannot
-  // see sessionStorage), so starting restored here would make the client's
-  // first render differ from the server HTML and throw a hydration error on
-  // every refresh. The persisted Redux brief is applied right after mount by
-  // the restore effect below — the store (s.chat) still holds all the data.
-  const [messages, setMessages] = useState<Message[]>(() => [
-    buildMessage(episodeById("welcome")),
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [currentId, setCurrentId] = useState("welcome");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   /** apiKey → (field index → files) */
@@ -149,12 +140,6 @@ export default function ChatWindow() {
     const params = decodeClientParams(searchParams.get("params"));
     if (!params) return;
 
-    // // If a different project arrives, wipe the old session before applying.
-    // if (params.id !== undefined && id !== null && params.id !== id) {
-    //   dispatch(resetBrief());
-    //   dispatch(resetEnterprise());
-    // }
-
     dispatch(
       setContext({
         id: params.id,
@@ -167,21 +152,22 @@ export default function ChatWindow() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Apply persisted data right after mount (or when the store is rehydrated
-  // from sessionStorage). The UI starts fresh so server + client HTML match;
-  // this effect is the single place that swaps in the restored transcript.
+  // Initialize or restore messages on client mount after hydration completes
   useEffect(() => {
     if (didRestoreRef.current) return;
+    didRestoreRef.current = true;
     const anyAnswered = Object.values(restoredItems).some(
       (item) => item !== undefined
     );
-    if (!anyAnswered) return; // nothing to restore
-    didRestoreRef.current = true;
-    setMessages(restoredTranscript.messages);
-    setCurrentId(restoredTranscript.currentId);
-    setAnswers(restoredTranscript.answers);
-    setCompleted(restoredTranscript.completed);
-    setMessageEpisodes(restoredTranscript.messageEpisodes);
+    if (anyAnswered) {
+      setMessages(restoredTranscript.messages);
+      setCurrentId(restoredTranscript.currentId);
+      setAnswers(restoredTranscript.answers);
+      setCompleted(restoredTranscript.completed);
+      setMessageEpisodes(restoredTranscript.messageEpisodes);
+    } else {
+      setMessages([buildMessage(episodeById("welcome"))]);
+    }
   }, [restoredItems, restoredTranscript]);
 
   const clearTypingTimeout = useCallback(() => {
