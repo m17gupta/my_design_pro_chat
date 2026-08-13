@@ -68,7 +68,7 @@ const nextId = () => `m-${Date.now()}-${idCounter++}`;
 
 const TYPING_MS = 950;
 /** Max revision loop rounds — beyond this, Regenerate is capped. */
-const MAX_REVISION_ROUNDS = 3;
+const MAX_REVISION_ROUNDS = 4;
 
 /** First status poll fires 3s after the task starts; every POLL_MS after that. */
 const POLL_START_MS = 3000;
@@ -538,6 +538,7 @@ export default function ChatWindow() {
       // Terminal state — stop polling and tell the user.
       if (res.status === "completed" || res.status === "failed") {
         stopPolling();
+        setPendingRevisionGenerate(null);
         if (res.status === "completed") {
           toast.success("Your design is ready!");
         } else {
@@ -546,6 +547,7 @@ export default function ChatWindow() {
       }
     } catch (error) {
       stopPolling();
+      setPendingRevisionGenerate(null);
       toast.error(
         typeof error === "string"
           ? error
@@ -679,7 +681,7 @@ export default function ChatWindow() {
 
     const round = countRevisionRounds(messages) + 1;
     if (round > MAX_REVISION_ROUNDS) {
-      toast("More than 3 revisions — please engage your designer for further changes.");
+      toast("More than 4 revisions — please engage your designer for further changes.");
       return;
     }
     const revisionMsg = buildMessage(episodeById("revision"));

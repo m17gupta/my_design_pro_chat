@@ -39,7 +39,7 @@ export default function DesignResultCard({
    
   const revision = entries.filter(item=>item.type=="revision")
   const hasRevisionComment = revision_comment.notes !== "" || (revision_comment.files && revision_comment.files.length > 0);
-  const interactive = !disabled && !submittedAction && (revision.length === 0 || hasRevisionComment);
+  const interactive = !disabled && !submittedAction && (revision.length <= 4 || hasRevisionComment);
   console.log("interactive---", interactive);
   console.log("hasRevisionComment",hasRevisionComment)
   console.log("submittedAction",submittedAction)
