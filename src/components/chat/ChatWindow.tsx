@@ -128,7 +128,7 @@ export default function ChatWindow() {
   const searchParams = useSearchParams();
 
   // Initialize or restore messages and context on client mount after hydration completes.
-  // Wipes the Redux store and sessionStorage if the project id has changed.
+  // Wipes the Redux store and localStorage if the project id has changed.
   const didInitializeRef = useRef(false);
   useEffect(() => {
     if (didInitializeRef.current) return;
@@ -145,7 +145,7 @@ export default function ChatWindow() {
       // same id so the persisted transcript can be restored.
       incomingProjectId = params.id ? String(params.id) : "";
 
-      const lastProjectId = window.sessionStorage.getItem("luna-project-id-v1");
+      const lastProjectId = window.localStorage.getItem("luna-project-id-v1");
 
       if (lastProjectId && lastProjectId !== incomingProjectId) {
         isNewSession = true;
@@ -153,14 +153,14 @@ export default function ChatWindow() {
 
       // Persist the current value for future mismatch comparison on refresh.
       if (incomingProjectId) {
-        window.sessionStorage.setItem("luna-project-id-v1", incomingProjectId);
+        window.localStorage.setItem("luna-project-id-v1", incomingProjectId);
       }
     }
 
     if (isNewSession) {
       // Clear persistence and memory stores
-      window.sessionStorage.removeItem("luna-brief-v1");
-      window.sessionStorage.removeItem("luna-enterprise-v2");
+      window.localStorage.removeItem("luna-brief-v1");
+      window.localStorage.removeItem("luna-enterprise-v2");
       dispatch(resetBrief());
       dispatch(resetEnterprise());
 
@@ -274,7 +274,7 @@ export default function ChatWindow() {
       const ep = episodeById(currentId);
 
       // Clicking "I am ready to proceed →" on the welcome screen starts a fresh
-      // intake: wipe the Redux brief (and its sessionStorage copy), the design
+      // intake: wipe the Redux brief (and its localStorage copy), the design
       // history (enterprise entries), plus any restored/display state before
       // recording the first answer.
       if (currentId === "welcome") {
@@ -434,18 +434,27 @@ export default function ChatWindow() {
     (cardMessageId: string, result: CardResult) => {
       const text = result.answerText.trim();
       const epId = cardMessageId.replace(/^ep-/, "");
+      const baseEpId = epId.startsWith("revision") ? "revision" : epId;
 
-      setMessages((prev) =>
-        prev.map((m) => {
-          if (m.role === "user" && messageEpisodes[m.id] === epId) {
-            return { ...m, content: text };
+      setMessages((prev) => {
+        const cardIndex = prev.findIndex((m) => m.id === cardMessageId);
+        if (cardIndex < 0) return prev;
+        
+        let userMsgIndex = -1;
+        for (let i = cardIndex + 1; i < prev.length; i++) {
+          if (prev[i].role === "user") {
+            userMsgIndex = i;
+            break;
           }
-          return m;
-        })
-      );
+        }
+        if (userMsgIndex >= 0) {
+          return prev.map((m, idx) => idx === userMsgIndex ? { ...m, content: text } : m);
+        }
+        return prev;
+      });
 
-      if (epId) {
-        const ep = episodeById(epId);
+      if (baseEpId) {
+        const ep = episodeById(baseEpId);
         if (ep.checklistId) {
           setAnswers((prev) => ({ ...prev, [ep.checklistId as string]: text }));
           setCompleted((prev) => new Set(prev).add(ep.checklistId as string));
@@ -454,13 +463,24 @@ export default function ChatWindow() {
           const apiKey = ep.apiKey;
           dispatch(answerQuestion({ apiKey, answer: result.answer }));
         }
+        if (baseEpId === "revision") {
+          const ans = result.answer;
+          if (ans && typeof ans === "object" && "notes" in ans) {
+            dispatch(
+              setRevision({
+                files: "files" in ans && ans.files ? ans.files : [],
+                notes: ans.notes,
+              })
+            );
+          }
+        }
         const filesKey = cardMessageId.startsWith("ep-revision") ? cardMessageId : ep.apiKey;
         setUploads((prev) => ({ ...prev, [filesKey]: result.files }));
       }
 
       setEditingId(null);
     },
-    [messageEpisodes, dispatch]
+    [dispatch]
   );
 
   const handleEditCancel = useCallback(() => setEditingId(null), []);
@@ -885,7 +905,27 @@ export default function ChatWindow() {
                            : undefined
                        }
                        onCardCancel={editingId === m.id ? handleEditCancel : undefined}
-                       initialAnswer={briefPayload.original[episodeApiKey]?.answer}
+                       initialAnswer={
+                          m.id.startsWith("ep-revision") && !isRevisionSummary
+                            ? (() => {
+                                const round = m.id === "ep-revision"
+                                  ? 1
+                                  : parseInt(m.id.replace("ep-revision-", ""), 10) || 1;
+                                const revEntry = entries.filter((e) => e.type === "revision")[round - 1];
+                                const ans = revEntry?.questions?.[0]?.answer;
+                                if (ans) {
+                                  return {
+                                    files: ans.files ?? [],
+                                    notes: ans.notes,
+                                  };
+                                }
+                                return {
+                                  files: revisionComment.files ?? [],
+                                  notes: revisionComment.notes,
+                                };
+                              })()
+                            : briefPayload.original[episodeApiKey]?.answer
+                        }
                       answers={answers}
                       uploadTotal={uploadTotal}
                       generating={generating}

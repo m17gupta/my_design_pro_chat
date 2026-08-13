@@ -10,7 +10,7 @@ import briefReducer, { resetBrief, type BriefState } from "./briefSlice";
 import enterpriseReducer, { resetEnterprise, type EnterpriseState } from "./enterprise/enterpriseSlice";
 import type { EnterpriseEntry } from "./enterprise/enterpriseType";
 
-/** Versioned sessionStorage key — bump to invalidate old shapes. */
+/** Versioned localStorage key — bump to invalidate old shapes. */
 export const BRIEF_STORAGE_KEY = "luna-brief-v1";
 /** v2 — the persisted blob is the schema-shaped entries array, not the old flat task fields. */
 export const ENTERPRISE_STORAGE_KEY = "luna-enterprise-v2";
@@ -19,7 +19,7 @@ const isBrowser = typeof window !== "undefined";
 
 /**
  * Serialize the store state into the exact schema.md payload shape. This is
- * also the format written to sessionStorage, so the persisted blob is the API
+ * also the format written to localStorage, so the persisted blob is the API
  * payload itself (all 8 questions with name/question/answer, answered or empty).
  */
 export function payloadFromState(state: BriefState): ApiBriefPayload {
@@ -61,7 +61,7 @@ export function stateFromPayload(payload: ApiBriefPayload): BriefState {
 export function loadPersistedState(): BriefState | undefined {
   if (!isBrowser) return undefined;
   try {
-    const raw = window.sessionStorage.getItem(BRIEF_STORAGE_KEY);
+    const raw = window.localStorage.getItem(BRIEF_STORAGE_KEY);
     if (!raw) return undefined;
     const payload = JSON.parse(raw) as ApiBriefPayload;
     if (!payload || typeof payload !== "object" || !payload.original) {
@@ -76,7 +76,7 @@ export function loadPersistedState(): BriefState | undefined {
 export function loadPersistedEnterpriseState(): EnterpriseState | undefined {
   if (!isBrowser) return undefined;
   try {
-    const raw = window.sessionStorage.getItem(ENTERPRISE_STORAGE_KEY);
+    const raw = window.localStorage.getItem(ENTERPRISE_STORAGE_KEY);
     if (!raw) return undefined;
     // v2 stores exactly the schema-shaped history array (revisonSchema.md).
     const entries = JSON.parse(raw) as EnterpriseEntry[];
@@ -99,9 +99,9 @@ const persistBriefMiddleware: Middleware = (storeApi) => (next) => (action) => {
     // Only chat actions touch the brief payload
     if (type.startsWith("chat/")) {
       if (type === resetBrief.type) {
-        window.sessionStorage.removeItem(BRIEF_STORAGE_KEY);
+        window.localStorage.removeItem(BRIEF_STORAGE_KEY);
       } else {
-        window.sessionStorage.setItem(
+        window.localStorage.setItem(
           BRIEF_STORAGE_KEY,
           JSON.stringify(payloadFromState(storeApi.getState().chat))
         );
@@ -110,11 +110,11 @@ const persistBriefMiddleware: Middleware = (storeApi) => (next) => (action) => {
     // Enterprise actions touch the enterprise payload
     else if (type.startsWith("enterprise/")) {
       if (type === resetEnterprise.type) {
-        window.sessionStorage.removeItem(ENTERPRISE_STORAGE_KEY);
+        window.localStorage.removeItem(ENTERPRISE_STORAGE_KEY);
       } else {
         // Persist exactly the schema-shaped history array (revisonSchema.md)
         // so the blob can be replayed to the backend; UI helpers are not stored.
-        window.sessionStorage.setItem(
+        window.localStorage.setItem(
           ENTERPRISE_STORAGE_KEY,
           JSON.stringify(storeApi.getState().enterprise.entries)
         );

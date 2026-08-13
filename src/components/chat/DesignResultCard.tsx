@@ -35,11 +35,14 @@ export default function DesignResultCard({
   onEngageDesigner,
 }: DesignResultCardProps) {
   const { entries } = useSelector((state: RootState) => state.enterprise)
- 
-
+   const {revision_comment}= useSelector((state:RootState)=>state.chat)
+   
   const revision = entries.filter(item=>item.type=="revision")
-  const interactive = !disabled && !submittedAction && revision.length === 0;
-
+  const hasRevisionComment = revision_comment.notes !== "" || (revision_comment.files && revision_comment.files.length > 0);
+  const interactive = !disabled && !submittedAction && (revision.length === 0 || hasRevisionComment);
+  console.log("interactive---", interactive);
+  console.log("hasRevisionComment",hasRevisionComment)
+  console.log("submittedAction",submittedAction)
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
