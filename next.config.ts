@@ -44,15 +44,10 @@ const nextConfig: NextConfig = {
               /*
                * Default policy.
                */
-              "default-src 'self'",
+              "default-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
 
               /*
                * Next.js / application JavaScript.
-               *
-               * unsafe-inline is currently allowed because your application
-               * is encountering CSP problems with inline Next.js scripts.
-               *
-               * Later this can be converted to nonce-based CSP.
                */
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
 
