@@ -82,17 +82,25 @@ const enterpriseSlice = createSlice({
       })
       .addCase(fetchEnterpriseStatus.fulfilled, (state, action) => {
         // Keep the matching entry in sync with the backend task lifecycle
-        // until it reaches a terminal state (completed / failed). Only the
-        // id-matched entry is touched — a stale poll for a removed id is
-        // ignored rather than overwriting the latest submission.
-        const entry = state.entries.find((e) => e.id === action.meta.arg);
-        if (entry) {
-          entry.status = action.payload.status;
-          if (
-            action.payload.status === "completed" &&
-            action.payload.result?.generated_image_url
-          ) {
-            entry.url = action.payload.result.generated_image_url;
+        // until it reaches a terminal state (completed / failed).
+        const entryIdx = state.entries.findIndex((e) => e.id === action.meta.arg);
+        if (entryIdx >= 0) {
+          const entry = state.entries[entryIdx];
+          if (action.payload.status === "failed") {
+            // Remove failed revision entry from entries
+            if (entry.type === "revision") {
+              state.entries.splice(entryIdx, 1);
+            } else {
+              entry.status = "failed";
+            }
+          } else {
+            entry.status = action.payload.status;
+            if (
+              action.payload.status === "completed" &&
+              action.payload.result?.generated_image_url
+            ) {
+              entry.url = action.payload.result.generated_image_url;
+            }
           }
         }
         if (action.payload.error) {
@@ -107,6 +115,11 @@ const enterpriseSlice = createSlice({
       .addCase(fetchEnterpriseStatus.rejected, (state, action) => {
         state.lifecycle = "failed";
         state.error = action.payload ?? "Failed to fetch design status";
+        // Remove failed revision entry from entries if network/API fails
+        const entryIdx = state.entries.findIndex((e) => e.id === action.meta.arg);
+        if (entryIdx >= 0 && state.entries[entryIdx].type === "revision") {
+          state.entries.splice(entryIdx, 1);
+        }
       });
   },
 });
