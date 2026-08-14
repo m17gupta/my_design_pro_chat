@@ -2,9 +2,7 @@
 
 import { memo, useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import DesignGeneratingCard from './DesignGeneratingCard'
-import DesignResultCard from './DesignResultCard'
-import DesignSummaryCard from './DesignSummaryCard'
+
 import { renderInline } from './formatText'
 import LunaAvatar from './LunaAvatar'
 import OptionButtons from './OptionButtons'
@@ -14,6 +12,9 @@ import RevisionDesign from '../revisionDesign/RevisionDesign'
 import type { SubmitAction } from '../revisionDesign/RevisionResultCard'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store'
+import DesignSummaryCard from './MainDesign/DesignSummaryCard'
+import DesignGeneratingCard from './MainDesign/DesignGeneratingCard'
+import DesignResultCard from './MainDesign/DesignResultCard'
 
 interface MessageBubbleProps {
   message: Message

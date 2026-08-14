@@ -110,6 +110,9 @@ export default function ChatWindow() {
   );
   const [ratings, setRatings] = useState<Record<string, number>>({});
 
+  console.log("messages--",messages)
+  console.log("completed--",completed)
+  console.log("answers--",answers)
   const dispatch = useAppDispatch();
   const briefPayload = useAppSelector(selectBriefPayload);
   const revisionComment = useAppSelector((s) => s.chat.revision_comment);
@@ -678,17 +681,18 @@ export default function ChatWindow() {
     setTyping(false);
     setEditingId(null);
     announcedIdRef.current = null;
-
     const round = countRevisionRounds(messages) + 1;
     if (round > MAX_REVISION_ROUNDS) {
       toast("More than 4 revisions — please engage your designer for further changes.");
       return;
     }
+    // Clear previous round's comment so the new revision card starts empty
+    dispatch(setRevision({ files: [], notes: "" }));
     const revisionMsg = buildMessage(episodeById("revision"));
     const id = episodeMessageId("revision", round);
     setMessages((prev) => [...prev, { ...revisionMsg, id }]);
     setCurrentId("revision");
-  }, [clearTypingTimeout, messages]);
+  }, [clearTypingTimeout, messages, dispatch]);
 
   /**
    * Generate a revision round (round N) — same single generate + polling path
@@ -700,9 +704,12 @@ export default function ChatWindow() {
       if (pendingRevisionGenerate !== null) return;
       setPendingRevisionGenerate(round);
       const revisions = entries.filter((entry) => entry.type === "revision");
+      // Use the entry for this specific round if it already exists (retry case),
+      // otherwise fall back to the current revision_comment in the Redux store
+      // (which was just set when the user submitted the revision card).
       const entry = revisions[round - 1];
-      const notes = entry?.questions[0]?.answer.notes ?? revisionComment.notes;
-      const files = entry?.questions[0]?.answer.files ?? revisionComment.files;
+      const notes = entry?.questions[0]?.answer?.notes ?? revisionComment.notes;
+      const files = entry?.questions[0]?.answer?.files ?? revisionComment.files ?? [];
       const payload = buildApiPayload(API_QUESTIONS, chat_original, {
         watermark: watermark ?? "",
         work_type: work_type ?? "",
@@ -771,7 +778,6 @@ export default function ChatWindow() {
     [messages, entries, revisionComment, clearTypingTimeout]
   );
 
-  const doneCount = completed.size;
 
   // The latest revision-summary message is the *current* round; earlier rounds
   // stay visible above as locked history.
@@ -885,8 +891,14 @@ export default function ChatWindow() {
                   const bubbleKey = m.initialAnswer
                     ? `${m.id}-prefilled`
                     : m.id;
-                   const isCardBeingEdited = msgEpId && editingId === `ep-${msgEpId}`;
-                   if (isCardBeingEdited) return null;
+
+                  // Hide revision question card once the user has submitted it
+                  // (i.e. it is no longer the current active card).
+                  const isRevisionQuestionCard = m.id.startsWith("ep-revision") && !isRevisionSummary;
+                  if (isRevisionQuestionCard && !isCurrent) return null;
+
+                  const isCardBeingEdited = msgEpId && editingId === `ep-${msgEpId}`;
+                  if (isCardBeingEdited) return null;
 
                    return (
                      <div
@@ -915,16 +927,23 @@ export default function ChatWindow() {
                                   : parseInt(m.id.replace("ep-revision-", ""), 10) || 1;
                                 const revEntry = entries.filter((e) => e.type === "revision")[round - 1];
                                 const ans = revEntry?.questions?.[0]?.answer;
+                                // If this round already has a saved entry answer, pre-fill it (edit/retry case).
+                                // For a brand-new card (no entry yet and revisionComment was just cleared),
+                                // return empty so the card starts blank.
                                 if (ans) {
                                   return {
                                     files: ans.files ?? [],
                                     notes: ans.notes,
                                   };
                                 }
-                                return {
-                                  files: revisionComment.files ?? [],
-                                  notes: revisionComment.notes,
-                                };
+                                // Only use revisionComment as fallback if it has actual data
+                                // (avoids leaking previous round's stale comment into new card).
+                                const hasComment =
+                                  revisionComment.notes !== "" ||
+                                  (revisionComment.files && revisionComment.files.length > 0);
+                                return hasComment
+                                  ? { files: revisionComment.files ?? [], notes: revisionComment.notes }
+                                  : undefined;
                               })()
                             : briefPayload.original[episodeApiKey]?.answer
                         }

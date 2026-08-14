@@ -87,83 +87,85 @@ export default function DesignResultCard({
           />
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <motion.button
-            type="button"
-            onClick={onAllINeed}
-            whileHover={interactive ? { scale: 1.03 } : undefined}
-            whileTap={interactive ? { scale: 0.95 } : undefined}
-            className={BUTTON_CLASS}
-            disabled={!interactive}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+        {!(revision.length > 0 && revision[0].status === "completed") && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <motion.button
+              type="button"
+              onClick={onAllINeed}
+              whileHover={interactive ? { scale: 1.03 } : undefined}
+              whileTap={interactive ? { scale: 0.95 } : undefined}
+              className={BUTTON_CLASS}
+              disabled={!interactive}
             >
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
-            This is All I Need
-          </motion.button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+              This is All I Need
+            </motion.button>
 
-          <motion.button
-            type="button"
-            onClick={onRegenerate}
-            whileHover={interactive ? { scale: 1.03 } : undefined}
-            whileTap={interactive ? { scale: 0.95 } : undefined}
-            className={BUTTON_CLASS}
-            disabled={!interactive}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+            <motion.button
+              type="button"
+              onClick={onRegenerate}
+              whileHover={interactive ? { scale: 1.03 } : undefined}
+              whileTap={interactive ? { scale: 0.95 } : undefined}
+              className={BUTTON_CLASS}
+              disabled={!interactive}
             >
-              <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-              <path d="M21 3v5h-5" />
-            </svg>
-            Regenerate With Comments
-          </motion.button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+              </svg>
+              Regenerate With Comments
+            </motion.button>
 
-          <motion.button
-            type="button"
-            onClick={onEngageDesigner}
-            whileHover={interactive ? { scale: 1.03 } : undefined}
-            whileTap={interactive ? { scale: 0.95 } : undefined}
-            className={BUTTON_CLASS}
-            disabled={!interactive}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+            <motion.button
+              type="button"
+              onClick={onEngageDesigner}
+              whileHover={interactive ? { scale: 1.03 } : undefined}
+              whileTap={interactive ? { scale: 0.95 } : undefined}
+              className={BUTTON_CLASS}
+              disabled={!interactive}
             >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            Engage Designer
-          </motion.button>
-        </div>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Engage Designer
+            </motion.button>
+          </div>
+        )}
       </div>
     </motion.div>
   );

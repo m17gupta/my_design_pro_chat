@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CHECKLIST } from "./types";
+import { CHECKLIST } from "../types";
 
 interface DesignSummaryCardProps {
   answers: Record<string, string>;

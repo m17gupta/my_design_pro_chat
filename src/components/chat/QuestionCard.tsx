@@ -288,7 +288,11 @@ function QuestionCard({
                       accept: field.accept,
                       multiple: true,
                     }}
-                    initialUrls={field.kind === "upload-grid" ? initUrls : undefined}
+                    initialUrls={
+                      field.kind === "upload-grid"
+                        ? Object.values(initUrlsByField[slot] ?? {}).map((r) => r.url)
+                        : undefined
+                    }
                     files={uploads[slot] ?? []}
                     disabled={disabled}
                     onChange={(files) =>
