@@ -7,7 +7,7 @@ import { renderInline } from './formatText'
 import LunaAvatar from './LunaAvatar'
 import OptionButtons from './OptionButtons'
 import QuestionCard, { type CardResult } from './QuestionCard'
-import { CHECKLIST, type Message, type AnswerValue } from './types'
+import { CHECKLIST, type ChecklistItem, type Message, type AnswerValue } from './types'
 import RevisionDesign from '../revisionDesign/RevisionDesign'
 import type { SubmitAction } from '../revisionDesign/RevisionResultCard'
 import { useSelector } from 'react-redux'
@@ -22,11 +22,14 @@ interface MessageBubbleProps {
   filesByField?: Record<number, File[]>
   disabled?: boolean
   initialAnswer?: AnswerValue
+  selectedValue?: string
   onOption?: (value: string) => void
   onCardSubmit?: (result: CardResult) => void
   onCardCancel?: () => void
   /** Recorded answers for the design-summary rows. */
   answers?: Record<string, string>
+  /** Checklist rows shown in the design summary — work-type aware (default landscape). */
+  checklist?: ChecklistItem[]
   /** True while the brief POST to the design API is in flight. */
   generating?: boolean
   uploadTotal?: number
@@ -63,6 +66,8 @@ interface MessageBubbleProps {
   onEditStart?: () => void
   onEditSave?: (text: string) => void
   onEditCancel?: () => void
+  /** Yes/No options for option-question episodes (photos/files) — renders buttons instead of a textarea while editing. */
+  editOptions?: string[]
 }
 
 /**
@@ -116,10 +121,12 @@ export const MessageBubble = ({
   filesByField = {},
   disabled = false,
   initialAnswer,
+  selectedValue,
   onOption,
   onCardSubmit,
   onCardCancel,
   answers = {},
+  checklist = CHECKLIST,
   generating = false,
   uploadTotal = 0,
   onSummaryGenerate,
@@ -145,11 +152,14 @@ export const MessageBubble = ({
   editing = false,
   onEditStart,
   onEditSave,
-  onEditCancel
+  onEditCancel,
+  editOptions
 }: MessageBubbleProps) => {
   const isUser = message.role === 'user'
   const reduceMotion = useReducedMotion() ?? false
   const editRef = useRef<HTMLTextAreaElement>(null)
+  const isOptionEdit = Boolean(editing && editOptions?.length)
+  const [editChoice, setEditChoice] = useState<string | null>(null)
   const { entries } = useSelector((state: RootState) => state.enterprise)
   // The intake (original) entry drives the summary + result card below it.
   const originalEntry = entries.find((entry) => entry.type === "original")
@@ -196,10 +206,16 @@ export const MessageBubble = ({
   }, [editing])
 
   const saveEdit = () => {
-    if (editRef.current && onEditSave) onEditSave(editRef.current.value)
+    if (isOptionEdit) {
+      if (onEditSave) onEditSave(editChoice ?? message.content)
+    } else if (editRef.current && onEditSave) {
+      onEditSave(editRef.current.value)
+    }
+    setEditChoice(null)
   }
 
   const cancelEdit = () => {
+    setEditChoice(null)
     if (onEditCancel) onEditCancel()
   }
 
@@ -250,11 +266,11 @@ export const MessageBubble = ({
                 isUser
                   ? 'rounded-br-md bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20'
                   : 'rounded-bl-md border border-zinc-200/80 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100'
-              } ${editing ? 'w-full ring-2 ring-emerald-400/70' : ''} ${
-                isUser && !editing ? 'hidden' : ''
+              } ${editing && !isOptionEdit ? 'w-full ring-2 ring-emerald-400/70' : ''} ${
+                isUser && (!editing || isOptionEdit) ? 'hidden' : ''
               } ${message.kind === 'card' ? 'w-full' : ''}`}
             >
-              {isUser && editing ? (
+              {isUser && editing && !isOptionEdit ? (
                 <textarea
                   ref={editRef}
                   defaultValue={message.content}
@@ -287,7 +303,7 @@ export const MessageBubble = ({
 
               {done && message.showChecklist && (
                 <ol className='mt-3 space-y-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-800'>
-                  {CHECKLIST.map(item => (
+                  {checklist.map(item => (
                     <li
                       key={item.id}
                       className='flex items-baseline gap-2 text-[13.5px] text-zinc-600 dark:text-zinc-300'
@@ -306,8 +322,22 @@ export const MessageBubble = ({
               <OptionButtons
                 options={message.options}
                 disabled={disabled}
+                selectedValue={selectedValue}
                 onSelect={onOption ?? (() => {})}
               />
+            )}
+
+            {isUser && isOptionEdit && (
+              <div className='mt-2 flex flex-col items-end gap-1'>
+                <span className='mr-1 text-xs text-zinc-400 dark:text-zinc-500'>
+                  Choose your answer:
+                </span>
+                <OptionButtons
+                  options={editOptions ?? []}
+                  selectedValue={editChoice ?? message.content}
+                  onSelect={setEditChoice}
+                />
+              </div>
             )}
 
             {isUser && (
@@ -317,7 +347,8 @@ export const MessageBubble = ({
                     <button
                       type='button'
                       onClick={saveEdit}
-                      className='rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 px-3.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:brightness-110'
+                      disabled={isOptionEdit && !editChoice}
+                      className='rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 px-3.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50'
                     >
                       Save
                     </button>
@@ -435,6 +466,7 @@ export const MessageBubble = ({
             <>
               <DesignSummaryCard
                 answers={answers}
+                checklist={checklist}
                 uploadTotal={uploadTotal}
                 generating={generating}
                 disabled={summaryDisabled}

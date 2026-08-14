@@ -202,7 +202,7 @@ function QuestionCard({
         else if (selected.length) parts.push(selected.join(", "));
         else if (trimmedNotes) parts.push(trimmedNotes);
       } else if (field.kind === "upload-grid") {
-        uploadTotal += (uploads[i] ?? []).length;
+        uploadTotal += Object.keys(urlsByField[i] ?? {}).length;
       }
     });
 
@@ -290,10 +290,10 @@ function QuestionCard({
                     }}
                     initialUrls={
                       field.kind === "upload-grid"
-                        ? Object.values(initUrlsByField[slot] ?? {}).map((r) => r.url)
+                        ? Object.values(urlsByField[slot] ?? {}).map((r) => r.url)
                         : undefined
                     }
-                    files={uploads[slot] ?? []}
+                    files={disabled ? [] : uploads[slot] ?? []}
                     disabled={disabled}
                     onChange={(files) =>
                       setUploads((prev) => ({ ...prev, [slot]: files }))

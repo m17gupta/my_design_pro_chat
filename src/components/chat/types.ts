@@ -132,3 +132,32 @@ export const CHECKLIST: ChecklistItem[] = [
   { id: "budget", number: 7, label: "Budget" },
   { id: "restrictions", number: 8, label: "Property restrictions (HOA requirements)" },
 ];
+
+/**
+ * Checklist for the color/material question set — same ids (so completion /
+ * restore state stays compatible), with the three topic labels swapped.
+ */
+export const COLOR_MATERIAL_CHECKLIST: ChecklistItem[] = [
+  { id: "photos", number: 1, label: "Additional property photos upload" },
+  { id: "files", number: 2, label: "Supporting files (survey and similar)" },
+  { id: "goals", number: 3, label: "High level project goals" },
+  { id: "styles", number: 4, label: "Exterior color & material style" },
+  { id: "hardscape", number: 5, label: "Primary material preferences" },
+  { id: "softscape", number: 6, label: "Color preferences" },
+  { id: "budget", number: 7, label: "Budget" },
+  { id: "restrictions", number: 8, label: "Property restrictions (HOA requirements)" },
+];
+
+/**
+ * Pick the intake checklist for a work type ("color-material" variants get
+ * the color/material labels; everything else keeps the landscape ones).
+ */
+export function checklistForWorkType(workType?: string): ChecklistItem[] {
+  const normalized = (workType ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_");
+  return normalized === "color_material"
+    ? COLOR_MATERIAL_CHECKLIST
+    : CHECKLIST;
+}

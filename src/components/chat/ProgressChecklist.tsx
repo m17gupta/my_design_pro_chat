@@ -1,18 +1,31 @@
 "use client";
 
-import { episodeById } from "./flow";
-import { CHECKLIST } from "./types";
+import { CHECKLIST, type ChecklistItem } from "./types";
+import type { Episode } from "./flow";
 
 interface ProgressChecklistProps {
   completed: ReadonlySet<string>;
   currentId: string | null;
+  /** Active episodes for the current work type (falls back to static EPISODES). */
+  episodes?: Episode[];
+  /** Checklist items for the current work type (falls back to landscape CHECKLIST). */
+  checklist?: ChecklistItem[];
 }
 
 export default function ProgressChecklist({
   completed,
   currentId,
+  episodes,
+  checklist = CHECKLIST,
 }: ProgressChecklistProps) {
-  const doneCount = CHECKLIST.filter((c) => completed.has(c.id)).length;
+  const doneCount = checklist.filter((c) => completed.has(c.id)).length;
+
+  // currentId is an episode apiKey — highlight via its checklist item.
+  // Resolved from the passed episodes list so work-type-specific episode
+  // keys (e.g. color-material's) never hit the static map (which would throw).
+  const activeChecklistId = currentId
+    ? episodes?.find((e) => e.apiKey === currentId)?.checklistId ?? null
+    : null;
 
   return (
     <div>
@@ -21,17 +34,13 @@ export default function ProgressChecklist({
           Intake checklist
         </h2>
         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-          {doneCount}/{CHECKLIST.length}
+          {doneCount}/{checklist.length}
         </span>
       </div>
 
       <ol className="space-y-1">
-        {CHECKLIST.map((item) => {
+        {checklist.map((item) => {
           const isDone = completed.has(item.id);
-          // currentId is an episode apiKey — highlight via its checklist item.
-          const activeChecklistId = currentId
-            ? episodeById(currentId).checklistId ?? null
-            : null;
           const isActive = activeChecklistId === item.id && !isDone;
           return (
             <li

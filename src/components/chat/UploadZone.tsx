@@ -84,6 +84,7 @@ function UploadZone({
           setStatus((prev) => ({ ...prev, [key]: { state: "done" } }));
           // Persist the returned Cloudinary URL so the app can use it.
           const nextUrls = { ...urlsRef.current, [key]: result };
+          console.log("nextUrls---->",nextUrls);
           urlsRef.current = nextUrls;
           setUrls(nextUrls);
           onUrlsChange?.(nextUrls);

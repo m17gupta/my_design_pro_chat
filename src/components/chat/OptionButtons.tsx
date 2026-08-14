@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 interface OptionButtonsProps {
   options: string[];
   disabled?: boolean;
+  selectedValue?: string;
   onSelect: (value: string) => void;
 }
 
@@ -45,6 +46,7 @@ const CloseIcon = () => (
 export default function OptionButtons({
   options,
   disabled = false,
+  selectedValue,
   onSelect,
 }: OptionButtonsProps) {
   
@@ -52,12 +54,14 @@ export default function OptionButtons({
     const norm = option.toLowerCase().replace(/[^a-z]/g, "");
     const isYes = norm === "yesido";
     const isNo = norm === "noidont";
-
+    const isSelected = selectedValue === option;
+  console.log("isSelected",isSelected)
     if (isYes) {
       return {
         label: "Yes, I do",
-        className:
-          "inline-flex items-center gap-2 rounded-lg bg-emerald-500 border border-emerald-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-150 hover:bg-emerald-600 hover:border-emerald-600 disabled:cursor-not-allowed disabled:opacity-50",
+        className: isSelected
+          ? "inline-flex items-center gap-2 rounded-lg bg-[#475C66] border border-[#475C66] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-150 disabled:cursor-not-allowed"
+          : "inline-flex items-center gap-2 rounded-lg bg-white border border-[#CBD5E1] px-5 py-2.5 text-sm font-medium text-emerald-700 shadow-sm transition-all duration-150 hover:bg-zinc-50 hover:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/50",
         icon: <PhotoIcon />,
       };
     }
@@ -65,8 +69,9 @@ export default function OptionButtons({
     if (isNo) {
       return {
         label: "No, I don't",
-        className:
-          "inline-flex items-center gap-2 rounded-lg bg-white border border-[#CBD5E1] px-5 py-2.5 text-sm font-medium text-emerald-700 shadow-sm transition-all duration-150 hover:bg-zinc-50 hover:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/50",
+        className: isSelected
+          ? "inline-flex items-center gap-2 rounded-lg bg-[#475C66] border border-[#475C66] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-150 disabled:cursor-not-allowed"
+          : "inline-flex items-center gap-2 rounded-lg bg-white border border-[#CBD5E1] px-5 py-2.5 text-sm font-medium text-emerald-700 shadow-sm transition-all duration-150 hover:bg-zinc-50 hover:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/50",
         icon: <CloseIcon />,
       };
     }
@@ -74,8 +79,9 @@ export default function OptionButtons({
     // Default option styles (e.g. Next, Ready to Proceed)
     return {
       label: option,
-      className:
-        "inline-flex items-center gap-1.5 rounded-lg bg-white border border-[#CBD5E1] px-5 py-2.5 text-sm font-medium text-emerald-700 shadow-sm transition-all duration-150 hover:bg-zinc-50 hover:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/50",
+      className: isSelected
+        ? "inline-flex items-center gap-1.5 rounded-lg bg-[#475C66] border border-[#475C66] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-150 disabled:cursor-not-allowed"
+        : "inline-flex items-center gap-1.5 rounded-lg bg-white border border-[#CBD5E1] px-5 py-2.5 text-sm font-medium text-emerald-700 shadow-sm transition-all duration-150 hover:bg-zinc-50 hover:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800/50",
       icon: null,
     };
   };

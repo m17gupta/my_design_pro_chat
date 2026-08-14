@@ -38,7 +38,7 @@ export default function DesignResultCard({
    const {revision_comment}= useSelector((state:RootState)=>state.chat)
    
   const revision = entries.filter(item=>item.type=="revision")
-  const hasRevisionComment = revision_comment.notes !== "" || (revision_comment.files && revision_comment.files.length > 0);
+  const hasRevisionComment = revision_comment.notes !== "" || ( revision_comment.files.length > 0);
   const interactive = !disabled && !submittedAction && (revision.length <= 4 || hasRevisionComment);
   console.log("interactive---", interactive);
   console.log("hasRevisionComment",hasRevisionComment)
@@ -119,7 +119,7 @@ export default function DesignResultCard({
               whileHover={interactive ? { scale: 1.03 } : undefined}
               whileTap={interactive ? { scale: 0.95 } : undefined}
               className={BUTTON_CLASS}
-              disabled={!interactive}
+              disabled={hasRevisionComment}
             >
               <svg
                 width="14"

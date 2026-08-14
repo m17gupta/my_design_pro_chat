@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CHECKLIST } from "../types";
+import { CHECKLIST, type ChecklistItem } from "../types";
 
 interface DesignSummaryCardProps {
   answers: Record<string, string>;
@@ -15,6 +15,8 @@ interface DesignSummaryCardProps {
    * (e.g. once the design has been generated — the result card takes over).
    */
   showActions?: boolean;
+  /** Checklist rows shown in the summary — work-type aware (default landscape). */
+  checklist?: ChecklistItem[];
   onGenerate: () => void;
   onChanges: () => void;
 }
@@ -25,6 +27,7 @@ export default function DesignSummaryCard({
   generating = false,
   disabled = false,
   showActions = true,
+  checklist = CHECKLIST,
   onGenerate,
   onChanges,
 }: DesignSummaryCardProps) {
@@ -45,7 +48,7 @@ export default function DesignSummaryCard({
       </p>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200/80 dark:border-zinc-800">
-        {CHECKLIST.map((item, i) => {
+        {checklist.map((item, i) => {
           const answer = answers[item.id];
           return (
             <div

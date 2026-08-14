@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 import type { EnterpriseEntry } from "@/store/enterprise/enterpriseType";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 /** Terminal project actions sent to the host via postMessage. */
 export type SubmitAction = "this_is_all_i_need" | "engage_designer";
@@ -53,11 +55,19 @@ export default function RevisionResultCard({
   onAllINeed,
   onRegenerate,
   onEngageDesigner,
-}: RevisionResultCardProps) {
-  const hasImage = Boolean(entry.url);
+}: RevisionResultCardProps) {  const hasImage = Boolean(entry.url);
   const done = entry.status === "completed" || hasImage;
   const failed = entry.status === "failed";
-  const interactive = !locked && !submittedAction;
+
+  const { entries } = useSelector((state: RootState) => state.enterprise);
+  const getRevison = entries.filter((item) => item.type === "revision");
+  // This round's entry is getRevison[round - 1] — while its status is still
+  // "pending" (generation in flight) every action button stays disabled.
+  const roundPending = getRevison[round - 1]?.status === "pending";
+  const interactive = !locked && !submittedAction && !roundPending;
+  
+
+  console.log("getRevison",getRevison);
 
   return (
     <motion.div
@@ -145,43 +155,7 @@ export default function RevisionResultCard({
           )}
         </div>
 
-        {/* Satisfaction rating — stored per entry, keyed by entry.id. */}
-        {/* <div className="mt-4">
-          <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">
-            Overall, how satisfied are you with this concept?
-          </p>
-          <div
-            className="mt-2 flex items-center gap-1.5"
-            role="radiogroup"
-            aria-label="Satisfaction rating"
-          >
-            {RATING_EMOJIS.map((emoji, idx) => {
-              const value = idx + 1;
-              const selected = rating === value;
-              return (
-                <motion.button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  aria-label={`${RATING_LABELS[idx]} (${value}/5)`}
-                  title={RATING_LABELS[idx]}
-                  onClick={() => onRate(value)}
-                  disabled={!interactive}
-                  whileHover={interactive ? { scale: 1.12, y: -2 } : undefined}
-                  whileTap={interactive ? { scale: 0.9 } : undefined}
-                  className={`flex h-11 w-11 items-center justify-center rounded-full border text-xl transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    selected
-                      ? "border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-500/20 dark:bg-emerald-500/10"
-                      : "border-zinc-200 bg-white hover:border-emerald-300 dark:border-zinc-700 dark:bg-zinc-900"
-                  }`}
-                >
-                  {emoji}
-                </motion.button>
-              );
-            })}
-          </div>
-        </div> */}
+     
 
         {/* Three actions — the only exit points from the revision loop. */}
         <div className="mt-4 flex flex-wrap items-center gap-3">

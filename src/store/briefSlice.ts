@@ -4,7 +4,7 @@ import {
   type PayloadAction,
 } from "@reduxjs/toolkit";
 import type { AnswerValue } from "../components/chat/types";
-import { API_QUESTIONS } from "../components/chat/flow";
+import { buildEpisodes, getApiQuestions } from "../components/chat/flow";
 import {
   buildApiPayload,
   buildQuestionItem,
@@ -49,7 +49,11 @@ const briefSlice = createSlice({
       state,
       action: PayloadAction<{ apiKey: string; answer: AnswerValue }>
     ) {
-      const meta = API_QUESTIONS.find((q) => q.apiKey === action.payload.apiKey);
+      // Resolve question text from the current work type so the stored item
+      // (and the payload it feeds) carries the right wording.
+      const meta = getApiQuestions(buildEpisodes(state.work_type ?? undefined)).find(
+        (q) => q.apiKey === action.payload.apiKey
+      );
       if (meta) {
         state.original[meta.apiKey] = buildQuestionItem(meta, action.payload.answer);
       }
@@ -92,7 +96,7 @@ export interface BriefSliceState {
 export const selectBriefPayload = createSelector(
   (state: BriefSliceState) => state.chat,
   (brief): ApiBriefPayload =>
-    buildApiPayload(API_QUESTIONS, brief.original, {
+    buildApiPayload(getApiQuestions(buildEpisodes(brief.work_type ?? undefined)), brief.original, {
       id: brief?.id??0,
       watermark: brief.watermark??"",
       work_type: brief.work_type??"",

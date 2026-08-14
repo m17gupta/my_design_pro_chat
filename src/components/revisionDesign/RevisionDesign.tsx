@@ -82,11 +82,13 @@ export default function RevisionDesign({
   if (!derived) return null;
   const { round, entry } = derived;
 
-  // The round's comments come from its own entry once it exists; before that
-  // (comments just submitted, generate not started) they come from the
-  // chat.revision_comment fallback. Rounds are never mixed.
-  const notes = entry?.questions[0]?.answer.notes ?? fallbackNotes;
-  const files = entry?.questions[0]?.answer.files ?? fallbackFiles;
+  // The round's comments come from its own entry once it exists.
+  // HOWEVER, if this is the current round and the user has actively provided
+  // feedback in `revision_comment` (fallbackNotes), that takes precedence
+  // over any stale `entry` data (e.g. if they edited a failed round).
+  const hasActiveFallback = isCurrent && (fallbackNotes !== "" || fallbackFiles.length > 0);
+  const notes = hasActiveFallback ? fallbackNotes : (entry?.questions[0]?.answer.notes ?? fallbackNotes);
+  const files = hasActiveFallback ? fallbackFiles : (entry?.questions[0]?.answer.files ?? fallbackFiles);
 
   const status = entry?.status;
   const hasImage = Boolean(entry?.url);
@@ -99,10 +101,13 @@ export default function RevisionDesign({
     status !== "completed";
   const completed = entry?.status === "completed";
   const generating = pendingGenerate || inFlight;
+  // A round whose entry is still "pending" (generation in flight) keeps its
+  // summary buttons disabled until the task reaches a terminal state.
+  const pending = status === "pending";
 
   // History rounds (and completed current rounds) keep the summary read-only;
   // a failed entry stays clickable so the same round can be retried.
-  const disabled = generating || completed || !isCurrent;
+  const disabled = generating || completed || pending || !isCurrent;
   const showActions = isCurrent && !completed;
 
   return (

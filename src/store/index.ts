@@ -1,5 +1,5 @@
 import { combineReducers, configureStore, type Middleware } from "@reduxjs/toolkit";
-import { API_QUESTIONS } from "../components/chat/flow";
+import { buildEpisodes, getApiQuestions } from "../components/chat/flow";
 import {
   buildApiPayload,
   type ApiBriefItem,
@@ -23,7 +23,7 @@ const isBrowser = typeof window !== "undefined";
  * payload itself (all 8 questions with name/question/answer, answered or empty).
  */
 export function payloadFromState(state: BriefState): ApiBriefPayload {
-  return buildApiPayload(API_QUESTIONS, state.original, {
+  return buildApiPayload(getApiQuestions(buildEpisodes(state.work_type ?? undefined)), state.original, {
     id: state.id ?? 0,
     watermark: state.watermark ?? "",
     work_type: state.work_type ?? "",
@@ -40,7 +40,7 @@ export function payloadFromState(state: BriefState): ApiBriefPayload {
  */
 export function stateFromPayload(payload: ApiBriefPayload): BriefState {
   const original: Record<string, ApiBriefItem> = {};
-  API_QUESTIONS.forEach((q) => {
+  getApiQuestions(buildEpisodes(payload.work_type ?? undefined)).forEach((q) => {
     const item = payload.original[q.apiKey];
     if (item && !isAnswerEmpty(item.answer)) {
       original[q.apiKey] = item;

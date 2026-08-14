@@ -10,18 +10,26 @@ import ProgressChecklist from "./ProgressChecklist";
 import type { CardResult } from "./QuestionCard";
 import TypingIndicator from "./TypingIndicator";
 import {
-  API_QUESTIONS,
+  buildEpisodes,
   buildMessage,
   buildRestoredTranscript,
   countRevisionRounds,
   episodeById,
   episodeMessageId,
+  getApiQuestions,
   nextEpisodeId,
   revisionRoundFromMessage,
 } from "./flow";
+import {
+  HOST_ACTION_CANCEL_ALL_NEED,
+  HOST_ACTION_SUBMIT_PROJECT,
+  isFromParent,
+  noteHostOrigin,
+  postToHost,
+} from "../../lib/hostBridge";
 import { deriveRevisionRound } from "../revisionDesign/RevisionDesign";
 import type { SubmitAction } from "../revisionDesign/RevisionResultCard";
-import { CHECKLIST, type AnswerValue, type Message } from "./types";
+import { checklistForWorkType, type AnswerValue, type Message } from "./types";
 import {
   answerQuestion,
   resetBrief,
@@ -73,8 +81,14 @@ const MAX_REVISION_ROUNDS = 4;
 /** First status poll fires 3s after the task starts; every POLL_MS after that. */
 const POLL_START_MS = 3000;
 const POLL_MS = 3000;
-/** Safety cap (~3 min) so the loader can never spin forever on a stuck task. */
+/**
+ * Fast-poll budget (~3 min) before falling back to a slow background poll.
+ * Design generations can take minutes, so this is not a hard stop — see
+ * SLOW_POLL_MS below.
+ */
 const MAX_POLLS = 60;
+/** Slow background cadence used after the fast budget is exhausted. */
+const SLOW_POLL_MS = 30000;
 
 // Stable empty object so memoized bubbles without uploads don't re-render.
 const EMPTY_FILES: Record<number, File[]> = {};
@@ -83,10 +97,6 @@ export default function ChatWindow() {
   
   const restoredItems = useAppSelector((s) => s.chat.original);
   const { entries } = useSelector((state: RootState) => state.enterprise);
-  const restoredTranscript = useMemo(
-    () => buildRestoredTranscript(restoredItems, entries),
-    [restoredItems, entries]
-  );
 
   // Flow messages keep their `ep-<apiKey>` id (one appearance per episode)
   // so uploads and Handoff labels can be keyed by episode apiKey.
@@ -110,9 +120,6 @@ export default function ChatWindow() {
   );
   const [ratings, setRatings] = useState<Record<string, number>>({});
 
-  console.log("messages--",messages)
-  console.log("completed--",completed)
-  console.log("answers--",answers)
   const dispatch = useAppDispatch();
   const briefPayload = useAppSelector(selectBriefPayload);
   const revisionComment = useAppSelector((s) => s.chat.revision_comment);
@@ -127,6 +134,17 @@ export default function ChatWindow() {
   const {watermark, image_url, work_type, id,original:chat_original} = briefPayload;
   const busyRef = useRef(false);
   const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>({});
+
+  // Build the work-type-specific episode list (description text only changes).
+  // Memoised on work_type so it only recomputes when the project type changes.
+  const episodes = useMemo(() => buildEpisodes(work_type ?? undefined), [work_type]);
+  // Checklist labels follow the work type (landscape vs color/material).
+  const checklist = useMemo(() => checklistForWorkType(work_type ?? undefined), [work_type]);
+
+  const restoredTranscript = useMemo(
+    () => buildRestoredTranscript(restoredItems, entries, episodes, revisionComment),
+    [restoredItems, entries, episodes, revisionComment]
+  );
   
   const searchParams = useSearchParams();
 
@@ -138,7 +156,7 @@ export default function ChatWindow() {
     didInitializeRef.current = true;
 
     const params = decodeClientParams(searchParams.get("params"));
-
+    console.log("paramas", params)
     let isNewSession = false;
     let incomingProjectId = "";
 
@@ -168,7 +186,7 @@ export default function ChatWindow() {
       dispatch(resetEnterprise());
 
       // Start fresh welcome message
-      setMessages([buildMessage(episodeById("welcome"))]);
+      setMessages([buildMessage(episodeById("welcome", episodes))]);
       setCurrentId("welcome");
       setAnswers({});
       setCompleted(new Set());
@@ -185,7 +203,7 @@ export default function ChatWindow() {
         setCompleted(restoredTranscript.completed);
         setMessageEpisodes(restoredTranscript.messageEpisodes);
       } else {
-        setMessages([buildMessage(episodeById("welcome"))]);
+        setMessages([buildMessage(episodeById("welcome", episodes))]);
       }
     }
 
@@ -244,7 +262,7 @@ export default function ChatWindow() {
     clearTypingTimeout();
     busyRef.current = false;
     setTyping(false);
-    setMessages([buildMessage(episodeById("welcome"))]);
+    setMessages([buildMessage(episodeById("welcome", episodes))]);
     setCurrentId("welcome");
     setAnswers({});
     dispatch(resetBrief());
@@ -274,7 +292,7 @@ export default function ChatWindow() {
     ) => {
       if (typing || busyRef.current) return;
       busyRef.current = true;
-      const ep = episodeById(currentId);
+      const ep = episodeById(currentId, episodes);
 
       // Clicking "I am ready to proceed →" on the welcome screen starts a fresh
       // intake: wipe the Redux brief (and its localStorage copy), the design
@@ -321,7 +339,7 @@ export default function ChatWindow() {
         dispatch(setRevision({ files: urls, notes: userText }));
       }
 
-      const nextEpisode = nextEpisodeId(ep.apiKey, userText);
+      const nextEpisode = nextEpisodeId(ep.apiKey, userText, episodes);
       setTyping(true);
       clearTypingTimeout();
       timeoutRef.current = window.setTimeout(() => {
@@ -329,7 +347,7 @@ export default function ChatWindow() {
         busyRef.current = false;
         setTyping(false);
         setMessages((prev) => {
-          const nextMsg = buildMessage(episodeById(nextEpisode));
+          const nextMsg = buildMessage(episodeById(nextEpisode, episodes));
           // One summary per revision round — suffix by the round's comment-card
           // count so round N always lands on `ep-revision-summary[-N]`.
           const id =
@@ -357,45 +375,19 @@ export default function ChatWindow() {
     [commit]
   );
 
-  /**
-   * Toggle edit mode for a user message. Only one answer can be edited at a
-   * time — clicking a second edit icon while another edit is open is blocked.
-   */
-  const handleEditStart = useCallback(
-    (messageId: string) => {
-      const epId = messageEpisodes[messageId];
-      let targetId = messageId;
-      if (epId) {
-        const ep = episodeById(epId);
-        if (ep.kind === "card") {
-          targetId = `ep-${epId}`;
-        }
-      }
 
-      if (editingId !== null && editingId !== targetId) {
-        toast.error(
-          "Only one answer can be edited at a time — save or cancel the current edit first."
-        );
-        return;
-      }
-      setEditingId(editingId === targetId ? null : targetId);
-    },
-    [editingId, messageEpisodes]
-  );
 
   /** Apply an edited answer to the transcript, checklist summary, and API payload. */
   const handleEditSave = useCallback(
     (messageId: string, rawText: string) => {
       const text = rawText.trim();
-      if (text) {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === messageId ? { ...m, content: text } : m))
-        );
-      }
+      let nextCardToEdit: string | null = null;
+      let insertedUserMsgId: string | null = null;
+      let insertedEpId: string | null = null;
 
       const epId = messageEpisodes[messageId];
       if (epId) {
-        const ep = episodeById(epId);
+        const ep = episodeById(epId, episodes);
         if (ep.checklistId && text) {
           setAnswers((prev) => ({ ...prev, [ep.checklistId as string]: text }));
           setCompleted((prev) => new Set(prev).add(ep.checklistId as string));
@@ -428,9 +420,64 @@ export default function ChatWindow() {
         }
       }
 
-      setEditingId(null);
+      setMessages((prev) => {
+        let newMessages = prev;
+        if (text) {
+          newMessages = prev.map((m) => (m.id === messageId ? { ...m, content: text } : m));
+        }
+
+        if (epId && (text.startsWith("Yes") || text.startsWith("No"))) {
+          const nextEpId =
+            epId === "photos"
+              ? "additional_images_upload"
+              : epId === "files"
+              ? "supporting_files_upload"
+              : null;
+
+          if (nextEpId) {
+            if (text.startsWith("Yes")) {
+              const hasCard = newMessages.some((m) => m.id === `ep-${nextEpId}`);
+              if (hasCard) {
+                nextCardToEdit = `ep-${nextEpId}`;
+              } else {
+                const msgIdx = newMessages.findIndex((m) => m.id === messageId);
+                if (msgIdx >= 0) {
+                  const nextEp = episodeById(nextEpId, episodes);
+                  const cardMsg = buildMessage(nextEp);
+                  const userMsgId = `m-inserted-${nextEpId}-${Date.now()}`;
+                  const userMsg: Message = { id: userMsgId, role: "user", content: "" };
+
+                  newMessages = [
+                    ...newMessages.slice(0, msgIdx + 1),
+                    cardMsg,
+                    userMsg,
+                    ...newMessages.slice(msgIdx + 1),
+                  ];
+
+                  nextCardToEdit = cardMsg.id;
+                  insertedUserMsgId = userMsgId;
+                  insertedEpId = nextEpId;
+                }
+              }
+            } else if (text.startsWith("No")) {
+              const cardIdx = newMessages.findIndex((m) => m.id === `ep-${nextEpId}`);
+              if (cardIdx >= 0) {
+                newMessages = newMessages.filter((m, i) => i !== cardIdx && i !== cardIdx + 1);
+              }
+            }
+          }
+        }
+
+        return newMessages;
+      });
+
+      if (insertedUserMsgId && insertedEpId) {
+        setMessageEpisodes((prev) => ({ ...prev, [insertedUserMsgId as string]: insertedEpId as string }));
+      }
+
+      setEditingId(nextCardToEdit);
     },
-    [messageEpisodes, briefPayload, dispatch]
+    [messageEpisodes, briefPayload, dispatch, episodes]
   );
 
   const handleCardEditSave = useCallback(
@@ -457,7 +504,7 @@ export default function ChatWindow() {
       });
 
       if (baseEpId) {
-        const ep = episodeById(baseEpId);
+        const ep = episodeById(baseEpId, episodes);
         if (ep.checklistId) {
           setAnswers((prev) => ({ ...prev, [ep.checklistId as string]: text }));
           setCompleted((prev) => new Set(prev).add(ep.checklistId as string));
@@ -493,7 +540,7 @@ export default function ChatWindow() {
     if (generating) return;
     setGenerating(true);
     try {
-       const payload = buildApiPayload(API_QUESTIONS, chat_original, {
+       const payload = buildApiPayload(getApiQuestions(episodes), chat_original, {
           // id: chat.id,
           watermark: watermark,
           work_type: work_type,
@@ -549,7 +596,10 @@ export default function ChatWindow() {
         }
       }
     } catch (error) {
-      stopPolling();
+      // Transient failure (network blip / proxy 5xx). Never permanently
+      // abandon the poll on a single error — the task may still complete and
+      // Redux would then be stuck on a stale status forever. Keep polling at
+      // the same cadence and surface the failure once.
       setPendingRevisionGenerate(null);
       toast.error(
         typeof error === "string"
@@ -559,10 +609,11 @@ export default function ChatWindow() {
             : "Failed to check design status"
       );
     }
-  }, [taskId, dispatch, stopPolling]);
+  }, [taskId, dispatch]);
 
   // Kick off polling 3s after a task_id lands; clear on unmount / task change.
-  // Caps at MAX_POLLS so the loader can never hang forever on a stuck task.
+  // Fast-poll every 3s for MAX_POLLS, then fall back to a slow background poll
+  // (SLOW_POLL_MS) so a long-running task still lands in Redux when it completes.
   useEffect(() => {
     if (!taskId) return;
     pollCountRef.current = 0;
@@ -570,9 +621,13 @@ export default function ChatWindow() {
       const tick = async () => {
         pollCountRef.current += 1;
         if (pollCountRef.current > MAX_POLLS) {
+          // Fast budget exhausted — the task may still be generating. Switch
+          // to the slow cadence instead of giving up (giving up leaves Redux
+          // stuck on a stale status while the API eventually completes).
           stopPolling();
-          toast.error(
-            "Design generation is taking longer than expected. Please try again."
+          pollRef.current = window.setInterval(
+            () => void getStatus(),
+            SLOW_POLL_MS
           );
           return;
         }
@@ -587,6 +642,17 @@ export default function ChatWindow() {
     };
   }, [taskId, getStatus, stopPolling]);
 
+  // When the user returns to the tab, immediately re-check the latest task so
+  // a design that completed while the tab was backgrounded reaches Redux.
+  useEffect(() => {
+    if (!taskId) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void getStatus();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [taskId, getStatus]);
+
   // get status 
 
   /** "I'd Like To Make Changes" — restart the questions from the first card. */
@@ -599,7 +665,7 @@ export default function ChatWindow() {
     setMessages(
       overviewIdx >= 0
         ? messages.slice(0, overviewIdx + 1)
-        : [buildMessage(episodeById("welcome")), buildMessage(episodeById("overview"))]
+        : [buildMessage(episodeById("welcome", episodes)), buildMessage(episodeById("overview", episodes))]
     );
     setAnswers({});
     dispatch(resetBrief());
@@ -619,7 +685,7 @@ export default function ChatWindow() {
       timeoutRef.current = null;
       busyRef.current = false;
       setTyping(false);
-      setMessages((prev) => [...prev, buildMessage(episodeById("photos"))]);
+      setMessages((prev) => [...prev, buildMessage(episodeById("photos", episodes))]);
       setCurrentId("photos");
     }, TYPING_MS);
   }, [messages, clearTypingTimeout, dispatch]);
@@ -637,12 +703,32 @@ export default function ChatWindow() {
         rating,
         action,
       };
-      console.log(`[Luna] submitLunaProject (${action})`, { data });
-      window.parent.postMessage({ action: "submitLunaProject", data }, "*");
+      postToHost({ action: HOST_ACTION_SUBMIT_PROJECT, data });
       setSubmittedAction(action);
     },
     [id, chat_original, entries]
   );
+
+  const handleCancelAllNeed = useCallback(() => {
+    setSubmittedAction(null);
+  }, []);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Only accept host commands from the embedding frame — never from an
+      // arbitrary window that happens to be able to reach us.
+      if (!isFromParent(event)) return;
+      // Learn the host's origin from its first message so future posts to the
+      // host can target it instead of "*".
+      noteHostOrigin(event.origin);
+      if (event.data?.action === HOST_ACTION_CANCEL_ALL_NEED) {
+        handleCancelAllNeed();
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [handleCancelAllNeed]);
+
 
   /** "This is All I Need" — the initial render is approved as-is. */
   const handleDesignAllINeed = useCallback(() => {
@@ -688,7 +774,7 @@ export default function ChatWindow() {
     }
     // Clear previous round's comment so the new revision card starts empty
     dispatch(setRevision({ files: [], notes: "" }));
-    const revisionMsg = buildMessage(episodeById("revision"));
+    const revisionMsg = buildMessage(episodeById("revision", episodes));
     const id = episodeMessageId("revision", round);
     setMessages((prev) => [...prev, { ...revisionMsg, id }]);
     setCurrentId("revision");
@@ -708,9 +794,10 @@ export default function ChatWindow() {
       // otherwise fall back to the current revision_comment in the Redux store
       // (which was just set when the user submitted the revision card).
       const entry = revisions[round - 1];
-      const notes = entry?.questions[0]?.answer?.notes ?? revisionComment.notes;
-      const files = entry?.questions[0]?.answer?.files ?? revisionComment.files ?? [];
-      const payload = buildApiPayload(API_QUESTIONS, chat_original, {
+      const hasActiveFallback = revisionComment.notes !== "" || (revisionComment.files && revisionComment.files.length > 0);
+      const notes = hasActiveFallback ? revisionComment.notes : (entry?.questions[0]?.answer?.notes ?? revisionComment.notes);
+      const files = hasActiveFallback ? (revisionComment.files ?? []) : (entry?.questions[0]?.answer?.files ?? revisionComment.files ?? []);
+      const payload = buildApiPayload(getApiQuestions(episodes), chat_original, {
         watermark: watermark ?? "",
         work_type: work_type ?? "",
         image_url: entries[entries.length - 1]?.url ?? "",
@@ -778,6 +865,50 @@ export default function ChatWindow() {
     [messages, entries, revisionComment, clearTypingTimeout]
   );
 
+  /**
+   * Toggle edit mode for a user message. Only one answer can be edited at a
+   * time — clicking a second edit icon while another edit is open is blocked.
+   */
+  const handleEditStart = useCallback(
+    (messageId: string) => {
+      const epId = messageEpisodes[messageId];
+
+      if (epId === "revision") {
+        const msgIdx = messages.findIndex((m) => m.id === messageId);
+        if (msgIdx >= 0) {
+          for (let i = msgIdx - 1; i >= 0; i--) {
+            if (messages[i].id === "ep-revision" || messages[i].id.startsWith("ep-revision-")) {
+              const cardId = messages[i].id;
+              const roundMatch = /^ep-revision(?:-(\d+))?$/.exec(cardId);
+              if (roundMatch) {
+                const round = roundMatch[1] ? parseInt(roundMatch[1], 10) : 1;
+                handleMakeChanges(round);
+                return;
+              }
+            }
+          }
+        }
+      }
+
+      let targetId = messageId;
+      if (epId) {
+        const ep = episodeById(epId, episodes);
+        if (ep.kind === "card") {
+          targetId = `ep-${epId}`;
+        }
+      }
+
+      if (editingId !== null && editingId !== targetId) {
+        toast.error(
+          "Only one answer can be edited at a time — save or cancel the current edit first."
+        );
+        return;
+      }
+      setEditingId(editingId === targetId ? null : targetId);
+    },
+    [editingId, messageEpisodes, messages, handleMakeChanges, episodes]
+  );
+
 
   // The latest revision-summary message is the *current* round; earlier rounds
   // stay visible above as locked history.
@@ -812,7 +943,12 @@ export default function ChatWindow() {
             className="z-10 overflow-hidden border-b border-zinc-200/70 bg-white/95 backdrop-blur-md lg:hidden dark:border-zinc-800/70 dark:bg-zinc-950/95"
           >
             <div className="px-5 py-4">
-              <ProgressChecklist completed={completed} currentId={currentId} />
+              <ProgressChecklist
+                completed={completed}
+                currentId={currentId}
+                episodes={episodes}
+                checklist={checklist}
+              />
             </div>
           </motion.div>
         )}
@@ -854,24 +990,16 @@ export default function ChatWindow() {
                   // Only editable episodes get an edit icon on their user answer
                   // (welcome / overview / photos are marked non-editable).
                   const msgEpId = messageEpisodes[m.id];
-                  const msgEpisode = msgEpId ? episodeById(msgEpId) : undefined;
+                  const msgEpisode = msgEpId ? episodeById(msgEpId, episodes) : undefined;
                   const hasCompletedEntry = entries.some(
                     (entry) => entry.status === "completed"
                   );
-                  const isFlowChat = msgEpId && [
-                    "welcome",
-                    "overview",
-                    "photos",
-                    "additional_images_upload",
-                    "files",
-                    "supporting_files_upload",
-                    "project_goals_or_brief_description",
-                    "landscape_design_style_preference",
-                    "hardscape_material_preferences",
-                    "softscape_planting_preferences",
-                    "budget",
-                    "important_proprty_information",
-                  ].includes(msgEpId);
+                  // Any episode in the current work type's flow is an intake
+                  // message (edit-gated once a design entry exists) — derived
+                  // so color-material's topic cards count too.
+                  const isFlowChat = msgEpId
+                    ? episodes.some((e) => e.apiKey === msgEpId)
+                    : false;
 
                   const revisionEntries = entries.filter(
                     (entry) => entry.type === "revision"
@@ -910,6 +1038,7 @@ export default function ChatWindow() {
                        message={m}
                        filesByField={uploads[filesKey] ?? EMPTY_FILES}
                        disabled={typing || (!isCurrent && editingId !== m.id)}
+                       selectedValue={messages[i + 1]?.role === "user" ? messages[i + 1].content : undefined}
                        onOption={isCurrent ? advance : undefined}
                        onCardSubmit={
                          isCurrent
@@ -948,6 +1077,7 @@ export default function ChatWindow() {
                             : briefPayload.original[episodeApiKey]?.answer
                         }
                       answers={answers}
+                      checklist={checklist}
                       uploadTotal={uploadTotal}
                       generating={generating}
                       onSummaryGenerate={isCurrent ? handleGenerate : undefined}
@@ -1007,8 +1137,9 @@ export default function ChatWindow() {
                       onDesignEngage={
                         showsResultCard ? handleDesignEngage : undefined
                       }
-                      editing={canEdit && editingId === m.id}
-                      onEditStart={
+                       editing={canEdit && editingId === m.id}
+                       editOptions={msgEpisode?.options}
+                       onEditStart={
                         canEdit ? () => handleEditStart(m.id) : undefined
                       }
                       onEditSave={
