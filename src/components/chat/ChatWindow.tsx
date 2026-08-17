@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 import LunaAvatar from "./LunaAvatar";
@@ -49,27 +48,10 @@ import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { buildApiPayload } from "@/lib/apiBrief";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import { hydrateProject } from "../../store/persistence/persistenceThunk";
+import { hydrationSkipped } from "../../store/persistence/persistenceSlice";
 
-/** Decoded shape of the base64 `?params` query string sent from the site. */
-interface ClientParams {
-  id?: number;
-  work_type?: string;
-  image_url?: string;
-  watermark?: string;
-  value?: string;
-}
-
-/** URL-safe base64 → JSON object; returns undefined when absent/malformed. */
-function decodeClientParams(raw: string | null): ClientParams | undefined {
-  if (!raw) return undefined;
-  try {
-    const standard = raw.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = standard.padEnd(standard.length + ((4 - (standard.length % 4)) % 4), "=");
-    return JSON.parse(atob(padded)) as ClientParams;
-  } catch {
-    return undefined;
-  }
-}
+import GetAllProjectData from "./GetAllProjectData";
 
 let idCounter = 0;
 const nextId = () => `m-${Date.now()}-${idCounter++}`;
@@ -101,7 +83,7 @@ export default function ChatWindow() {
   // Flow messages keep their `ep-<apiKey>` id (one appearance per episode)
   // so uploads and Handoff labels can be keyed by episode apiKey.
   const [messages, setMessages] = useState<Message[]>([]);
-  const [currentId, setCurrentId] = useState("welcome");
+  const [currentId, setCurrentId] = useState("overview");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   /** apiKey → (field index → files) */
   const [uploads, setUploads] = useState<Record<string, Record<number, File[]>>>({});
@@ -146,80 +128,34 @@ export default function ChatWindow() {
     [restoredItems, entries, episodes, revisionComment]
   );
   
-  const searchParams = useSearchParams();
-
-  // Initialize or restore messages and context on client mount after hydration completes.
-  // Wipes the Redux store and localStorage if the project id has changed.
+  // The project id is the single session identifier: the host sends a fresh id
+  // for a brand-new project, while a refresh keeps the same id so the Supabase
+  // row can be restored. Hydration is async (DB read), so restore is gated on
+  // `persistence.hydrated` below — never before the row has been loaded.
+  const hydrated = useAppSelector((s) => s.persistence.hydrated);
+  console.log("hydrated", hydrated)
   const didInitializeRef = useRef(false);
+
+  // Once hydration completes (row restored or confirmed absent), rebuild the
+  // transcript or start fresh. Same restore logic as before, now DB-backed.
   useEffect(() => {
-    if (didInitializeRef.current) return;
+    if (didInitializeRef.current || !hydrated) return;
     didInitializeRef.current = true;
 
-    const params = decodeClientParams(searchParams.get("params"));
-    console.log("paramas", params)
-    let isNewSession = false;
-    let incomingProjectId = "";
-
-    if (params) {
-      // The project id is the single session identifier: a fresh, unique id
-      // from the host means a brand-new project, while a refresh keeps the
-      // same id so the persisted transcript can be restored.
-      incomingProjectId = params.id ? String(params.id) : "";
-
-      const lastProjectId = window.localStorage.getItem("luna-project-id-v1");
-
-      if (lastProjectId && lastProjectId !== incomingProjectId) {
-        isNewSession = true;
-      }
-
-      // Persist the current value for future mismatch comparison on refresh.
-      if (incomingProjectId) {
-        window.localStorage.setItem("luna-project-id-v1", incomingProjectId);
-      }
-    }
-
-    if (isNewSession) {
-      // Clear persistence and memory stores
-      window.localStorage.removeItem("luna-brief-v1");
-      window.localStorage.removeItem("luna-enterprise-v2");
-      dispatch(resetBrief());
-      dispatch(resetEnterprise());
-
-      // Start fresh welcome message
-      setMessages([buildMessage(episodeById("welcome", episodes))]);
-      setCurrentId("welcome");
-      setAnswers({});
-      setCompleted(new Set());
-      setMessageEpisodes({});
+    const anyAnswered = Object.values(restoredItems).some(
+      (item) => item !== undefined
+    );
+    if (anyAnswered) {
+      setMessages(restoredTranscript.messages);
+      setCurrentId(restoredTranscript.currentId);
+      setAnswers(restoredTranscript.answers);
+      setCompleted(restoredTranscript.completed);
+      setMessageEpisodes(restoredTranscript.messageEpisodes);
     } else {
-      // Restore from persisted state
-      const anyAnswered = Object.values(restoredItems).some(
-        (item) => item !== undefined
-      );
-      if (anyAnswered) {
-        setMessages(restoredTranscript.messages);
-        setCurrentId(restoredTranscript.currentId);
-        setAnswers(restoredTranscript.answers);
-        setCompleted(restoredTranscript.completed);
-        setMessageEpisodes(restoredTranscript.messageEpisodes);
-      } else {
-        setMessages([buildMessage(episodeById("welcome", episodes))]);
-      }
+      setMessages([buildMessage(episodeById("overview", episodes))]);
     }
-
-    if (params) {
-      dispatch(
-        setContext({
-          id: params.id,
-          work_type: params.work_type,
-          image_url: params.image_url,
-          watermark: params.watermark,
-          value: params.value,
-        })
-      );
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
 
   const clearTypingTimeout = useCallback(() => {
     if (timeoutRef.current !== null) {
@@ -233,8 +169,20 @@ export default function ChatWindow() {
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, typing, scrollToBottom]);
+    if (editingId) {
+      const scrollTarget = () => {
+        const el = document.getElementById(`msg-${editingId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      };
+      scrollTarget();
+      const frameId = requestAnimationFrame(scrollTarget);
+      return () => cancelAnimationFrame(frameId);
+    } else {
+      scrollToBottom();
+    }
+  }, [messages, typing, editingId, scrollToBottom]);
 
   useEffect(() => clearTypingTimeout, [clearTypingTimeout]);
 
@@ -262,8 +210,8 @@ export default function ChatWindow() {
     clearTypingTimeout();
     busyRef.current = false;
     setTyping(false);
-    setMessages([buildMessage(episodeById("welcome", episodes))]);
-    setCurrentId("welcome");
+    setMessages([buildMessage(episodeById("overview", episodes))]);
+    setCurrentId("overview");
     setAnswers({});
     dispatch(resetBrief());
     dispatch(resetEnterprise());
@@ -294,11 +242,11 @@ export default function ChatWindow() {
       busyRef.current = true;
       const ep = episodeById(currentId, episodes);
 
-      // Clicking "I am ready to proceed →" on the welcome screen starts a fresh
+      // Clicking "I am ready to proceed →" on the overview screen starts a fresh
       // intake: wipe the Redux brief (and its localStorage copy), the design
       // history (enterprise entries), plus any restored/display state before
       // recording the first answer.
-      if (currentId === "welcome") {
+      if (currentId === "overview") {
         dispatch(resetBrief());
         dispatch(resetEnterprise());
         setAnswers({});
@@ -320,7 +268,7 @@ export default function ChatWindow() {
       if (ep.api && structuredAnswer !== undefined) {
         dispatch(answerQuestion({ apiKey: ep.apiKey, answer: structuredAnswer }));
       }
-      if (filesByField && ep.apiKey !== "welcome") {
+      if (filesByField) {
         // Revision rounds are keyed by their round-specific message id so each
         // loop's uploaded files never leak into the next round's comments card.
         const key =
@@ -439,11 +387,15 @@ export default function ChatWindow() {
               const hasCard = newMessages.some((m) => m.id === `ep-${nextEpId}`);
               if (hasCard) {
                 nextCardToEdit = `ep-${nextEpId}`;
+                newMessages = newMessages.map((m) =>
+                  m.id === `ep-${nextEpId}` ? { ...m, isRestored: true } : m
+                );
               } else {
                 const msgIdx = newMessages.findIndex((m) => m.id === messageId);
                 if (msgIdx >= 0) {
                   const nextEp = episodeById(nextEpId, episodes);
                   const cardMsg = buildMessage(nextEp);
+                  cardMsg.isRestored = true;
                   const userMsgId = `m-inserted-${nextEpId}-${Date.now()}`;
                   const userMsg: Message = { id: userMsgId, role: "user", content: "" };
 
@@ -665,7 +617,7 @@ export default function ChatWindow() {
     setMessages(
       overviewIdx >= 0
         ? messages.slice(0, overviewIdx + 1)
-        : [buildMessage(episodeById("welcome", episodes)), buildMessage(episodeById("overview", episodes))]
+        : [buildMessage(episodeById("overview", episodes))]
     );
     setAnswers({});
     dispatch(resetBrief());
@@ -872,7 +824,7 @@ export default function ChatWindow() {
   const handleEditStart = useCallback(
     (messageId: string) => {
       const epId = messageEpisodes[messageId];
-
+      console.log("epId--->",epId)
       if (epId === "revision") {
         const msgIdx = messages.findIndex((m) => m.id === messageId);
         if (msgIdx >= 0) {
@@ -920,6 +872,7 @@ export default function ChatWindow() {
 
   return (
     <div>
+      <GetAllProjectData />
       <span aria-live="polite" className="sr-only">
         {announcement}
       </span>
@@ -988,7 +941,7 @@ export default function ChatWindow() {
                       ? m.id
                       : episodeApiKey;
                   // Only editable episodes get an edit icon on their user answer
-                  // (welcome / overview / photos are marked non-editable).
+                  // (overview / photos are marked non-editable).
                   const msgEpId = messageEpisodes[m.id];
                   const msgEpisode = msgEpId ? episodeById(msgEpId, episodes) : undefined;
                   const hasCompletedEntry = entries.some(
@@ -1028,6 +981,32 @@ export default function ChatWindow() {
                   const isCardBeingEdited = msgEpId && editingId === `ep-${msgEpId}`;
                   if (isCardBeingEdited) return null;
 
+                  // Extract already-uploaded image URLs from Redux so UserAnswerBubble
+                  // can render thumbnails for the user's submitted answer.
+                  // Covers: string[] (upload-only), { files, notes } (text+upload answers).
+                  const answerImageUrls: string[] = (() => {
+                    if (m.role !== 'user') return [];
+                    const epKey = messageEpisodes[m.id];
+                    if (!epKey) return [];
+                    const item = briefPayload.original[epKey];
+                    if (!item) return [];
+                    const ans = item.answer;
+                    if (Array.isArray(ans)) return ans as string[];
+                    if (ans && typeof ans === 'object' && 'files' in ans && Array.isArray(ans.files))
+                      return ans.files as string[];
+                    return [];
+                  })();
+
+                  // Detect if this is an assistant option-message whose adjacent
+                  // user answer is currently being edited — option buttons reappear.
+                  const nextMsg = messages[i + 1];
+                  const editingNextMessage = Boolean(
+                    m.role === 'assistant' &&
+                    m.options?.length &&
+                    nextMsg?.role === 'user' &&
+                    nextMsg.id === editingId
+                  );
+
                    return (
                      <div
                        key={bubbleKey}
@@ -1037,9 +1016,16 @@ export default function ChatWindow() {
                      <MessageBubble
                        message={m}
                        filesByField={uploads[filesKey] ?? EMPTY_FILES}
-                       disabled={typing || (!isCurrent && editingId !== m.id)}
+                       disabled={typing || (!isCurrent && editingId !== m.id && !editingNextMessage)}
                        selectedValue={messages[i + 1]?.role === "user" ? messages[i + 1].content : undefined}
                        onOption={isCurrent ? advance : undefined}
+                       answerImageUrls={answerImageUrls}
+                       editingNextMessage={editingNextMessage}
+                       onOptionEditSave={
+                         editingNextMessage && nextMsg
+                           ? (text) => handleEditSave(nextMsg.id, text)
+                           : undefined
+                       }
                        onCardSubmit={
                          isCurrent
                            ? handleCardSubmit

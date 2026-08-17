@@ -18,6 +18,8 @@ interface UploadZoneProps {
   onChange: (files: File[]) => void;
   /** Called with fileKey → Cloudinary result whenever uploaded URLs change. */
   onUrlsChange?: (urls: Record<string, CloudinaryUploadResult>) => void;
+  /** Called when any file starts or finishes uploading. */
+  onUploadingChange?: (isUploading: boolean) => void;
 }
 
 interface UploadStatus {
@@ -39,12 +41,18 @@ function UploadZone({
   compact = false,
   onChange,
   onUrlsChange,
+  onUploadingChange,
 }: UploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState<Record<string, UploadStatus>>({});
   const [urls, setUrls] = useState<Record<string, CloudinaryUploadResult>>({});
   const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    const isUploading = Object.values(status).some((st) => st.state === "uploading");
+    onUploadingChange?.(isUploading);
+  }, [status, onUploadingChange]);
 
   // The url map lives in a ref so async completions always notify the parent
   // with the full accumulated state, not just the latest single upload.

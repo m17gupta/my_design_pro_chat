@@ -36,32 +36,24 @@ export interface Episode {
 }
 
 /**
- * The Luna intake flow: welcome → overview → eight question cards
+ * The Luna intake flow: overview → eight question cards
  * (transcribed from design.md) → Design Summary.
  */
 const EPISODES: Episode[] = [
-  {
-    apiKey: "welcome",
-    kind: "ready",
-    content:
-      "Hi! I'm **Luna**, and I'll help get your project started. I'll quickly gather and organize the information your designer, **Brooke Edwards**, will need to review your request and guide you through the next steps.",
-    options: ["I am ready to proceed →"],
-    editable: false,
-  },
   {
     apiKey: "overview",
     kind: "ready",
     content:
       "To give you an overview of what information I will be gathering so you know what to expect, I will be touching on the following:",
     showChecklist: true,
-    options: ["Next →"],
+    options: ["I am ready to proceed  →"],
     editable: false,
   },
   {
     apiKey: "photos",
     kind: "ready",
     content:
-      "First, do you have any additional photo angles of the front yard that you think are helpful for us to see?",
+      "Perfect! Go ahead and upload any additional angles of the front view. These extra views help us better understand your property.",
     checklistId: "photos",
     options: ["Yes I do", "No I don't"],
   },
@@ -71,7 +63,7 @@ const EPISODES: Episode[] = [
     card: {
       title: "Additional House Photos (Optional)",
       description:
-        "Great, your main photo has been received! If you have additional photos of **this same side of your home taken** from different angles, distances, or perspectives (such as closer shots or views from the left or right while still facing this same elevation), please upload them here.\n\nThese additional photos help us better understand your home's architecture and create the most accurate design possible.",
+        "",
       fields: [{ kind: "upload-grid", count: 4, accept: "image/*" }],
     },
     api: {
@@ -671,22 +663,21 @@ export function buildRestoredTranscript(
     }
   };
 
-  // Nothing restored → a fresh welcome screen, exactly like today.
+  // Nothing restored → a fresh overview screen, exactly like today.
   const anyAnswered = Object.values(original).some(
     (item) => item !== undefined && !isAnswerEmpty(item.answer)
   );
   if (!anyAnswered) {
     return {
-      messages: [buildMessage(episodeById("welcome", episodes))],
+      messages: [buildMessage(episodeById("overview", episodes))],
       messageEpisodes: {},
       answers: {},
-      currentId: "welcome",
+      currentId: "overview",
       completed: new Set(),
     };
   }
 
   // Fixed intro
-  pushAssistant(episodeById("welcome", episodes));
   pushAssistant(episodeById("overview", episodes));
 
   let lastId = "overview";

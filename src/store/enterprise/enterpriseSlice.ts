@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import {
   fetchEnterpriseStatus,
   generateEnterpriseDesign,
@@ -35,6 +35,12 @@ const enterpriseSlice = createSlice({
     /** Clear the design history (e.g. on Start Over). */
     resetEnterprise() {
       return initialState;
+    },
+    /** Replace the design history (used when restoring a project from the DB). */
+    setEntries(state, action: PayloadAction<EnterpriseEntry[]>) {
+      state.entries = action.payload;
+      state.lifecycle = "idle";
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -124,5 +130,5 @@ const enterpriseSlice = createSlice({
   },
 });
 
-export const { resetEnterprise } = enterpriseSlice.actions;
+export const { resetEnterprise, setEntries } = enterpriseSlice.actions;
 export default enterpriseSlice.reducer;

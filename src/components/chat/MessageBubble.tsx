@@ -7,6 +7,7 @@ import { renderInline } from './formatText'
 import LunaAvatar from './LunaAvatar'
 import OptionButtons from './OptionButtons'
 import QuestionCard, { type CardResult } from './QuestionCard'
+import UserAnswerBubble from './UserAnswerBubble'
 import { CHECKLIST, type ChecklistItem, type Message, type AnswerValue } from './types'
 import RevisionDesign from '../revisionDesign/RevisionDesign'
 import type { SubmitAction } from '../revisionDesign/RevisionResultCard'
@@ -68,6 +69,12 @@ interface MessageBubbleProps {
   onEditCancel?: () => void
   /** Yes/No options for option-question episodes (photos/files) — renders buttons instead of a textarea while editing. */
   editOptions?: string[]
+
+  answerImageUrls?: string[]
+
+  editingNextMessage?: boolean
+ 
+  onOptionEditSave?: (text: string) => void
 }
 
 /**
@@ -102,7 +109,7 @@ function useTypewriter (
           window.clearInterval(intervalRef.current)
           intervalRef.current = null
         }
-      }, 40)
+      }, 80)
     }, 0)
     return () => {
       window.clearTimeout(id)
@@ -153,13 +160,13 @@ export const MessageBubble = ({
   onEditStart,
   onEditSave,
   onEditCancel,
-  editOptions
+  editOptions,
+  answerImageUrls = [],
+  editingNextMessage = false,
+  onOptionEditSave,
 }: MessageBubbleProps) => {
   const isUser = message.role === 'user'
   const reduceMotion = useReducedMotion() ?? false
-  const editRef = useRef<HTMLTextAreaElement>(null)
-  const isOptionEdit = Boolean(editing && editOptions?.length)
-  const [editChoice, setEditChoice] = useState<string | null>(null)
   const { entries } = useSelector((state: RootState) => state.enterprise)
   // The intake (original) entry drives the summary + result card below it.
   const originalEntry = entries.find((entry) => entry.type === "original")
@@ -169,17 +176,13 @@ export const MessageBubble = ({
         originalEntry.status === "processing" ||
         originalEntry.status === "pending")
   )
-  // Once the original entry exists and isn't failed, the intake summary's two
-  // action buttons are hidden — the generating/result card takes over. A
-  // failed entry keeps them visible so the generate can be retried.
+ 
   const summaryActionsHidden =
     originalEntry !== undefined && originalEntry.status !== "failed"
-  // The intake summary's actions stay disabled while the original entry is
-  // pending or done; a failed entry stays enabled so it can be retried.
+
   const summaryDisabled =
     originalEntry !== undefined && originalEntry.status !== "failed"
-  // Cards type out their title + description in the bubble; the card below
-  // then shows only the answer fields.
+ 
   const displayText =
     message.kind === 'card' && message.card
       ? `${message.card.title}\n\n${message.card.description}`
@@ -196,234 +199,145 @@ export const MessageBubble = ({
   )
   const done = isUser || typed === displayText
 
-  // Focus the edit textarea (cursor at the end) when edit mode opens.
-  useEffect(() => {
-    if (editing && editRef.current) {
-      editRef.current.focus()
-      const len = editRef.current.value.length
-      editRef.current.setSelectionRange(len, len)
-    }
-  }, [editing])
-
-  const saveEdit = () => {
-    if (isOptionEdit) {
-      if (onEditSave) onEditSave(editChoice ?? message.content)
-    } else if (editRef.current && onEditSave) {
-      onEditSave(editRef.current.value)
-    }
-    setEditChoice(null)
-  }
-
-  const cancelEdit = () => {
-    setEditChoice(null)
-    if (onEditCancel) onEditCancel()
+  if (message.kind === 'card') {
+    console.log("Card render check:", {
+      id: message.id,
+      done,
+      disabled,
+      hasCardCancel: !!onCardCancel,
+    });
   }
 
   return (
     <div className='w-full'>
       {!isRevisionSummary && (
-        <motion.div
-          initial={
-            message.isRestored
-              ? { opacity: 1, y: 0, scale: 1 }
-              : reduceMotion
-              ? { opacity: 0 }
-              : { opacity: 0, y: 12, scale: 0.96 }
-          }
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.15 } }}
-          transition={
-            message.isRestored
-              ? { duration: 0 }
-              : {
-                  type: 'spring',
-                  stiffness: 380,
-                  damping: 30,
-                  mass: 0.9
-                }
-          }
-          className={`flex w-full items-start ${
-            isUser ? 'justify-end' : 'justify-start'
-          }`}
-        >
-          {!isUser && (
-            <div className='mr-3 mt-0.5'>
-              <LunaAvatar size='sm' />
-            </div>
-          )}
-
-          <div
-            className={`flex flex-col ${
-              isUser
-                ? 'max-w-[85%] sm:max-w-[75%] items-end'
-                : message.kind === 'card'
-                ? 'w-full sm:max-w-[85%] items-start'
-                : 'max-w-[85%] sm:max-w-[75%] items-start'
-            }`}
-          >
-            <div
-              className={`rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed shadow-sm ${
-                isUser
-                  ? 'rounded-br-md bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20'
-                  : 'rounded-bl-md border border-zinc-200/80 bg-white text-zinc-800 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100'
-              } ${editing && !isOptionEdit ? 'w-full ring-2 ring-emerald-400/70' : ''} ${
-                isUser && (!editing || isOptionEdit) ? 'hidden' : ''
-              } ${message.kind === 'card' ? 'w-full' : ''}`}
-            >
-              {isUser && editing && !isOptionEdit ? (
-                <textarea
-                  ref={editRef}
-                  defaultValue={message.content}
-                  aria-label='Edit your answer'
-                  rows={Math.max(
-                    2,
-                    Math.min(6, message.content.split('\n').length + 1)
-                  )}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      saveEdit()
-                    } else if (e.key === 'Escape') {
-                      cancelEdit()
+        <>
+          {/* ── User message: delegate to UserAnswerBubble ── */}
+          {isUser ? (
+            <UserAnswerBubble
+              content={message.content}
+              imageUrls={answerImageUrls}
+              editing={editing}
+              editOptions={editOptions}
+              onEditStart={onEditStart}
+              onEditSave={onEditSave}
+              onEditCancel={onEditCancel}
+              isRestored={message.isRestored}
+            />
+          ) : (
+            /* ── Assistant message ── */
+            <motion.div
+              initial={
+                message.isRestored
+                  ? { opacity: 1, y: 0, scale: 1 }
+                  : reduceMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, y: 12, scale: 0.96 }
+              }
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.15 } }}
+              transition={
+                message.isRestored
+                  ? { duration: 0 }
+                  : {
+                      type: 'spring',
+                      stiffness: 380,
+                      damping: 30,
+                      mass: 0.9
                     }
-                  }}
-                  className='w-full resize-none rounded-xl bg-white/15 px-3 py-2 text-[15px] leading-relaxed text-white outline-none ring-1 ring-white/30 placeholder:text-white/60 focus:bg-white/20 focus:ring-2 focus:ring-white/60'
-                />
-              ) : (
-                <p className='whitespace-pre-wrap break-words'>
-                  {renderInline(typed)}
-                  {!done && (
-                    <span
-                      aria-hidden='true'
-                      className='ml-0.5 inline-block h-[1em] w-[2px] animate-pulse rounded-sm bg-emerald-500 align-middle dark:bg-emerald-400'
-                    />
-                  )}
-                </p>
-              )}
-
-              {done && message.showChecklist && (
-                <ol className='mt-3 space-y-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-800'>
-                  {checklist.map(item => (
-                    <li
-                      key={item.id}
-                      className='flex items-baseline gap-2 text-[13.5px] text-zinc-600 dark:text-zinc-300'
-                    >
-                      <span className='font-semibold text-emerald-600 dark:text-emerald-400'>
-                        {item.number}.
-                      </span>
-                      <span>{item.label}</span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
-
-            {done && message.options && (
-              <OptionButtons
-                options={message.options}
-                disabled={disabled}
-                selectedValue={selectedValue}
-                onSelect={onOption ?? (() => {})}
-              />
-            )}
-
-            {isUser && isOptionEdit && (
-              <div className='mt-2 flex flex-col items-end gap-1'>
-                <span className='mr-1 text-xs text-zinc-400 dark:text-zinc-500'>
-                  Choose your answer:
-                </span>
-                <OptionButtons
-                  options={editOptions ?? []}
-                  selectedValue={editChoice ?? message.content}
-                  onSelect={setEditChoice}
-                />
+              }
+              className='flex w-full items-start justify-start'
+            >
+              <div className='mr-3 mt-0.5'>
+                <LunaAvatar size='sm' />
               </div>
-            )}
 
-            {isUser && (
-              <div className='mt-1 flex items-center gap-1.5'>
-                {editing ? (
-                  <>
-                    <button
-                      type='button'
-                      onClick={saveEdit}
-                      disabled={isOptionEdit && !editChoice}
-                      className='rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 px-3.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50'
-                    >
-                      Save
-                    </button>
-                    <button
-                      type='button'
-                      onClick={cancelEdit}
-                      className='rounded-full border border-zinc-300 px-3.5 py-1 text-xs font-medium text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700 dark:border-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-200'
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : onEditStart ? (
-                  <button
-                    type='button'
-                    onClick={onEditStart}
-                    aria-label={`Edit answer: ${message.content}`}
-                    title='Edit answer'
-                    className='flex h-6 w-6 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400'
-                  >
-                    <svg
-                      width='12'
-                      height='12'
-                      viewBox='0 0 24 24'
-                      fill='none'
-                      stroke='currentColor'
-                      strokeWidth='2'
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      aria-hidden='true'
-                    >
-                      <path d='M12 20h9' />
-                      <path d='M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z' />
-                    </svg>
-                  </button>
-                ) : null}
-              </div>
-            )}
-            {done && message.kind === 'card' && message.card && (
-              <motion.div
-                initial={
-                  message.isRestored
-                    ? { opacity: 1, y: 0 }
-                    : reduceMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, y: 12 }
-                }
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                transition={
-                  message.isRestored
-                    ? { duration: 0 }
-                    : { type: 'spring', stiffness: 380, damping: 30 }
-                }
-                className='mt-3 w-full'
+              <div
+                className={`flex flex-col ${
+                  message.kind === 'card'
+                    ? 'w-full sm:max-w-[85%] items-start'
+                    : 'max-w-[85%] sm:max-w-[75%] items-start'
+                }`}
               >
-                <QuestionCard
-                  key={`${message.id}-${disabled ? 'disabled' : 'editing'}`}
-                  spec={message.card}
-                  filesByField={filesByField}
-                  initialAnswer={initialAnswer ?? message.initialAnswer}
-                  disabled={disabled}
-                  showHeader={false}
-                  onSubmit={onCardSubmit ?? (() => {})}
-                  onCancel={onCardCancel}
-                />
-              </motion.div>
-            )}
-          </div>
+                <div
+                  className={`rounded-2xl rounded-bl-md border border-zinc-200/80 bg-white px-4 py-2.5 text-[15px] leading-relaxed text-zinc-800 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 ${
+                    message.kind === 'card' ? 'w-full' : ''
+                  }`}
+                >
+                  <p className='whitespace-pre-wrap break-words'>
+                    {renderInline(typed)}
+                    {!done && (
+                      <span
+                        aria-hidden='true'
+                        className='ml-0.5 inline-block h-[1em] w-[2px] animate-pulse rounded-sm bg-emerald-500 align-middle dark:bg-emerald-400'
+                      />
+                    )}
+                  </p>
 
-          {/* {isUser && (
-            <div className="ml-3 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-xs font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-              You
-            </div>
-          )} */}
-        </motion.div>
+                  {done && message.showChecklist && (
+                    <ol className='mt-3 space-y-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-800'>
+                      {checklist.map(item => (
+                        <li
+                          key={item.id}
+                          className='flex items-baseline gap-2 text-[13.5px] text-zinc-600 dark:text-zinc-300'
+                        >
+                          <span className='font-semibold text-emerald-600 dark:text-emerald-400'>
+                            {item.number}.
+                          </span>
+                          <span>{item.label}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+
+                {/* ── OptionButtons: hidden once answered; reappear during edit ── */}
+                {done && message.options && (!selectedValue || editingNextMessage) && (
+                  <OptionButtons
+                    options={message.options}
+                    disabled={editingNextMessage ? false : disabled}
+                    selectedValue={editingNextMessage ? undefined : selectedValue}
+                    onSelect={editingNextMessage
+                      ? (onOptionEditSave ?? (() => {}))
+                      : (onOption ?? (() => {}))}
+                  />
+                )}
+
+                {/* ── QuestionCard: hidden once answered (disabled=true) unless being re-edited ── */}
+                {done && message.kind === 'card' && message.card && (!disabled || onCardCancel) && (
+                  <motion.div
+                    initial={
+                      message.isRestored
+                        ? { opacity: 1, y: 0 }
+                        : reduceMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: 12 }
+                    }
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                    transition={
+                      message.isRestored
+                        ? { duration: 0 }
+                        : { type: 'spring', stiffness: 380, damping: 30 }
+                    }
+                    className='mt-3 w-full'
+                  >
+                    <QuestionCard
+                      key={`${message.id}-${disabled ? 'disabled' : 'editing'}`}
+                      spec={message.card}
+                      filesByField={filesByField}
+                      initialAnswer={initialAnswer ?? message.initialAnswer}
+                      disabled={disabled}
+                      showHeader={false}
+                      onSubmit={onCardSubmit ?? (() => {})}
+                      onCancel={onCardCancel}
+                    />
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </>
       )}
 
       {done && message.kind === 'summary' && (

@@ -61,6 +61,37 @@ export type AnswerValue =
 export type ApiAnswerShape = "urls" | "text" | "files-notes" | "value-notes";
 
 /**
+ * Known work_type values — the section keys in Questions.json, normalized to
+ * underscores (matching `normalizeWorkType` in flow.ts). Incoming host values
+ * may be hyphenated ("front-yard"); `toWorkType` normalizes them on entry to
+ * the store so state only ever holds canonical values.
+ */
+export const WORK_TYPES = [
+  "front_yard",
+  "rear_yard",
+  "whole_property",
+  "color_material",
+  "arc_addition",
+  "custom",
+  "value_added_services",
+] as const;
+
+/** The canonical work_type values the intake flow supports. */
+export type WorkType = (typeof WORK_TYPES)[number];
+
+/**
+ * Normalize a raw host/API work_type (e.g. "front-yard") to a known WorkType.
+ * Returns null when absent or not a recognized value.
+ */
+export function toWorkType(raw: string | null | undefined): WorkType | null {
+  if (!raw) return null;
+  const normalized = raw.trim().toLowerCase().replace(/-/g, "_");
+  return (WORK_TYPES as readonly string[]).includes(normalized)
+    ? (normalized as WorkType)
+    : null;
+}
+
+/**
  * API-facing metadata attached to a card episode. `apiKey` is the episode's
  * identifier (hoisted from the episode in flow.ts) and the exact snake_case
  * key the API expects — always matching schema.md.
@@ -97,7 +128,7 @@ export interface Message {
   content: string;
   /** Which kind of interactive attachment this message carries. */
   kind?: EpisodeKind;
-  /** Choice buttons rendered under the message (welcome / overview). */
+  /** Choice buttons rendered under the message (overview). */
   options?: string[];
   /** Question card rendered in place of a bubble. */
   card?: QuestionCardSpec;

@@ -3,7 +3,8 @@ import {
   createSlice,
   type PayloadAction,
 } from "@reduxjs/toolkit";
-import type { AnswerValue } from "../components/chat/types";
+import type { AnswerValue, WorkType } from "../components/chat/types";
+import { toWorkType } from "../components/chat/types";
 import { buildEpisodes, getApiQuestions } from "../components/chat/flow";
 import {
   buildApiPayload,
@@ -13,6 +14,7 @@ import {
   type BriefContext,
   type RevisionComment,
 } from "../lib/apiBrief";
+import { isAnswerEmpty } from "../lib/briefDisplay";
 
 /**
  * Brief state mirrors the schema.md payload: one fully-assembled item
@@ -23,11 +25,37 @@ import {
 export interface BriefState {
   id:number |null,
   watermark: string |null;
-  work_type: string |null;
+  work_type: WorkType |null;
   image_url: string |null;
   value: string |null;
   original: Record<string, ApiBriefItem>;
   revision_comment: RevisionComment;
+}
+
+/**
+ * Reverse of `payloadFromState`: reconstruct store state from a persisted
+ * schema.md-shaped payload. Lossless round-trip — the same payload regenerates.
+ * Items with empty (unanswered) answers are dropped so key presence = answered.
+ * Lives here (not in the store) so the persistence thunk can restore a project
+ * without creating a circular import.
+ */
+export function stateFromPayload(payload: ApiBriefPayload): BriefState {
+  const original: Record<string, ApiBriefItem> = {};
+  getApiQuestions(buildEpisodes(payload.work_type ?? undefined)).forEach((q) => {
+    const item = payload.original[q.apiKey];
+    if (item && !isAnswerEmpty(item.answer)) {
+      original[q.apiKey] = item;
+    }
+  });
+  return {
+    id: payload.id,
+    original,
+    watermark: payload.watermark,
+    work_type: toWorkType(payload.work_type),
+    image_url: payload.image_url,
+    value: payload.value ?? null,
+    revision_comment: payload.revision_comment ?? { files: [], notes: "" },
+  };
 }
 
 const initialState: BriefState = {
@@ -63,7 +91,8 @@ const briefSlice = createSlice({
     setContext(state, action: PayloadAction<BriefContext>) {
       if (action.payload.id !== undefined) state.id = action.payload.id;
       if (action.payload.watermark !== undefined) state.watermark = action.payload.watermark;
-      if (action.payload.work_type !== undefined) state.work_type = action.payload.work_type;
+      if (action.payload.work_type !== undefined)
+        state.work_type = toWorkType(action.payload.work_type);
       if (action.payload.image_url !== undefined) state.image_url = action.payload.image_url;
       if (action.payload.value !== undefined) state.value = action.payload.value;
     },
@@ -75,11 +104,15 @@ const briefSlice = createSlice({
     resetBrief(state) {
       state.original = {}
       state.revision_comment={ files: [], notes: "" }
+    },
+    /** Replace the whole brief state (used when restoring a project from the DB). */
+    setBriefState(_state, action: PayloadAction<BriefState>) {
+      return action.payload;
     }
   },
 });
 
-export const { answerQuestion, setContext, setRevision, resetBrief } = briefSlice.actions;
+export const { answerQuestion, setContext, setRevision, resetBrief, setBriefState } = briefSlice.actions;
 export default briefSlice.reducer;
 
 /** Shape used by selectors (a slice of the root state). */

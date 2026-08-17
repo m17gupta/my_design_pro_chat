@@ -183,7 +183,7 @@ describe("nextEpisodeId", () => {
 
 describe("buildMessage", () => {
   it("derives message ids from the episode apiKey", () => {
-    expect(buildMessage(episodeById("welcome")).id).toBe("ep-welcome");
+    expect(buildMessage(episodeById("overview")).id).toBe("ep-overview");
     expect(buildMessage(episodeById("additional_images_upload")).id).toBe(
       "ep-additional_images_upload"
     );
@@ -253,7 +253,6 @@ describe("buildEpisodes", () => {
       );
       // Non-topic episodes stay byte-identical to the base list.
       for (const shared of [
-        "welcome",
         "overview",
         "photos",
         "budget",
@@ -288,7 +287,7 @@ describe("revision loop round ids", () => {
 
   it("counts revision comment cards without counting their summaries", () => {
     const ids = [
-      "ep-welcome",
+      "ep-overview",
       "ep-revision",
       "ep-revision-summary",
       "ep-revision-2",
@@ -338,10 +337,10 @@ describe("revision loop round ids", () => {
 });
 
 describe("buildRestoredTranscript", () => {
-  it("returns just the welcome screen when nothing was answered", () => {
+  it("returns just the overview screen when nothing was answered", () => {
     const t = buildRestoredTranscript({});
-    expect(t.messages.map((m) => m.id)).toEqual(["ep-welcome"]);
-    expect(t.currentId).toBe("welcome");
+    expect(t.messages.map((m) => m.id)).toEqual(["ep-overview"]);
+    expect(t.currentId).toBe("overview");
   });
 
   it("resumes at the files question when only photos were uploaded", () => {

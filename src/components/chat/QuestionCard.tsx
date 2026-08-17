@@ -37,6 +37,8 @@ function QuestionCard({
   showHeader = true,
   onCancel,
 }: QuestionCardProps) {
+
+  console.log("spec title----", spec.title)
   // Compute initial states from initialAnswer
   const initTextByField = useMemo(() => {
     if (!initialAnswer) return {};
@@ -109,6 +111,7 @@ function QuestionCard({
   const [radio, setRadio] = useState<string | null>(initRadio);
   const [checks, setChecks] = useState<Set<string>>(initChecks);
   const [notes, setNotes] = useState(initNotes);
+  const [uploadingSlots, setUploadingSlots] = useState<Record<number, boolean>>({});
   const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
 
   const autoResize = (index: number) => {
@@ -124,9 +127,12 @@ function QuestionCard({
     });
   }, [textByField, spec.fields]);
 
+  const isAnyUploading = Object.values(uploadingSlots).some(Boolean);
+
   // Continue is enabled once every required field has input.
   const canContinue =
     !disabled &&
+    !isAnyUploading &&
     spec.fields.every((field, i) => {
       if (field.kind === "textarea" && field.required) {
         return (textByField[i] ?? "").trim().length > 0;
@@ -151,6 +157,23 @@ function QuestionCard({
         Array.from({ length: field.count ?? 4 }).forEach((_, slot) => {
           handlers.set(slot, (map) =>
             setUrlsByField((prev) => ({ ...prev, [slot]: map }))
+          );
+        });
+      }
+    });
+    return handlers;
+  }, [spec.fields]);
+
+  const uploadingHandlers = useMemo(() => {
+    const handlers = new Map<number, (isUploading: boolean) => void>();
+    spec.fields.forEach((field) => {
+      if (field.kind === "upload-grid") {
+        Array.from({ length: field.count ?? 4 }).forEach((_, slot) => {
+          handlers.set(slot, (isUploading) =>
+            setUploadingSlots((prev) => {
+              if (prev[slot] === isUploading) return prev;
+              return { ...prev, [slot]: isUploading };
+            })
           );
         });
       }
@@ -299,6 +322,7 @@ function QuestionCard({
                       setUploads((prev) => ({ ...prev, [slot]: files }))
                     }
                     onUrlsChange={urlsHandlers.get(slot)}
+                    onUploadingChange={uploadingHandlers.get(slot)}
                   />
                 ))}
               </div>
