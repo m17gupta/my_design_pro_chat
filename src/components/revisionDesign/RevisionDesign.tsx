@@ -100,9 +100,10 @@ export default function RevisionDesign({
     status !== "failed" &&
     status !== "completed";
   const completed = entry?.status === "completed";
-  const generating = pendingGenerate || inFlight;
-  // A round whose entry is still "pending" (generation in flight) keeps its
-  // summary buttons disabled until the task reaches a terminal state.
+  const inProgress =
+    status === "pending" || status === "queued" || status === "processing";
+
+  const generating = pendingGenerate || inFlight || inProgress;
   const pending = status === "pending";
 
   // History rounds (and completed current rounds) keep the summary read-only;

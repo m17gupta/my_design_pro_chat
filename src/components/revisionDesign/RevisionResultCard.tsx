@@ -104,10 +104,10 @@ export default function RevisionResultCard({
         <h3 className="mt-2 text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           Your Revised Design
         </h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+        {/* <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
           Thanks for the feedback — I&apos;ve applied your revision comments and
           generated an updated concept below.
-        </p>
+        </p> */}
 
         {/* Revision image — loading placeholder until the task completes. */}
         <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">

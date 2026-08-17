@@ -1,6 +1,8 @@
 "use client";
 
+import { RootState } from "@/store";
 import { motion } from "framer-motion";
+import { useSelector } from "react-redux";
 
 interface RevisionSummaryCardProps {
   /** 1-based revision round — shown as the "Revision N" badge. */
@@ -37,6 +39,9 @@ export default function RevisionSummaryCard({
   onGenerate,
   onChanges,
 }: RevisionSummaryCardProps) {
+
+
+  const {lifecycle}= useSelector((state:RootState)=>state.enterprise)
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -115,7 +120,7 @@ export default function RevisionSummaryCard({
         )}
       </div>
 
-      {showActions && (
+      {showActions && (lifecycle=="succeeded"|| lifecycle=="loading")&& (
         <div className="mt-4 flex flex-wrap justify-center gap-3 w-full">
           <motion.button
             type="button"

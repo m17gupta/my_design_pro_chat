@@ -368,60 +368,65 @@ export default function ChatWindow() {
         }
       }
 
-      setMessages((prev) => {
-        let newMessages = prev;
-        if (text) {
-          newMessages = prev.map((m) => (m.id === messageId ? { ...m, content: text } : m));
-        }
+      // Build the next transcript and decide what enters edit mode BEFORE
+      // touching state: the `editingId` target must be known synchronously so
+      // a Yes→card edit re-opens the card instead of silently cancelling
+      // (React runs state updaters lazily, so writing these inside the
+      // setMessages updater and reading them after would see stale nulls).
+      let newMessages = messages;
+      if (text) {
+        newMessages = messages.map((m) =>
+          m.id === messageId ? { ...m, content: text } : m
+        );
+      }
 
-        if (epId && (text.startsWith("Yes") || text.startsWith("No"))) {
-          const nextEpId =
-            epId === "photos"
-              ? "additional_images_upload"
-              : epId === "files"
-              ? "supporting_files_upload"
-              : null;
+      if (epId && (text.startsWith("Yes") || text.startsWith("No"))) {
+        const nextEpId =
+          epId === "photos"
+            ? "additional_images_upload"
+            : epId === "files"
+            ? "supporting_files_upload"
+            : null;
 
-          if (nextEpId) {
-            if (text.startsWith("Yes")) {
-              const hasCard = newMessages.some((m) => m.id === `ep-${nextEpId}`);
-              if (hasCard) {
-                nextCardToEdit = `ep-${nextEpId}`;
-                newMessages = newMessages.map((m) =>
-                  m.id === `ep-${nextEpId}` ? { ...m, isRestored: true } : m
-                );
-              } else {
-                const msgIdx = newMessages.findIndex((m) => m.id === messageId);
-                if (msgIdx >= 0) {
-                  const nextEp = episodeById(nextEpId, episodes);
-                  const cardMsg = buildMessage(nextEp);
-                  cardMsg.isRestored = true;
-                  const userMsgId = `m-inserted-${nextEpId}-${Date.now()}`;
-                  const userMsg: Message = { id: userMsgId, role: "user", content: "" };
+        if (nextEpId) {
+          if (text.startsWith("Yes")) {
+            const hasCard = newMessages.some((m) => m.id === `ep-${nextEpId}`);
+            if (hasCard) {
+              nextCardToEdit = `ep-${nextEpId}`;
+              newMessages = newMessages.map((m) =>
+                m.id === `ep-${nextEpId}` ? { ...m, isRestored: true } : m
+              );
+            } else {
+              const msgIdx = newMessages.findIndex((m) => m.id === messageId);
+              if (msgIdx >= 0) {
+                const nextEp = episodeById(nextEpId, episodes);
+                const cardMsg = buildMessage(nextEp);
+                cardMsg.isRestored = true;
+                const userMsgId = `m-inserted-${nextEpId}-${Date.now()}`;
+                const userMsg: Message = { id: userMsgId, role: "user", content: "" };
 
-                  newMessages = [
-                    ...newMessages.slice(0, msgIdx + 1),
-                    cardMsg,
-                    userMsg,
-                    ...newMessages.slice(msgIdx + 1),
-                  ];
+                newMessages = [
+                  ...newMessages.slice(0, msgIdx + 1),
+                  cardMsg,
+                  userMsg,
+                  ...newMessages.slice(msgIdx + 1),
+                ];
 
-                  nextCardToEdit = cardMsg.id;
-                  insertedUserMsgId = userMsgId;
-                  insertedEpId = nextEpId;
-                }
+                nextCardToEdit = cardMsg.id;
+                insertedUserMsgId = userMsgId;
+                insertedEpId = nextEpId;
               }
-            } else if (text.startsWith("No")) {
-              const cardIdx = newMessages.findIndex((m) => m.id === `ep-${nextEpId}`);
-              if (cardIdx >= 0) {
-                newMessages = newMessages.filter((m, i) => i !== cardIdx && i !== cardIdx + 1);
-              }
+            }
+          } else if (text.startsWith("No")) {
+            const cardIdx = newMessages.findIndex((m) => m.id === `ep-${nextEpId}`);
+            if (cardIdx >= 0) {
+              newMessages = newMessages.filter((m, i) => i !== cardIdx && i !== cardIdx + 1);
             }
           }
         }
+      }
 
-        return newMessages;
-      });
+      setMessages(newMessages);
 
       if (insertedUserMsgId && insertedEpId) {
         setMessageEpisodes((prev) => ({ ...prev, [insertedUserMsgId as string]: insertedEpId as string }));
@@ -429,7 +434,7 @@ export default function ChatWindow() {
 
       setEditingId(nextCardToEdit);
     },
-    [messageEpisodes, briefPayload, dispatch, episodes]
+    [messageEpisodes, briefPayload, dispatch, episodes, messages]
   );
 
   const handleCardEditSave = useCallback(
