@@ -3,6 +3,10 @@
 import { motion } from "framer-motion";
 import { CHECKLIST, type ChecklistItem } from "../types";
 
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
+import { isAnswerEmpty, answerToText } from "@/lib/briefDisplay";
+
 interface DesignSummaryCardProps {
   answers: Record<string, string>;
   uploadTotal: number;
@@ -31,6 +35,25 @@ export default function DesignSummaryCard({
   onGenerate,
   onChanges,
 }: DesignSummaryCardProps) {
+  // console.log("checklist--",checklist)
+  // console.log("answers--",answers)
+  // console.log("uploadTotal--",uploadTotal)
+
+  const {original}= useSelector((state:RootState)=>state.chat)
+//   if(original && Object.keys(original).length > 0){
+//        Object.keys(original).forEach((key)=>{
+//         console.log("original======", key)
+//         console.log("original======", original[key])
+//         if(original[key]){
+//             const objectAnswer= original[key].answer
+//             const objectName= original[key].name
+
+//             console.log("objectAnswer", objectAnswer)
+//             console.log("objectName", objectName)
+//         }
+//        })
+//   }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -48,7 +71,7 @@ export default function DesignSummaryCard({
       </p>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200/80 dark:border-zinc-800">
-        {checklist.map((item, i) => {
+        {/* {checklist.map((item, i) => {
           const answer = answers[item.id];
           return (
             <div
@@ -78,7 +101,7 @@ export default function DesignSummaryCard({
                 </p>
               </div>
               <p className="min-w-0 max-w-[45%] truncate text-right text-sm text-zinc-800 dark:text-zinc-100">
-                {answer || (
+                {answer &&(
                   <span className="italic text-zinc-400 dark:text-zinc-500">
                     Not answered
                   </span>
@@ -86,7 +109,142 @@ export default function DesignSummaryCard({
               </p>
             </div>
           );
-        })}
+        })} */}
+        { original && Object.keys(original).length > 0 &&
+          Object.keys(original).map((key, i) => {
+            const item = original[key];
+            if (!item) return null;
+            const { answer, name } = item;
+            
+            const isArray = Array.isArray(answer);
+            const isObject = typeof answer === "object" && answer !== null && !isArray;
+            const isEmpty = isAnswerEmpty(answer);
+            
+            return (
+              <div
+                key={key}
+                className={`flex items-center gap-3 px-3.5 py-2.5 ${
+                  i > 0 ? "border-t border-zinc-200/80 dark:border-zinc-800" : ""
+                }`}
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  className="shrink-0 text-emerald-500"
+                >
+                  <path d="M3 10.5L12 3l9 7.5" />
+                  <path d="M5 9.5V21h14V9.5" />
+                </svg>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                    {name}
+                  </p>
+                </div>
+                {isEmpty ? (
+                  <p className="min-w-0 max-w-[45%] truncate text-right text-sm text-zinc-800 dark:text-zinc-100">
+                    <span className="italic text-zinc-400 dark:text-zinc-500">
+                      Not answered
+                    </span>
+                  </p>
+                ) : typeof answer === "string" ? (
+                  <p className="min-w-0 max-w-[45%] truncate text-right text-sm text-zinc-800 dark:text-zinc-100" title={answer}>
+                    {answer}
+                  </p>
+                ) : isArray ? (
+                  <div className="flex flex-wrap gap-1 justify-end max-w-[50%]">
+                    {answer.map((url, idx) => {
+                      const isImage = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || url.startsWith("data:image");
+                      if (isImage) {
+                        return (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 transition-transform hover:scale-105"
+                          >
+                            <img src={url} alt="thumbnail" className="h-full w-full object-cover" />
+                          </a>
+                        );
+                      } else {
+                        return (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex h-8 px-2 shrink-0 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-[10px] font-medium text-zinc-500 hover:bg-zinc-100"
+                          >
+                            File {idx + 1}
+                          </a>
+                        );
+                      }
+                    })}
+                  </div>
+                ) : isObject ? (
+                  (() => {
+                    const notes = "notes" in answer ? answer.notes : "";
+                    const files = "files" in answer ? answer.files : [];
+                    const value = "value" in answer ? answer.value : [];
+                    return (
+                      <div className="flex flex-col gap-1 items-end max-w-[60%]">
+                        {notes.trim() && (
+                          <p className="text-right text-sm text-zinc-800 dark:text-zinc-100 truncate w-full" title={notes}>
+                            {notes}
+                          </p>
+                        )}
+                        {value.length > 0 && (
+                          <p className="text-right text-xs text-zinc-500 dark:text-zinc-400 truncate w-full" title={value.join(", ")}>
+                            {value.join(", ")}
+                          </p>
+                        )}
+                        {files.length > 0 && (
+                          <div className="flex flex-wrap gap-1 justify-end">
+                            {files.map((url, idx) => {
+                              const isImage = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || url.startsWith("data:image");
+                              if (isImage) {
+                                return (
+                                  <a
+                                    key={idx}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 transition-transform hover:scale-105"
+                                  >
+                                    <img src={url} alt="thumbnail" className="h-full w-full object-cover" />
+                                  </a>
+                                );
+                              } else {
+                                return (
+                                  <a
+                                    key={idx}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex h-8 px-2 shrink-0 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-[10px] font-medium text-zinc-500 hover:bg-zinc-100"
+                                  >
+                                    File {idx + 1}
+                                  </a>
+                                );
+                              }
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
+                ) : null}
+              </div>
+            );
+          })
+        }
         {uploadTotal > 0 && (
           <div className="flex items-center gap-3 border-t border-zinc-200/80 px-3.5 py-2.5 dark:border-zinc-800">
             <svg

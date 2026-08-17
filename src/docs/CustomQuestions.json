@@ -36,7 +36,7 @@
   {
     "apiKey": "summary",
     "kind": "summary",
-    "content": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you've shared with me! Can you please confirm?"
+    "content": "I let me generate an initial rendering based on my understanding of what you are looking for."
   },
   {
     "apiKey": "revision",
