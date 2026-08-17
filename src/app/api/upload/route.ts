@@ -1,29 +1,40 @@
 import { Readable } from "node:stream";
-import { v2 as cloudinary } from "cloudinary";
+import { S3Client } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
 
 export const runtime = "nodejs";
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+const BUCKET = process.env.AWS_BUCKET ?? "";
+const REGION = process.env.AWS_DEFAULT_REGION ?? "";
+const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID ?? "";
+const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY ?? "";
+
+const s3 = new S3Client({
+  region: REGION,
+  credentials: {
+    accessKeyId: ACCESS_KEY_ID,
+    secretAccessKey: SECRET_ACCESS_KEY,
+  },
 });
 
-/** Cloudinary chunked uploads support up to 100MB. */
+/** Keep the previous 100MB cap — S3 multipart supports far more, but the
+ *  design-intake files are human-sized and this bound matches the old route. */
 const MAX_BYTES = 100 * 1024 * 1024;
-/** 20MB chunks. */
-const CHUNK_SIZE = 20 * 1024 * 1024;
 
 /**
- * Signed, chunked upload proxy. The client streams the raw file here and we
- * forward it to Cloudinary with the API secret — the secret never reaches
- * the browser. Chunked uploads handle files up to 100MB.
- *
- * NB: the SDK's `v2.uploader.upload_chunked_stream` takes (options, callback)
- * — the callback receives (err, result). (The v2 adapter reorders the args
- * before delegating to the v1 internals.)
+ * Signed upload proxy. The client streams the raw file here and we put it in
+ * the S3 bucket with the AWS secret — the secret never reaches the browser.
+ * Returns the public object URL (bucket must allow public reads, or sit behind
+ * CloudFront) plus the object key for reference.
  */
 export async function POST(request: Request) {
+  if (!BUCKET || !REGION || !ACCESS_KEY_ID || !SECRET_ACCESS_KEY) {
+    return Response.json(
+      { error: "S3 upload is not configured (missing AWS_* env vars)" },
+      { status: 500 }
+    );
+  }
+
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > MAX_BYTES) {
     return Response.json(
@@ -36,43 +47,31 @@ export async function POST(request: Request) {
     return Response.json({ error: "Missing request body" }, { status: 400 });
   }
 
-  const filename =
+  const rawName =
     decodeURIComponent(request.headers.get("x-file-name") ?? "upload") || "upload";
+  // Strip path separators and anything that isn't safe for an S3 key.
+  const safeName = rawName.replace(/[^A-Za-z0-9._-]+/g, "-").slice(0, 120);
+  const key = `luna-ai/${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}-${safeName}`;
 
   try {
-    const result = await new Promise<{ url: string; publicId: string }>(
-      (resolve, reject) => {
-        const out = cloudinary.uploader.upload_chunked_stream(
-          {
-            resource_type: "auto",
-            folder: "chat-uploads",
-            use_filename: true,
-            unique_filename: true,
-            filename: filename.replace(/\.[^/.]+$/, ""),
-            chunk_size: CHUNK_SIZE,
-          },
-          (err, res) => {
-            if (err) {
-              reject(
-                new Error(String(err?.message ?? err ?? "Cloudinary upload failed"))
-              );
-              return;
-            }
-            if (!res?.secure_url || !res?.public_id) {
-              reject(new Error("Cloudinary returned an incomplete response"));
-              return;
-            }
-            resolve({ url: res.secure_url, publicId: res.public_id });
-          }
-        );
+    const upload = new Upload({
+      client: s3,
+      params: {
+        Bucket: BUCKET,
+        Key: key,
+        Body: Readable.fromWeb(request.body as never),
+        ContentLength: contentLength || undefined,
+        ContentType:
+          request.headers.get("content-type") || "application/octet-stream",
+      },
+    });
 
-        // Reject instead of hanging if the client disconnects mid-upload.
-        out.on("error", reject);
-        Readable.fromWeb(request.body as never).pipe(out);
-      }
-    );
+    await upload.done();
 
-    return Response.json(result);
+    const url = `https://${BUCKET}.s3.${REGION}.amazonaws.com/${key}`;
+    return Response.json({ url, key });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Upload failed";
     return Response.json({ error: message }, { status: 500 });

@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import type { CloudinaryUploadResult } from "../../lib/cloudinary";
+import type { UploadResult } from "../../lib/upload";
 import { renderInline } from "./formatText";
 import UploadZone from "./UploadZone";
 import type { AnswerValue, QuestionCardSpec } from "./types";
@@ -11,7 +11,7 @@ export interface CardResult {
   /** Human-readable text for the chat bubble / summary. */
   answerText: string;
   files: Record<number, File[]>;
-  /** field index → fileKey → Cloudinary URL of each successfully uploaded file. */
+  /** field index → fileKey → S3 URL of each successfully uploaded file. */
   fileUrls: Record<number, Record<string, string>>;
   /** Structured answer value for the design API, per the card's fields. */
   answer: AnswerValue;
@@ -74,15 +74,15 @@ function QuestionCard({
     return "";
   }, [initialAnswer]);
 
-  const initUrls = useMemo(() => {
-    if (!initialAnswer) return [];
-    if (Array.isArray(initialAnswer)) return initialAnswer;
-    if (typeof initialAnswer === "object" && "files" in initialAnswer) return initialAnswer.files;
-    return [];
-  }, [initialAnswer]);
+  // const initUrls = useMemo(() => {
+  //   if (!initialAnswer) return [];
+  //   if (Array.isArray(initialAnswer)) return initialAnswer;
+  //   if (typeof initialAnswer === "object" && "files" in initialAnswer) return initialAnswer.files;
+  //   return [];
+  // }, [initialAnswer]);
 
   const initUrlsByField = useMemo(() => {
-    const map: Record<number, Record<string, CloudinaryUploadResult>> = {};
+    const map: Record<number, Record<string, UploadResult>> = {};
     if (!initialAnswer) return map;
 
     const urls = Array.isArray(initialAnswer)
@@ -97,7 +97,7 @@ function QuestionCard({
         map[slot] = {};
       }
       const key = `restored-${i}`;
-      map[slot][key] = { url, publicId: "" };
+      map[slot][key] = { url, key: "" };
     });
 
     return map;
@@ -105,7 +105,7 @@ function QuestionCard({
 
   const [uploads, setUploads] = useState<Record<number, File[]>>(filesByField);
   const [urlsByField, setUrlsByField] = useState<
-    Record<number, Record<string, CloudinaryUploadResult>>
+    Record<number, Record<string, UploadResult>>
   >(initUrlsByField);
   const [textByField, setTextByField] = useState<Record<number, string>>(initTextByField);
   const [radio, setRadio] = useState<string | null>(initRadio);
@@ -150,7 +150,7 @@ function QuestionCard({
   const urlsHandlers = useMemo(() => {
     const handlers = new Map<
       number,
-      (map: Record<string, CloudinaryUploadResult>) => void
+      (map: Record<string, UploadResult>) => void
     >();
     spec.fields.forEach((field) => {
       if (field.kind === "upload-grid") {

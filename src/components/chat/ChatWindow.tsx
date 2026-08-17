@@ -39,6 +39,7 @@ import {
 import {
   resetEnterprise,
   selectLatestEnterpriseEntry,
+  setEditId,
 } from "../../store/enterprise/enterpriseSlice";
 import {
   fetchEnterpriseStatus,
@@ -830,6 +831,7 @@ export default function ChatWindow() {
     (messageId: string) => {
       const epId = messageEpisodes[messageId];
       console.log("epId--->",epId)
+      dispatch(setEditId(epId))
       if (epId === "revision") {
         const msgIdx = messages.findIndex((m) => m.id === messageId);
         if (msgIdx >= 0) {
@@ -852,6 +854,7 @@ export default function ChatWindow() {
         const ep = episodeById(epId, episodes);
         if (ep.kind === "card") {
           targetId = `ep-${epId}`;
+          console.log("targetId", targetId)
         }
       }
 

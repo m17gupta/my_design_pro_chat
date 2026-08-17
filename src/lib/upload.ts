@@ -1,18 +1,18 @@
-export interface CloudinaryUploadResult {
+export interface UploadResult {
   url: string;
-  publicId: string;
+  key: string;
 }
 
 /**
- * Upload via the signed `/api/upload` route, which proxies to Cloudinary's
- * chunked upload API server-side (supports files up to 100MB). The Cloudinary
- * secret never reaches the browser. Progress reflects the client→server leg
- * (XHR, since fetch has no reliable upload-progress support).
+ * Upload via the signed `/api/upload` route, which proxies to the AWS S3
+ * bucket server-side (supports files up to 100MB). The AWS secret never
+ * reaches the browser. Progress reflects the client→server leg (XHR, since
+ * fetch has no reliable upload-progress support).
  */
-export function uploadToCloudinary(
+export function uploadFile(
   file: File,
   onProgress?: (percent: number) => void
-): Promise<CloudinaryUploadResult> {
+): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/upload");
@@ -24,7 +24,7 @@ export function uploadToCloudinary(
       }
     };
     xhr.onload = () => {
-      let data: { url?: string; publicId?: string; error?: string };
+      let data: { url?: string; key?: string; error?: string };
       try {
         data = JSON.parse(xhr.responseText);
       } catch {
@@ -32,7 +32,7 @@ export function uploadToCloudinary(
         return;
       }
       if (xhr.status >= 200 && xhr.status < 300 && data.url) {
-        resolve({ url: data.url, publicId: data.publicId ?? "" });
+        resolve({ url: data.url, key: data.key ?? "" });
       } else {
         reject(new Error(data.error ?? `Upload failed (${xhr.status})`));
       }

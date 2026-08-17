@@ -2,10 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import {
-  uploadToCloudinary,
-  type CloudinaryUploadResult,
-} from "../../lib/cloudinary";
+import { uploadFile, type UploadResult } from "../../lib/upload";
 import type { UploadSpec } from "./types";
 
 interface UploadZoneProps {
@@ -16,8 +13,8 @@ interface UploadZoneProps {
   /** Compact grid-box variant used inside question cards. */
   compact?: boolean;
   onChange: (files: File[]) => void;
-  /** Called with fileKey → Cloudinary result whenever uploaded URLs change. */
-  onUrlsChange?: (urls: Record<string, CloudinaryUploadResult>) => void;
+  /** Called with fileKey → upload result whenever uploaded URLs change. */
+  onUrlsChange?: (urls: Record<string, UploadResult>) => void;
   /** Called when any file starts or finishes uploading. */
   onUploadingChange?: (isUploading: boolean) => void;
 }
@@ -46,7 +43,7 @@ function UploadZone({
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState<Record<string, UploadStatus>>({});
-  const [urls, setUrls] = useState<Record<string, CloudinaryUploadResult>>({});
+  const [urls, setUrls] = useState<Record<string, UploadResult>>({});
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
@@ -56,7 +53,7 @@ function UploadZone({
 
   // The url map lives in a ref so async completions always notify the parent
   // with the full accumulated state, not just the latest single upload.
-  const urlsRef = useRef<Record<string, CloudinaryUploadResult>>({});
+  const urlsRef = useRef<Record<string, UploadResult>>({});
   // Keys removed while an upload is still in flight — their completion is
   // discarded so a removed file can't resurrect into the URL map/brief.
   const removedKeysRef = useRef<Set<string>>(new Set());
@@ -84,13 +81,13 @@ function UploadZone({
     (file: File) => {
       const key = keyOf(file);
       setStatus((prev) => ({ ...prev, [key]: { state: "uploading", percent: 0 } }));
-      uploadToCloudinary(file, (percent) =>
+      uploadFile(file, (percent) =>
         setStatus((prev) => ({ ...prev, [key]: { state: "uploading", percent } }))
       )
         .then((result) => {
           if (removedKeysRef.current.has(key)) return;
           setStatus((prev) => ({ ...prev, [key]: { state: "done" } }));
-          // Persist the returned Cloudinary URL so the app can use it.
+          // Persist the returned S3 URL so the app can use it.
           const nextUrls = { ...urlsRef.current, [key]: result };
           console.log("nextUrls---->",nextUrls);
           urlsRef.current = nextUrls;
@@ -180,7 +177,7 @@ function UploadZone({
           filled
             ? "border-solid border-zinc-200 bg-white p-0 dark:border-zinc-700 dark:bg-zinc-900"
             : compact
-              ? "border-dashed px-2 py-3"
+              ? "border-dashed aspect-square flex flex-col items-center justify-center px-2 py-3"
               : "cursor-pointer rounded-2xl border-dashed px-5 py-6"
         } ${
           !filled &&
@@ -216,8 +213,14 @@ function UploadZone({
                 Math.max(files.length, initialUrls.length) >= 2 ? "grid-cols-2" : "grid-cols-1"
               }`}
             >
-              {files.length > 0 ? files.map((file) => {
+              {files.length > 0 ? files.map((file, fileIdx) => {
                 const st = status[keyOf(file)];
+                // Once a file has a persisted S3 URL (from Redux via
+                // initialUrls), show that instead of the in-memory blob
+                // preview — blob URLs are session-scoped and die on refresh,
+                // and edit mode should reflect the canonical stored URL.
+                // Files beyond the URL count are still uploading → blob.
+                const s3Url = fileIdx < initialUrls.length ? initialUrls[fileIdx] : undefined;
                 return (
                   <motion.div
                     key={`${file.name}-${file.size}`}
@@ -229,7 +232,7 @@ function UploadZone({
                     {/* Local blob: URLs can't go through next/image's optimizer. */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={previewUrls[keyOf(file)]}
+                      src={s3Url ?? previewUrls[keyOf(file)]}
                       alt={file.name}
                       draggable={false}
                       className="h-full w-full object-cover"
@@ -406,7 +409,7 @@ function UploadZone({
                         </svg>
                       </a>
                     )}
-                    <span title="Uploaded to Cloudinary">
+                    <span title="Uploaded">
                       <svg
                         width="13"
                         height="13"

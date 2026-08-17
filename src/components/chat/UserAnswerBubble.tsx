@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 interface UserAnswerBubbleProps {
   /** The plain-text answer (may be empty for image-only answers). */
   content: string;
-  /** Cloudinary image URLs already uploaded as part of this answer. */
+  /** Image URLs already uploaded as part of this answer. */
   imageUrls?: string[];
   /** True while the inline text edit textarea is active. */
   editing?: boolean;
@@ -42,6 +42,7 @@ function UserAnswerBubble({
   const hasImages = imageUrls.length > 0;
  console.log("content",content)
  console.log("editing",editing)
+ console.log("imageUrls",imageUrls)
   // Auto-resize textarea
   useEffect(() => {
     if (editing && editRef.current) {

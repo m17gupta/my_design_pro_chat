@@ -13,12 +13,14 @@ export interface EnterpriseState {
   /** Lifecycle of the last `generateEnterpriseDesign`/`fetchEnterpriseStatus` dispatch. */
   lifecycle: "idle" | "loading" | "succeeded" | "failed" | "pending";
   error: string | null;
+  editId:string | null;
 }
 
 const initialState: EnterpriseState = {
   entries: [],
   lifecycle: "idle",
   error: null,
+  editId:null 
 };
 
 /** The most recently submitted design entry, if any. */
@@ -42,6 +44,12 @@ const enterpriseSlice = createSlice({
       state.lifecycle = "idle";
       state.error = null;
     },
+    setEditId(state, action: PayloadAction<string | null>) {
+      state.editId = action.payload;
+    }, 
+    resetEditId(state) {
+      state.editId = null;
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -130,5 +138,5 @@ const enterpriseSlice = createSlice({
   },
 });
 
-export const { resetEnterprise, setEntries } = enterpriseSlice.actions;
+export const { resetEnterprise, setEntries, setEditId , resetEditId } = enterpriseSlice.actions;
 export default enterpriseSlice.reducer;
