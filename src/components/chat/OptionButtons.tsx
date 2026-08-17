@@ -55,7 +55,6 @@ export default function OptionButtons({
     const isYes = norm === "yesido";
     const isNo = norm === "noidont";
     const isSelected = selectedValue === option;
-  console.log("isSelected",isSelected)
     if (isYes) {
       return {
         label: "Yes, I do",

@@ -1,0 +1,58 @@
+[
+
+  {
+    "apiKey": "project_goals_or_brief_description",
+    "kind": "card",
+    "checklistId": "goals",
+    "card": {
+      "title": "Project Goals/Brief Description",
+      "description": "Give me a brief overview of what you are looking to do?",
+      "fields": [{ "kind": "textarea", "placeholder": "Share your thoughts", "rows": 4, "required": true }]
+    },
+    "api": {
+      "name": "Project Goals/Brief Description",
+      "question": "Give me a brief overview of what you are looking to do?",
+      "answerShape": "text",
+      "checklistId": "goals"
+    }
+  },
+  {
+    "apiKey": "additional_images_upload",
+    "kind": "card",
+    "card": {
+      "title": "Inspirational Photos",
+      "description":"Do you have any inspirational photos you would like me to analyze that portray the look or feel you are trying to achieve?",
+      "fields": [{ "kind": "upload-grid", "count": 4, "accept": ".pdf,.dwg,.dxf,image/*" }]
+    },
+    "api": {
+      "name": "Inspirational Photos",
+ 
+      "question":
+        "<p class='mb-3'>Do you have any inspirational photos you would like me to analyze that portray the look or feel you are trying to achieve?.</p>",
+      "answerShape": "urls",
+      "checklistId": "files"
+    }
+  },
+  {
+    "apiKey": "summary",
+    "kind": "summary",
+    "content": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you've shared with me! Can you please confirm?"
+  },
+  {
+    "apiKey": "revision",
+    "kind": "card",
+    "card": {
+      "title": "Revision Comments",
+      "description": "Please share your revision requests, I will incorporate them into the design.",
+      "fields": [
+        { "kind": "textarea", "placeholder": "Describe the changes you'd like", "rows": 4, "required": true },
+        { "kind": "upload-grid", "count": 4, "accept": "image/*" }
+      ]
+    }
+  },
+  {
+    "apiKey": "revision-summary",
+    "kind": "summary",
+    "content": "Thanks! I've noted your revision comments. I'm ready to regenerate the design with these changes."
+  }
+]

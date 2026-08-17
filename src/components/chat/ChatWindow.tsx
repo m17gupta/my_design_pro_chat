@@ -134,7 +134,6 @@ export default function ChatWindow() {
   // row can be restored. Hydration is async (DB read), so restore is gated on
   // `persistence.hydrated` below — never before the row has been loaded.
   const hydrated = useAppSelector((s) => s.persistence.hydrated);
-  console.log("hydrated", hydrated)
   const didInitializeRef = useRef(false);
 
   // Once hydration completes (row restored or confirmed absent), rebuild the
@@ -153,7 +152,12 @@ export default function ChatWindow() {
       setCompleted(restoredTranscript.completed);
       setMessageEpisodes(restoredTranscript.messageEpisodes);
     } else {
-      setMessages([buildMessage(episodeById("overview", episodes))]);
+      // Fresh session — start at the flow's opening episode: the overview
+      // screen for shared flows, or the first intake card for the
+      // overview-less custom flow (which starts directly at its first question).
+      const firstEp = episodes[0];
+      setMessages([buildMessage(firstEp)]);
+      setCurrentId(firstEp.apiKey);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
@@ -211,8 +215,9 @@ export default function ChatWindow() {
     clearTypingTimeout();
     busyRef.current = false;
     setTyping(false);
-    setMessages([buildMessage(episodeById("overview", episodes))]);
-    setCurrentId("overview");
+    const firstEp = episodes[0];
+    setMessages([buildMessage(firstEp)]);
+    setCurrentId(firstEp.apiKey);
     setAnswers({});
     dispatch(resetBrief());
     dispatch(resetEnterprise());
@@ -226,7 +231,7 @@ export default function ChatWindow() {
     setPendingRevisionGenerate(null);
     announcedIdRef.current = null;
     setMenuOpen(false);
-  }, [clearTypingTimeout, dispatch]);
+  }, [clearTypingTimeout, dispatch, episodes]);
 
   /**
    * Record an answer for the current episode, then (after Luna "types") push
@@ -619,11 +624,18 @@ export default function ChatWindow() {
     busyRef.current = false;
     setTyping(false);
 
-    const overviewIdx = messages.findIndex((m) => m.id === "ep-overview");
+    const firstEp = episodes[0];
+    const firstEpId = firstEp.apiKey;
+    const startIdx = messages.findIndex((m) => m.id === `ep-${firstEpId}`);
+    // Shared flows keep their overview intro and restart from the first
+    // question after it; the overview-less custom flow has nothing to keep, so
+    // it truncates to the first card itself (or starts empty).
     setMessages(
-      overviewIdx >= 0
-        ? messages.slice(0, overviewIdx + 1)
-        : [buildMessage(episodeById("overview", episodes))]
+      startIdx >= 0
+        ? messages.slice(0, startIdx + 1)
+        : firstEpId === "overview"
+          ? [buildMessage(firstEp)]
+          : []
     );
     setAnswers({});
     dispatch(resetBrief());
@@ -637,16 +649,26 @@ export default function ChatWindow() {
     setPendingRevisionGenerate(null);
     announcedIdRef.current = null;
 
+    // The first question is the photos Yes/No step for shared flows; for the
+    // custom flow the first episode IS the first question.
+    const firstQuestion =
+      firstEpId === "overview"
+        ? episodes.find((e) => e.apiKey === "photos") ?? firstEp
+        : firstEp;
+    const needsAppend = firstEpId === "overview" || startIdx < 0;
+
     setTyping(true);
     clearTypingTimeout();
     timeoutRef.current = window.setTimeout(() => {
       timeoutRef.current = null;
       busyRef.current = false;
       setTyping(false);
-      setMessages((prev) => [...prev, buildMessage(episodeById("photos", episodes))]);
-      setCurrentId("photos");
+      if (needsAppend) {
+        setMessages((prev) => [...prev, buildMessage(firstQuestion)]);
+      }
+      setCurrentId(firstQuestion.apiKey);
     }, TYPING_MS);
-  }, [messages, clearTypingTimeout, dispatch]);
+  }, [messages, clearTypingTimeout, dispatch, episodes]);
 
   /**
    * Terminal submit — posts the project back to the host with the full design
@@ -830,7 +852,6 @@ export default function ChatWindow() {
   const handleEditStart = useCallback(
     (messageId: string) => {
       const epId = messageEpisodes[messageId];
-      console.log("epId--->",epId)
       dispatch(setEditId(epId))
       if (epId === "revision") {
         const msgIdx = messages.findIndex((m) => m.id === messageId);
@@ -854,7 +875,6 @@ export default function ChatWindow() {
         const ep = episodeById(epId, episodes);
         if (ep.kind === "card") {
           targetId = `ep-${epId}`;
-          console.log("targetId", targetId)
         }
       }
 

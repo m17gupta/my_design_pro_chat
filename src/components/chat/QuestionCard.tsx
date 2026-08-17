@@ -38,7 +38,6 @@ function QuestionCard({
   onCancel,
 }: QuestionCardProps) {
 
-  console.log("spec title----", spec.title)
   // Compute initial states from initialAnswer
   const initTextByField = useMemo(() => {
     if (!initialAnswer) return {};

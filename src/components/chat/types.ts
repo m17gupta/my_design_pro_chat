@@ -180,15 +180,31 @@ export const COLOR_MATERIAL_CHECKLIST: ChecklistItem[] = [
 ];
 
 /**
- * Pick the intake checklist for a work type ("color-material" variants get
- * the color/material labels; everything else keeps the landscape ones).
+ * Checklist for the arc-addition question set — same ids (so completion /
+ * restore state stays compatible), with the three topic labels swapped.
+ */
+export const ARC_CHECKLIST: ChecklistItem[] = [
+  { id: "photos", number: 1, label: "Additional property photos upload" },
+  { id: "files", number: 2, label: "Supporting files (survey and similar)" },
+  { id: "goals", number: 3, label: "High level project goals" },
+  { id: "styles", number: 4, label: "Type of architectural project" },
+  { id: "hardscape", number: 5, label: "Architectural style preference" },
+  { id: "softscape", number: 6, label: "Exterior materials & finishes" },
+  { id: "budget", number: 7, label: "Budget" },
+  { id: "restrictions", number: 8, label: "Property restrictions (HOA requirements)" },
+];
+
+/**
+ * Pick the intake checklist for a work type: the color/material and
+ * arc-addition variants get their own topic labels; everything else keeps the
+ * landscape ones.
  */
 export function checklistForWorkType(workType?: string): ChecklistItem[] {
   const normalized = (workType ?? "")
     .trim()
     .toLowerCase()
     .replace(/-/g, "_");
-  return normalized === "color_material"
-    ? COLOR_MATERIAL_CHECKLIST
-    : CHECKLIST;
+  if (normalized === "color_material") return COLOR_MATERIAL_CHECKLIST;
+  if (normalized === "arc_addition") return ARC_CHECKLIST;
+  return CHECKLIST;
 }

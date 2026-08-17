@@ -40,9 +40,6 @@ function UserAnswerBubble({
   const isOptionEdit = Boolean(editing && editOptions?.length);
   const hasText = content.trim().length > 0;
   const hasImages = imageUrls.length > 0;
- console.log("content",content)
- console.log("editing",editing)
- console.log("imageUrls",imageUrls)
   // Auto-resize textarea
   useEffect(() => {
     if (editing && editRef.current) {

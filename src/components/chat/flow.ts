@@ -9,36 +9,25 @@ import type {
 } from "./types";
 import type { EnterpriseEntry } from "../../store/enterprise/enterpriseType";
 import questionsJson from "../../docs/Questions.json";
+// The `custom` work type is driven entirely by CustomQuestions.json — its
+// complete episode list is the single source of truth for the custom flow.
+import customQuestionsJson from "../../docs/CustomQuestions.json";
 
 export interface Episode {
-  /**
-   * Single identifier for this step. For API-bound episodes this IS the
-   * backend schema key (schema.md), so the chat never re-keys the API.
-   */
+
   apiKey: string;
   kind: EpisodeKind;
-  /** Spoken text — unused on card episodes, which render `card.title` instead. */
   content?: string;
-  /** Checklist item completed by answering this episode. */
   checklistId?: string;
   options?: string[];
   card?: QuestionCardSpec;
   showChecklist?: boolean;
   /** Whether the user may edit this episode's answer (default true). */
   editable?: boolean;
-  /**
-   * API-facing metadata — set on card episodes whose answer is sent upstream.
-   * `apiKey` lives on the episode itself (omitted here); `question` is the final
-   * question string sent to the API (HTML for the two upload steps, plain text
-   * elsewhere); keep it in sync with `card.description`.
-   */
   api?: Omit<ApiQuestionMeta, "apiKey">;
 }
 
-/**
- * The Luna intake flow: overview → eight question cards
- * (transcribed from design.md) → Design Summary.
- */
+
 const EPISODES: Episode[] = [
   {
     apiKey: "overview",
@@ -278,7 +267,67 @@ const EPISODES: Episode[] = [
   },
 ];
 
-const BY_ID = new Map(EPISODES.map((e) => [e.apiKey, e]));
+/**
+ * The three topic-card apiKeys per family. Every work type shares the same
+ * pre/post structure (photos, files, goals, budget, restrictions, summaries);
+ * only these three middle slots differ between families.
+ */
+const LANDSCAPE_TOPIC_KEYS = [
+  "landscape_design_style_preference",
+  "hardscape_material_preferences",
+  "softscape_planting_preferences",
+] as const;
+
+const COLOR_MATERIAL_TOPIC_KEYS = [
+  "exterior_color_and_material_style",
+  "primary_material_preferences",
+  "color_preferences",
+] as const;
+
+const ARC_TOPIC_KEYS = [
+  "type_of_architectural_project",
+  "architectural_style_preference",
+  "exterior_materials_and_finishes",
+] as const;
+
+/** The base intake order — the landscape (front-yard) family. */
+const BASE_KEYS = EPISODES.map((e) => e.apiKey);
+
+/** The custom work type's episode apiKeys, sourced from CustomQuestions.json. */
+const CUSTOM_KEYS = (customQuestionsJson as Episode[]).map((e) => e.apiKey);
+
+/** Swap the three landscape topic slots for another family's topic keys. */
+function withTopicFamily(
+  keys: readonly string[],
+  topics: readonly string[]
+): string[] {
+  return keys.map((k) => {
+    const slot = (LANDSCAPE_TOPIC_KEYS as readonly string[]).indexOf(k);
+    return slot >= 0 ? topics[slot] : k;
+  });
+}
+
+/**
+ * The intake question set per work type, as ordered apiKey arrays — the single
+ * source of truth for which cards each work type shows. Wording is layered on
+ * later from Questions.json via `buildEpisodes`; the `custom` work type reads
+ * its keys straight from CustomQuestions.json.
+ */
+export const WORK_TYPE_API_KEYS: Record<string, string[]> = {
+  front_yard: BASE_KEYS,
+  rear_yard: BASE_KEYS,
+  whole_property: BASE_KEYS,
+  custom: CUSTOM_KEYS,
+  value_added_services: BASE_KEYS,
+  color_material: withTopicFamily(BASE_KEYS, COLOR_MATERIAL_TOPIC_KEYS),
+  arc_addition: withTopicFamily(BASE_KEYS, ARC_TOPIC_KEYS),
+};
+
+/** Resolve a work type's apiKey array to its episode objects. */
+function resolveWorkTypeEpisodes(workType: string | undefined): Episode[] {
+  const keys = WORK_TYPE_API_KEYS[normalizeWorkType(workType)] ?? BASE_KEYS;
+  return keys.map((k) => CATALOG[k]);
+}
 
 /**
  * Normalize a work_type value: "front-yard" → "front_yard".
@@ -288,19 +337,6 @@ function normalizeWorkType(workType: string | undefined): string {
   return (workType ?? "front_yard").trim().toLowerCase().replace(/-/g, "_");
 }
 
-/** True when the work type selects the color/material question set. */
-export function isColorMaterialWorkType(workType: string | undefined): boolean {
-  return normalizeWorkType(workType) === "color_material";
-}
-
-/**
- * The color/material question set (Questions.json → color-material →
- * color_material). Structurally identical to the landscape flow except the
- * three topic cards — exterior style / primary materials / color preferences
- * replace the landscape style / hardscape / softscape cards. Wording is
- * overlaid from Questions.json by `buildEpisodes`, these defaults only pin
- * the apiKeys, field layouts, and answer shapes.
- */
 const COLOR_MATERIAL_EXTERIOR_STYLE: Episode = {
   apiKey: "exterior_color_and_material_style",
   kind: "card",
@@ -367,31 +403,137 @@ const COLOR_MATERIAL_COLOR_PREFERENCES: Episode = {
   },
 };
 
-/** Swap the three landscape topic cards for the color/material ones. */
-const COLOR_MATERIAL_TOPIC_SWAP: Record<string, Episode> = {
-  landscape_design_style_preference: COLOR_MATERIAL_EXTERIOR_STYLE,
-  hardscape_material_preferences: COLOR_MATERIAL_PRIMARY_MATERIALS,
-  softscape_planting_preferences: COLOR_MATERIAL_COLOR_PREFERENCES,
+/** The three arc-addition topic cards (Questions.json → color-material). */
+const ARC_TYPE_OF_PROJECT: Episode = {
+  apiKey: "type_of_architectural_project",
+  kind: "card",
+  checklistId: "styles",
+  card: {
+    title: "Type of Architectural Project",
+    description:
+      "What type of architectural changes are you considering? Select all that apply?",
+    fields: [
+      {
+        kind: "checkbox",
+        options: [
+          "Home addition",
+          "Front porch",
+          "Covered porch",
+          "Garage addition",
+          "Second story",
+          "Dormers",
+          "Entry enhancement",
+          "Portico",
+          "Sunroom",
+          "Outdoor living space",
+          "Roof modifications",
+          "Window changes",
+          "Door changes",
+          "Exterior facelift",
+          "Detached structure",
+          "Other",
+        ],
+        notesPlaceholder: "Enter your notes",
+      },
+    ],
+  },
+  api: {
+    name: "Type of Architectural Project",
+    question:
+      "What type of architectural changes are you considering? Select all that apply?",
+    answerShape: "value-notes",
+    checklistId: "styles",
+  },
 };
+
+const ARC_STYLE_PREFERENCE: Episode = {
+  apiKey: "architectural_style_preference",
+  kind: "card",
+  checklistId: "hardscape",
+  card: {
+    title: "Architectural Style Preference",
+    description:
+      "Do you have a preferred architectural style or overall look you'd like to achieve? For example, modern, transitional, traditional, farmhouse, craftsman, contemporary, colonial, or something uniquely your own.\n\nFeel free to upload inspiration photos if you have them!",
+    fields: [
+      { kind: "textarea", placeholder: "Share your thoughts", rows: 3, required: true },
+      { kind: "upload-grid", count: 4, accept: "image/*" },
+    ],
+  },
+  api: {
+    name: "Architectural Style Preference",
+    question:
+      "Do you have a preferred architectural style or overall look you'd like to achieve? For example, modern, transitional, traditional, farmhouse, craftsman, contemporary, colonial, or something uniquely your own.<br />Feel free to upload inspiration photos if you have them!",
+    answerShape: "files-notes",
+    checklistId: "hardscape",
+  },
+};
+
+const ARC_EXTERIOR_MATERIALS: Episode = {
+  apiKey: "exterior_materials_and_finishes",
+  kind: "card",
+  checklistId: "softscape",
+  card: {
+    title: "Exterior Materials & Finishes",
+    description:
+      "Are there any exterior materials or finishes you'd like me to incorporate into the design? Select all that apply?",
+    fields: [
+      {
+        kind: "checkbox",
+        options: [
+          "Brick",
+          "Stone",
+          "Siding",
+          "Stucco",
+          "Wood accents",
+          "Metal roofing",
+          "Decorative columns",
+          "Timber beams",
+          "Modern windows",
+          "Black window frames",
+          "Decorative trim",
+        ],
+        notesPlaceholder: "Enter your notes",
+      },
+    ],
+  },
+  api: {
+    name: "Exterior Materials & Finishes",
+    question:
+      "Are there any exterior materials or finishes you'd like me to incorporate into the design? Select all that apply?",
+    answerShape: "value-notes",
+    checklistId: "softscape",
+  },
+};
+
+/**
+ * Every episode the app can render, keyed by apiKey. Built from the base
+ * EPISODES plus the topic cards of every family, so the per-work-type apiKey
+ * arrays in `WORK_TYPE_API_KEYS` resolve to real episode objects.
+ */
+const CATALOG: Record<string, Episode> = Object.fromEntries(
+  [
+    ...EPISODES,
+    COLOR_MATERIAL_EXTERIOR_STYLE,
+    COLOR_MATERIAL_PRIMARY_MATERIALS,
+    COLOR_MATERIAL_COLOR_PREFERENCES,
+    ARC_TYPE_OF_PROJECT,
+    ARC_STYLE_PREFERENCE,
+    ARC_EXTERIOR_MATERIALS,
+  ].map((e) => [e.apiKey, e])
+);
+
+/** Lookup map for `episodeById` (all families, not just the base flow). */
+const BY_ID = new Map(Object.entries(CATALOG));
 
 /** The color/material episodes list — same flow, three different topic cards. */
 export function buildColorMaterialEpisodes(): Episode[] {
-  return EPISODES.map((ep) => COLOR_MATERIAL_TOPIC_SWAP[ep.apiKey] ?? ep);
+  return WORK_TYPE_API_KEYS.color_material.map((k) => CATALOG[k]);
 }
 
 /**
- * The eight API-bound intake questions, in EPISODES (schema) order.
- * `apiKey` is hoisted from the episode itself so the payload keys always
- * match schema.md. Consumed by the design-brief payload builder.
- * @deprecated Use `getApiQuestions(episodes)` when using a dynamic episode list.
- */
-export const API_QUESTIONS: ApiQuestionMeta[] = EPISODES.filter(
-  (e) => e.api !== undefined
-).map((e) => ({ ...(e.api as ApiQuestionMeta), apiKey: e.apiKey }));
-
-/**
  * Return the API questions for a given episodes list (dynamic or static).
- * Replaces the static `API_QUESTIONS` export when using `buildEpisodes()`.
+ * `apiKey` is hoisted from the episode itself so the payload keys always
+ * match schema.md.
  */
 export function getApiQuestions(episodes: Episode[]): ApiQuestionMeta[] {
   return episodes
@@ -437,15 +579,30 @@ function htmlToDisplay(html: string): string {
 }
 
 /**
- * Collect the override questions for a work type from Questions.json. Searches
- * the `landscape-design` and `color-material` categories (in that order) and
+ * Collect the override questions for a work type. Searches the
+ * `landscape-design` and `color-material` categories (in that order) and
  * merges the `questions` arrays of every phase in the matched work-type
  * section, so overrides are found regardless of which phase a question lives in.
  */
 function collectWorkTypeOverrides(workType: string | undefined): QJsonQuestion[] {
   const normalized = normalizeWorkType(workType);
-  const root = questionsJson as Record<string, unknown>;
 
+  return collectOverridesFromRoot(
+    questionsJson as Record<string, unknown>,
+    workType,
+    normalized
+  );
+}
+
+/**
+ * Scan a JSON root's `landscape-design` / `color-material` categories for the
+ * given work type and merge every phase's `questions` array.
+ */
+function collectOverridesFromRoot(
+  root: Record<string, unknown>,
+  workType: string | undefined,
+  normalized: string
+): QJsonQuestion[] {
   for (const category of ["landscape-design", "color-material"]) {
     const categorySection = root[category];
     if (!categorySection || typeof categorySection !== "object") continue;
@@ -467,32 +624,45 @@ function collectWorkTypeOverrides(workType: string | undefined): QJsonQuestion[]
 }
 
 /**
- * Build a work-type-specific episodes list by overlaying the question wording
- * from Questions.json onto the shared base EPISODES structure.
+ * Build a work-type-specific episodes list: resolve the work type's apiKey
+ * array from `WORK_TYPE_API_KEYS`, then overlay the question wording from
+ * Questions.json onto those episode objects.
  *
- * The apiKeys and field layouts never change — only description / question text
- * is swapped per work type. Falls back to the base EPISODES when no override
- * is found for a given id.
+ * The apiKeys and field layouts come from the catalog (per work type); only
+ * description / question text is swapped per work type from the JSON. Falls
+ * back to the front-yard base when no array or no override is found.
  *
  * Lookup path in Questions.json (work-type keys may use "-" or "_"):
  *   ["landscape-design"][workType][phase*]["questions"]  (landscape variants)
  *   ["color-material"][workType][phase*]["questions"]     (exterior variants)
+ * The `custom` work type bypasses this entirely: its ordered episode list comes
+ * straight from CustomQuestions.json (keys, card layout, and wording).
  *
  * @param workType  The `work_type` from the URL params (e.g. "front_yard",
  *                  "front-yard", "rear_yard", "color-material").
  */
 export function buildEpisodes(workType: string | undefined): Episode[] {
+  const normalized = normalizeWorkType(workType);
+  // The `custom` work type is driven entirely by CustomQuestions.json — its
+  // episode list is the single source of truth. Card descriptions may hold
+  // HTML (upload steps), so convert them to readable text for display while
+  // the API question keeps the exact HTML the backend expects.
+  if (normalized === "custom") {
+    return (customQuestionsJson as Episode[]).map((ep) =>
+      ep.card && ep.card.description
+        ? {
+            ...ep,
+            card: { ...ep.card, description: htmlToDisplay(ep.card.description) },
+          }
+        : ep
+    );
+  }
+  const base = resolveWorkTypeEpisodes(workType);
   const overrides = collectWorkTypeOverrides(workType);
   if (overrides.length === 0) {
-    // No overrides found — return the base episodes unchanged.
-    return EPISODES;
+    // No overrides found — return the work type's episodes unchanged.
+    return base;
   }
-
-  // color-material swaps the three topic cards; landscape variants (front
-  // yard / rear yard / whole property / …) keep the base EPISODES structure.
-  const base = isColorMaterialWorkType(workType)
-    ? buildColorMaterialEpisodes()
-    : EPISODES;
 
   return base.map((ep) => {
     const override = overrides.find((q) => q.id === ep.apiKey);
@@ -663,24 +833,33 @@ export function buildRestoredTranscript(
     }
   };
 
-  // Nothing restored → a fresh overview screen, exactly like today.
+  // The episodes list to walk (falls back to the shared base flow).
+  const list = episodes ?? EPISODES;
+  const hasEpisode = (key: string) => list.some((e) => e.apiKey === key);
+
+  // Nothing restored → show the flow's opening episode: the overview screen
+  // for shared flows, or the first intake card for the overview-less custom
+  // flow (which starts directly at its first question).
   const anyAnswered = Object.values(original).some(
     (item) => item !== undefined && !isAnswerEmpty(item.answer)
   );
   if (!anyAnswered) {
+    const first = list[0];
     return {
-      messages: [buildMessage(episodeById("overview", episodes))],
+      messages: [buildMessage(first)],
       messageEpisodes: {},
       answers: {},
-      currentId: "overview",
+      currentId: first.apiKey,
       completed: new Set(),
     };
   }
 
-  // Fixed intro
-  pushAssistant(episodeById("overview", episodes));
+  // Fixed intro — only shared flows have the overview screen.
+  if (hasEpisode("overview")) {
+    pushAssistant(episodeById("overview", episodes));
+  }
 
-  let lastId = "overview";
+  let lastId: string | undefined;
   let lastAnswer: string | undefined;
   const advance = (epId: string, answer?: string) => {
     lastId = epId;
@@ -692,24 +871,28 @@ export function buildRestoredTranscript(
     advance(ep.apiKey, userText);
   };
 
-  // photos branch: shown whenever any question was answered (the flow is
-  // linear, so reaching a later card implies the user answered this one).
-  const photosEp = episodeById("photos", episodes);
-  const photoUploaded = isAnswered("additional_images_upload");
-  mark(photosEp, photoUploaded ? "Yes I do" : "No I don't");
-  if (photoUploaded) {
-    const upEp = episodeById("additional_images_upload", episodes);
-    const item = original["additional_images_upload"] as ApiBriefItem;
-    pushAssistant(upEp, item?.answer);      pushUserAnswer(upEp, answerToText(item));
+  // photos branch: only shared flows have the Yes/No photos step. Reaching a
+  // later card implies the user answered it (the flow is linear).
+  if (hasEpisode("photos")) {
+    const photosEp = episodeById("photos", episodes);
+    const photoUploaded = isAnswered("additional_images_upload");
+    mark(photosEp, photoUploaded ? "Yes I do" : "No I don't");
+    if (photoUploaded) {
+      const upEp = episodeById("additional_images_upload", episodes);
+      const item = original["additional_images_upload"] as ApiBriefItem;
+      pushAssistant(upEp, item?.answer);
+      pushUserAnswer(upEp, answerToText(item));
       advance(upEp.apiKey);
+    }
   }
 
-  // files branch: only if the user got past photos (any later key answered).
-  // Derived from the episodes list so color-material keys count too.
-  const laterKeys = (episodes ?? EPISODES)
+  // files branch: only shared flows have the Yes/No files step, and only if
+  // the user got past photos (any later key answered). Derived from the
+  // episodes list so color-material keys count too.
+  const laterKeys = list
     .filter((e) => e.api !== undefined && e.apiKey !== "additional_images_upload")
     .map((e) => e.apiKey);
-  if (laterKeys.some(isAnswered)) {
+  if (hasEpisode("files") && laterKeys.some(isAnswered)) {
     const filesEp = episodeById("files", episodes);
     const filesUploaded = isAnswered("supporting_files_upload");
     mark(filesEp, filesUploaded ? "Yes I do" : "No I don't");
@@ -722,11 +905,15 @@ export function buildRestoredTranscript(
     }
   }
 
-  // Remaining card episodes, in flow order, only when answered.
-  for (const ep of episodes ?? EPISODES) {
+  // Remaining card episodes, in flow order, only when answered. The upload
+  // cards are pushed by the photos/files branches above; in overview-less
+  // flows (custom) those branches don't exist, so the upload card is an
+  // ordinary flow step and is handled here.
+  const skipUploadCards = hasEpisode("photos") || hasEpisode("files");
+  for (const ep of list) {
     if (!ep.api) continue;
     const key = ep.apiKey;
-    if (key === "additional_images_upload" || key === "supporting_files_upload") {
+    if (skipUploadCards && (key === "additional_images_upload" || key === "supporting_files_upload")) {
       continue;
     }
     if (isAnswered(key)) {
@@ -739,7 +926,9 @@ export function buildRestoredTranscript(
 
   // Resume point — the next episode the user must answer.
   // Marked as restored so it renders immediately (no typewriter re-run on refresh).
-  let currentId = nextEpisodeId(lastId, lastAnswer, episodes);
+  let currentId = lastId
+    ? nextEpisodeId(lastId, lastAnswer, episodes)
+    : list[0].apiKey;
 
   const revisionEntries = entries.filter((e) => e.type === "revision");
   // A revision comment exists in the store but hasn't been turned into an

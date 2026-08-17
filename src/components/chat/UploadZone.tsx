@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { uploadFile, type UploadResult } from "../../lib/upload";
+import { useAppSelector } from "../../store/hooks";
 import type { UploadSpec } from "./types";
 
 interface UploadZoneProps {
@@ -45,6 +46,8 @@ function UploadZone({
   const [status, setStatus] = useState<Record<string, UploadStatus>>({});
   const [urls, setUrls] = useState<Record<string, UploadResult>>({});
   const reduceMotion = useReducedMotion();
+  // Group every upload of the same project under luna-ai/<projectId>/ in S3.
+  const projectId = useAppSelector((s) => s.chat.id);
 
   useEffect(() => {
     const isUploading = Object.values(status).some((st) => st.state === "uploading");
@@ -83,13 +86,12 @@ function UploadZone({
       setStatus((prev) => ({ ...prev, [key]: { state: "uploading", percent: 0 } }));
       uploadFile(file, (percent) =>
         setStatus((prev) => ({ ...prev, [key]: { state: "uploading", percent } }))
-      )
+      , projectId)
         .then((result) => {
           if (removedKeysRef.current.has(key)) return;
           setStatus((prev) => ({ ...prev, [key]: { state: "done" } }));
           // Persist the returned S3 URL so the app can use it.
           const nextUrls = { ...urlsRef.current, [key]: result };
-          console.log("nextUrls---->",nextUrls);
           urlsRef.current = nextUrls;
           setUrls(nextUrls);
           onUrlsChange?.(nextUrls);
@@ -99,7 +101,7 @@ function UploadZone({
           setStatus((prev) => ({ ...prev, [key]: { state: "error" } }));
         });
     },
-    [keyOf, onUrlsChange]
+    [keyOf, onUrlsChange, projectId]
   );
 
   const addFiles = useCallback(

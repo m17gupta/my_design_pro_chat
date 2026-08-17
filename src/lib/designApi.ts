@@ -23,7 +23,6 @@ export async function submitDesignBrief(
       body: JSON.stringify(payload),
     });
 
-    console.log("get resposne enterprise", res);
   } catch {
     throw new Error("Network error — could not reach the design API");
   }

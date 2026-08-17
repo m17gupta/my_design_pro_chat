@@ -199,15 +199,6 @@ export const MessageBubble = ({
   )
   const done = isUser || typed === displayText
 
-  if (message.kind === 'card') {
-    // console.log("Card render check:", {
-    //   id: message.id,
-    //   done,
-    //   disabled,
-    //   hasCardCancel: !!onCardCancel,
-    // });
-  }
-
   return (
     <div className='w-full'>
       {!isRevisionSummary && (

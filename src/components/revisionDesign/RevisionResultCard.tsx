@@ -65,9 +65,6 @@ export default function RevisionResultCard({
   // "pending" (generation in flight) every action button stays disabled.
   const roundPending = getRevison[round - 1]?.status === "pending";
   const interactive = !locked && !submittedAction && !roundPending;
-  
-
-  console.log("getRevison",getRevison);
 
   return (
     <motion.div

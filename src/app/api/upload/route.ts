@@ -24,6 +24,8 @@ const MAX_BYTES = 100 * 1024 * 1024;
 /**
  * Signed upload proxy. The client streams the raw file here and we put it in
  * the S3 bucket with the AWS secret — the secret never reaches the browser.
+ * Objects land under luna-ai/<projectId>/ (from the client's X-Project-Id
+ * header, sourced from Redux) so one project's uploads share a folder.
  * Returns the public object URL (bucket must allow public reads, or sit behind
  * CloudFront) plus the object key for reference.
  */
@@ -51,7 +53,14 @@ export async function POST(request: Request) {
     decodeURIComponent(request.headers.get("x-file-name") ?? "upload") || "upload";
   // Strip path separators and anything that isn't safe for an S3 key.
   const safeName = rawName.replace(/[^A-Za-z0-9._-]+/g, "-").slice(0, 120);
-  const key = `luna-ai/${Date.now()}-${Math.random()
+  // Group every upload of the same project under luna-ai/<projectId>/ so the
+  // bucket mirrors the project structure. The id comes from Redux on the
+  // client (sent as X-Project-Id); sanitized so it can't escape the prefix.
+  const projectId = (request.headers.get("x-project-id") ?? "")
+    .replace(/[^A-Za-z0-9_-]+/g, "-")
+    .slice(0, 64);
+  const projectPrefix = projectId ? `luna-ai/${projectId}/` : "luna-ai/";
+  const key = `${projectPrefix}${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 8)}-${safeName}`;
 

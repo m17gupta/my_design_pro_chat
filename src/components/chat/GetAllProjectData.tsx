@@ -29,6 +29,7 @@ function decodeClientParams(raw: string | null): ClientParams | undefined {
 
 const GetAllProjectData = () => {
   const searchParams = useSearchParams();
+
   const dispatch = useAppDispatch();
   const hydrationDispatchedRef = useRef(false);
 
@@ -37,7 +38,6 @@ const GetAllProjectData = () => {
     hydrationDispatchedRef.current = true;
 
     const params = decodeClientParams(searchParams.get("params"));
-    console.log("paramas", params)
     if (params) {
       dispatch(
         setContext({

@@ -11,13 +11,19 @@ export interface UploadResult {
  */
 export function uploadFile(
   file: File,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  projectId?: string | number | null
 ): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/upload");
     xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
     xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
+    // Sent so the server can group every upload of a project under
+    // luna-ai/<projectId>/ in the bucket.
+    if (projectId != null && projectId !== "") {
+      xhr.setRequestHeader("X-Project-Id", String(projectId));
+    }
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
         onProgress(Math.round((e.loaded / e.total) * 100));

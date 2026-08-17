@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { ApiBriefItem } from "../../lib/apiBrief";
 import type { EnterpriseEntry } from "../../store/enterprise/enterpriseType";
 import {
-  API_QUESTIONS,
   EPISODES,
+  WORK_TYPE_API_KEYS,
   buildColorMaterialEpisodes,
   buildEpisodes,
   buildMessage,
@@ -46,6 +46,18 @@ const COLOR_MATERIAL_KEYS = [
   "important_proprty_information",
 ];
 
+/** Keys the arc-addition question set sends (Questions.json → color-material). */
+const ARC_KEYS = [
+  "additional_images_upload",
+  "supporting_files_upload",
+  "project_goals_or_brief_description",
+  "type_of_architectural_project",
+  "architectural_style_preference",
+  "exterior_materials_and_finishes",
+  "budget",
+  "important_proprty_information",
+];
+
 describe("EPISODES apiKey identifiers", () => {
   it("assigns a unique apiKey to every episode", () => {
     const keys = EPISODES.map((e) => e.apiKey);
@@ -63,7 +75,7 @@ describe("EPISODES apiKey identifiers", () => {
   });
 
   it("API-bound episodes use the exact schema.md keys, in order", () => {
-    expect(API_QUESTIONS.map((q) => q.apiKey)).toEqual(SCHEMA_KEYS);
+    expect(getApiQuestions(EPISODES).map((q) => q.apiKey)).toEqual(SCHEMA_KEYS);
   });
 
   it("keeps friendly checklist ids separate from schema apiKeys", () => {
@@ -275,7 +287,150 @@ describe("buildEpisodes", () => {
     const colors = eps.find((e) => e.apiKey === "color_preferences");
     expect(colors?.card?.description).toMatch(/paint colors|colors/);
   });
+
+  it("swaps the three topic cards for the arc-addition question set", () => {
+    for (const wt of ["arc-addition", "arc_addition"]) {
+      const eps = buildEpisodes(wt);
+      const keys = eps.map((e) => e.apiKey);
+      expect(keys).toContain("type_of_architectural_project");
+      expect(keys).toContain("architectural_style_preference");
+      expect(keys).toContain("exterior_materials_and_finishes");
+      expect(keys).not.toContain("landscape_design_style_preference");
+      expect(keys).not.toContain("hardscape_material_preferences");
+      expect(keys).not.toContain("softscape_planting_preferences");
+      expect(getApiQuestions(eps).map((q) => q.apiKey)).toEqual(ARC_KEYS);
+      // Untouched episodes stay byte-identical to the base list (budget is
+      // excluded: the arc JSON rewrites its wording, matching base layout).
+      for (const shared of ["overview", "photos", "summary", "revision"]) {
+        expect(episodeById(shared, eps)).toEqual(episodeById(shared, EPISODES));
+      }
+    }
+  });
+
+  it("overlays arc-addition wording from Questions.json onto the new topic cards", () => {
+    const eps = buildEpisodes("arc_addition");
+    const projectType = eps.find((e) => e.apiKey === "type_of_architectural_project");
+    expect(projectType?.card?.title).toBe("Type of Architectural Project");
+    expect(projectType?.card?.description).toMatch(/architectural changes/);
+    expect(projectType?.api?.answerShape).toBe("value-notes");
+    const style = eps.find((e) => e.apiKey === "architectural_style_preference");
+    expect(style?.card?.description).toMatch(/architectural style/);
+    expect(style?.api?.answerShape).toBe("files-notes");
+    const materials = eps.find((e) => e.apiKey === "exterior_materials_and_finishes");
+    expect(materials?.card?.description).toMatch(/exterior materials/);
+  });
+
+  it("applies the whole_property goals override after the JSON id typo fix", () => {
+    const whole = buildEpisodes("whole_property");
+    const goals = whole.find((e) => e.apiKey === "project_goals_or_brief_description");
+    // The JSON override text mentions the property as a whole (not a specific side).
+    expect(goals?.card?.description).toMatch(/accomplish with your property/);
+  });
+
+  it("sources the custom work type's id/name/details from CustomQuestions.json", () => {
+    const custom = buildEpisodes("custom");
+    const goals = custom.find((e) => e.apiKey === "project_goals_or_brief_description");
+    // CustomQuestions.json custom wording, not the Questions.json default.
+    expect(goals?.card?.description).toMatch(/brief overview of what you are looking to do/);
+    // The upload question is renamed "Inspirational Photos" with new details.
+    const photos = custom.find((e) => e.apiKey === "additional_images_upload");
+    expect(photos?.card?.title).toBe("Inspirational Photos");
+    expect(photos?.card?.description).toMatch(/inspirational photos/);
+    expect(photos?.api?.name).toBe("Inspirational Photos");
+  });
 });
+
+describe("WORK_TYPE_API_KEYS registry", () => {
+  it("defines an apiKey array for every supported work type", () => {
+    for (const wt of [
+      "front_yard",
+      "rear_yard",
+      "whole_property",
+      "color_material",
+      "arc_addition",
+      "custom",
+      "value_added_services",
+    ]) {
+      expect(WORK_TYPE_API_KEYS[wt]).toBeDefined();
+      expect(WORK_TYPE_API_KEYS[wt].length).toBeGreaterThan(0);
+    }
+  });
+
+  it("resolves every key in every family array to a real episode", () => {
+    for (const [wt, keys] of Object.entries(WORK_TYPE_API_KEYS)) {
+      const eps = buildEpisodes(wt);
+      expect(eps.map((e) => e.apiKey)).toEqual(keys);
+      for (const key of keys) {
+        // BY_ID covers the full catalog, so a bare lookup resolves any family's key.
+        expect(episodeById(key).apiKey).toBe(key);
+      }
+    }
+  });
+
+  it("keeps landscape variants on the base apiKey array", () => {
+    const base = EPISODES.map((e) => e.apiKey);
+    for (const wt of ["front_yard", "rear_yard", "whole_property", "value_added_services"]) {
+      expect(WORK_TYPE_API_KEYS[wt]).toEqual(base);
+    }
+  });
+
+  it("keeps every family array identical except the three topic slots", () => {
+    const base = EPISODES.map((e) => e.apiKey);
+    // All 7 arrays share the same pre/post structure; only the three topic
+    // slots differ, and each family swaps in exactly its own three keys.
+    // (Custom defines its own self-contained flow in CustomQuestions.json.)
+    for (const wt of Object.keys(WORK_TYPE_API_KEYS) as (keyof typeof WORK_TYPE_API_KEYS)[]) {
+      if (wt === "custom") continue;
+      const keys = WORK_TYPE_API_KEYS[wt];
+      expect(keys.length).toBe(base.length);
+      const nonTopic = keys.filter((k) => !ALL_TOPIC_KEYS.includes(k));
+      const baseNonTopic = base.filter((k) => !ALL_TOPIC_KEYS.includes(k));
+      expect(nonTopic).toEqual(baseNonTopic);
+    }
+  });
+
+  it("sources the custom flow's apiKeys from CustomQuestions.json", () => {
+    const custom = buildEpisodes("custom");
+    expect(custom.map((e) => e.apiKey)).toEqual(WORK_TYPE_API_KEYS.custom);
+    // Self-contained 5-step flow — no overview/photos/files/budget steps.
+    expect(custom.map((e) => e.apiKey)).toEqual([
+      "project_goals_or_brief_description",
+      "additional_images_upload",
+      "summary",
+      "revision",
+      "revision-summary",
+    ]);
+  });
+
+  it("has exactly one topic set per family (landscape / color-material / arc)", () => {
+    expect(WORK_TYPE_API_KEYS.front_yard.filter((k) => ALL_TOPIC_KEYS.includes(k))).toEqual(
+      LANDSCAPE_TOPIC_KEYS
+    );
+    expect(WORK_TYPE_API_KEYS.color_material.filter((k) => ALL_TOPIC_KEYS.includes(k))).toEqual(
+      COLOR_MATERIAL_TOPIC_KEYS
+    );
+    expect(WORK_TYPE_API_KEYS.arc_addition.filter((k) => ALL_TOPIC_KEYS.includes(k))).toEqual(
+      ARC_TOPIC_KEYS
+    );
+  });
+});
+
+/** Every topic-card apiKey across the three families. */
+const ALL_TOPIC_KEYS = [
+  "landscape_design_style_preference",
+  "hardscape_material_preferences",
+  "softscape_planting_preferences",
+  "exterior_color_and_material_style",
+  "primary_material_preferences",
+  "color_preferences",
+  "type_of_architectural_project",
+  "architectural_style_preference",
+  "exterior_materials_and_finishes",
+];
+
+const LANDSCAPE_TOPIC_KEYS = ALL_TOPIC_KEYS.slice(0, 3);
+const COLOR_MATERIAL_TOPIC_KEYS = ALL_TOPIC_KEYS.slice(3, 6);
+const ARC_TOPIC_KEYS = ALL_TOPIC_KEYS.slice(6, 9);
 
 describe("revision loop round ids", () => {
   it("builds round-suffixed message ids (round 1 keeps the base id)", () => {
@@ -378,6 +533,50 @@ describe("buildRestoredTranscript", () => {
       (m) => m.id === "ep-project_goals_or_brief_description"
     );
     expect(card?.card?.description).toMatch(/backyard/);
+  });
+
+  it("shows the first card when a custom session has no answers yet", () => {
+    const eps = buildEpisodes("custom");
+    const t = buildRestoredTranscript({}, [], eps);
+    expect(t.messages.map((m) => m.id)).toEqual([
+      "ep-project_goals_or_brief_description",
+    ]);
+    expect(t.currentId).toBe("project_goals_or_brief_description");
+  });
+
+  it("restores a custom transcript starting at the first card (no overview)", () => {
+    const eps = buildEpisodes("custom");
+    const t = buildRestoredTranscript(
+      { project_goals_or_brief_description: item("a custom remodel") },
+      [],
+      eps
+    );
+    const ids = t.messages.map((m) => m.id);
+    expect(ids).toEqual([
+      "ep-project_goals_or_brief_description",
+      "m-restored-project_goals_or_brief_description",
+      // Resume point — the inspirational-photos card, rendered as restored.
+      "ep-additional_images_upload",
+    ]);
+    expect(ids).not.toContain("ep-overview");
+    expect(t.currentId).toBe("additional_images_upload");
+  });
+
+  it("reaches the summary when every custom question is answered", () => {
+    const eps = buildEpisodes("custom");
+    const t = buildRestoredTranscript(
+      {
+        project_goals_or_brief_description: item("a custom remodel"),
+        additional_images_upload: item(["https://cdn/img1.jpg"]),
+      },
+      [],
+      eps
+    );
+    expect(t.currentId).toBe("summary");
+    const ids = t.messages.map((m) => m.id);
+    expect(ids).toContain("ep-summary");
+    expect(ids).not.toContain("ep-photos");
+    expect(ids).not.toContain("ep-files");
   });
 
   it("restores a color-material transcript with its own topic keys", () => {

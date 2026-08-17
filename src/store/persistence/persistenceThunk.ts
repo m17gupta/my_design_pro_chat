@@ -49,7 +49,6 @@ export const hydrateProject = createAsyncThunk<
     });
 
     const project = data?.project;
-    console.log("hydrated project--->", project);
 
     if (project) {
       // Restore the brief payload (context + answered questions) and the
@@ -76,8 +75,6 @@ export const saveProject = createAsyncThunk<
   { rejectValue: string }
 >("persistence/saveProject", async ({ projectId, chats, designData }, { rejectWithValue }) => {
   try {
-
-    console.log("calling save project", { project_id: projectId, chats, design_data: designData })
     await fetchApi("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
