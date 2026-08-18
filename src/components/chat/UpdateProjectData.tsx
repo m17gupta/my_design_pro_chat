@@ -32,19 +32,24 @@ const UpdateProjectData = () => {
         if (timerRef.current) clearTimeout(timerRef.current)
         timerRef.current = setTimeout(() => {
             timerRef.current = null
-            const { id, watermark, work_type, image_url, value, original, revision_comment } = chatRef.current
+            const { id, watermark, work_type, image_url, value, original, revision_comment, user_type, dc_name, role, custom_engage_designer, question_sets } = chatRef.current
             if (original == null || Object.keys(original).length === 0) return
             void dispatch(
                 saveProject({
                     projectId: String(id),
                     chats: {
-                        id: id ?? 0,
+                        projectId: id ?? 0,
+                        user_type: user_type ?? "",
+                        dc_name: dc_name ?? "",
+                        role: role ?? null,
+                        custom_engage_designer: custom_engage_designer ?? undefined,
                         watermark: watermark ?? DEFAULT_WATERMARK,
                         work_type: work_type ?? DEFAULT_WORK_TYPE,
                         image_url: image_url ?? "",
                         value: value ?? "",
                         original,
                         revision_comment,
+                        question_sets: question_sets ?? undefined,
                     },
                     designData: entriesRef.current,
                 })

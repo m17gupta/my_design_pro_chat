@@ -3,15 +3,15 @@ import { answerToText, isAnswerEmpty } from "../../lib/briefDisplay";
 import type {
   AnswerValue,
   ApiQuestionMeta,
+  ChecklistItem,
   EpisodeKind,
   Message,
   QuestionCardSpec,
 } from "./types";
 import type { EnterpriseEntry } from "../../store/enterprise/enterpriseType";
 import questionsJson from "../../docs/Questions.json";
-// The `custom` work type is driven entirely by CustomQuestions.json — its
-// complete episode list is the single source of truth for the custom flow.
 import customQuestionsJson from "../../docs/CustomQuestions.json";
+import allQuestionsJson from "../../docs/AllQuestion.json";
 
 export interface Episode {
 
@@ -25,6 +25,14 @@ export interface Episode {
   /** Whether the user may edit this episode's answer (default true). */
   editable?: boolean;
   api?: Omit<ApiQuestionMeta, "apiKey">;
+  engageDesigner?: {
+    description: string;
+    question?: string;
+  };
+
+  revisionStep?: boolean;
+  /** Optional headline for summary-kind episodes (AllQuestion-driven flows). */
+  title?: string;
 }
 
 
@@ -267,11 +275,6 @@ const EPISODES: Episode[] = [
   },
 ];
 
-/**
- * The three topic-card apiKeys per family. Every work type shares the same
- * pre/post structure (photos, files, goals, budget, restrictions, summaries);
- * only these three middle slots differ between families.
- */
 const LANDSCAPE_TOPIC_KEYS = [
   "landscape_design_style_preference",
   "hardscape_material_preferences",
@@ -640,15 +643,20 @@ function collectOverridesFromRoot(
  *
  * @param workType  The `work_type` from the URL params (e.g. "front_yard",
  *                  "front-yard", "rear_yard", "color-material").
+ * @param options   Optional custom-flow flags: `engageDesigner` swaps the
+ *                  engage-designer copy from CustomQuestions.json onto the
+ *                  custom questions (the `{designer}` token is replaced with
+ *                  `dcName`, falling back to "your designer" when blank),
+ *                  only applied when `workType === "custom"`.
  */
-export function buildEpisodes(workType: string | undefined): Episode[] {
+export function buildEpisodes(
+  workType: string | undefined,
+  options?: { engageDesigner?: boolean; dcName?: string }
+): Episode[] {
   const normalized = normalizeWorkType(workType);
-  // The `custom` work type is driven entirely by CustomQuestions.json — its
-  // episode list is the single source of truth. Card descriptions may hold
-  // HTML (upload steps), so convert them to readable text for display while
-  // the API question keeps the exact HTML the backend expects.
+
   if (normalized === "custom") {
-    return (customQuestionsJson as Episode[]).map((ep) =>
+    const customEpisodes = (customQuestionsJson as Episode[]).map((ep) =>
       ep.card && ep.card.description
         ? {
             ...ep,
@@ -656,6 +664,25 @@ export function buildEpisodes(workType: string | undefined): Episode[] {
           }
         : ep
     );
+  
+    if (options?.engageDesigner) {
+      const designer = options.dcName?.trim() || "your designer";
+      return customEpisodes.map((ep) => {
+        const variant = ep.engageDesigner;
+        if (!variant) return ep;
+        const description = variant.description.replaceAll("{designer}", designer);
+        const question = (variant.question ?? variant.description).replaceAll(
+          "{designer}",
+          designer
+        );
+        return {
+          ...ep,
+          ...(ep.card ? { card: { ...ep.card, description } } : {}),
+          ...(ep.api ? { api: { ...ep.api, question } } : {}),
+        };
+      });
+    }
+    return customEpisodes;
   }
   const base = resolveWorkTypeEpisodes(workType);
   const overrides = collectWorkTypeOverrides(workType);
@@ -693,6 +720,536 @@ export function buildEpisodes(workType: string | undefined): Episode[] {
   });
 }
 
+// -------------------------------------------------------------------------
+// AllQuestion.json-driven flows (enterprise / enterprise-client roles)
+// -------------------------------------------------------------------------
+
+/**
+ * One question from AllQuestion.json. Only the fields the chat renders are
+ * typed; unknown/extra fields are ignored.
+ */
+export interface AllQQuestion {
+  id: string;
+  type?: string;
+  name?: string;
+  details?: string;
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  max_files?: number;
+  max_selection?: number;
+  is_ai_design?: boolean;
+  is_property_address?: boolean;
+  example?: string;
+  options?: string[] | Record<string, string>;
+  multi_questions?: AllQQuestion[];
+}
+
+/** One phase: a titled, ordered list of questions. */
+export interface AllQPhase {
+  title: string;
+  questions: AllQQuestion[];
+}
+
+/**
+ * Everything the chat knows about the host flow, used to pick the question
+ * set from AllQuestion.json (mirrors the BriefState context fields).
+ */
+export interface FlowContext {
+  work_type?: string | null;
+  user_type?: string | null;
+  role?: string | null;
+  question_sets?: { original?: string[]; revision?: string[] } | null;
+  engageDesigner?: boolean | null;
+  dcName?: string | null;
+}
+
+/** AllQuestion.json root — role → (user_type → (work_type →) phase → questions). */
+const allQuestionsRoot = allQuestionsJson as Record<string, unknown>;
+
+function normalizeRole(role: string | null | undefined): string {
+  return (role ?? "").trim().toLowerCase();
+}
+
+function normalizeUserType(userType: string | null | undefined): string {
+  return (userType ?? "").trim().toLowerCase();
+}
+
+/** Default user_type key for a work_type when the host didn't send one. */
+function userTypeForWorkType(workType: string | undefined): string {
+  const wt = normalizeWorkType(workType);
+  if (wt === "color_material" || wt === "arc_addition") return "color-material";
+  return "landscape-design";
+}
+
+interface ResolvedAllQuestionFlow {
+  phases: Record<string, AllQPhase>;
+  originalPhases: string[];
+  revisionPhases: string[];
+}
+
+/**
+ * Locate the phase map for the given role / user_type / work_type in
+ * AllQuestion.json and decide which phases drive the intake (`original`) and
+ * which drive the revision loop. Returns null when the path doesn't exist —
+ * callers then fall back to the legacy Questions.json flow.
+ */
+function resolveAllQuestionFlow(ctx: FlowContext): ResolvedAllQuestionFlow | null {
+  const role = normalizeRole(ctx.role);
+  if (!role) return null;
+  const roleSection = allQuestionsRoot[role];
+  if (!roleSection || typeof roleSection !== "object") return null;
+  const roleMap = roleSection as Record<string, unknown>;
+
+  const userType = normalizeUserType(ctx.user_type);
+  let phases: Record<string, AllQPhase> | undefined;
+
+  if (role === "enterprise-client") {
+    // enterprise-client sections are user_type → phase (no work_type level).
+    const section = userType ? roleMap[userType] : undefined;
+    if (section && typeof section === "object") {
+      phases = section as Record<string, AllQPhase>;
+    }
+  } else {
+    const userTypeKey = userType || userTypeForWorkType(ctx.work_type ?? undefined);
+    const userSection = roleMap[userTypeKey];
+    if (userSection && typeof userSection === "object") {
+      const workTypeKey = normalizeWorkType(ctx.work_type ?? "front_yard");
+      const workSection = (userSection as Record<string, unknown>)[workTypeKey];
+      if (workSection && typeof workSection === "object") {
+        phases = workSection as Record<string, AllQPhase>;
+      }
+    }
+  }
+  if (!phases) return null;
+
+  const phaseKeys = Object.keys(phases);
+  if (phaseKeys.length === 0) return null;
+
+  const qs = ctx.question_sets;
+  let originalPhases =
+    qs?.original && qs.original.length > 0 ? qs.original : defaultOriginalPhases(phases);
+  let revisionPhases =
+    qs?.revision && qs.revision.length > 0
+      ? qs.revision
+      : defaultRevisionPhases(phases);
+
+  // Keep only phases that exist, preserving JSON order.
+  originalPhases = originalPhases.filter((key) => phases && phases[key]);
+  revisionPhases = revisionPhases.filter((key) => phases && phases[key]);
+
+  return { phases, originalPhases, revisionPhases };
+}
+
+/**
+ * Index of the phase holding the design summary / approval question
+ * (design_summary, design_direction_approval); -1 when absent.
+ */
+function summaryPhaseIndex(phases: Record<string, AllQPhase>): number {
+  const keys = Object.keys(phases);
+  return keys.findIndex((key) =>
+    phases[key].questions.some(
+      (q) => q.id === "design_summary" || q.id === "design_direction_approval"
+    )
+  );
+}
+
+/**
+ * Default intake phases: everything up to & including the phase that holds the
+ * design summary / approval question (design_summary, design_direction_approval).
+ */
+function defaultOriginalPhases(phases: Record<string, AllQPhase>): string[] {
+  const keys = Object.keys(phases);
+  const summaryIdx = summaryPhaseIndex(phases);
+  const end = summaryIdx >= 0 ? summaryIdx + 1 : Math.max(0, keys.length - 1);
+  return keys.slice(0, end);
+}
+
+/**
+ * Default revision phases: everything after the summary/approval phase. The
+ * post-approval phases hold the revision-request cards (is_ai_design review
+ * phases are skipped when the episodes are built), so picking all remaining
+ * phases keeps the revision loop populated for every flow.
+ */
+function defaultRevisionPhases(phases: Record<string, AllQPhase>): string[] {
+  const keys = Object.keys(phases);
+  const summaryIdx = summaryPhaseIndex(phases);
+  const start = summaryIdx >= 0 ? summaryIdx + 1 : Math.max(0, keys.length - 1);
+  return keys.slice(start);
+}
+
+/** Normalize options (string[] or {value: label}) into a display label list. */
+function normalizeOptions(options: unknown): string[] {
+  if (Array.isArray(options)) {
+    return options.filter((o): o is string => typeof o === "string");
+  }
+  if (options && typeof options === "object") {
+    return Object.values(options as Record<string, string>).filter(
+      (o): o is string => typeof o === "string"
+    );
+  }
+  return [];
+}
+
+/** Default summary text when the JSON has no design_summary display question. */
+const DEFAULT_SUMMARY_TEXT =
+  "Let me generate an initial rendering based on my understanding of what you are looking for.";
+
+/**
+ * Convert one AllQuestion.json question into one or more episodes. The card
+ * description is human-readable (HTML converted); the API question keeps the
+ * exact HTML the backend expects.
+ */
+function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
+  const title = q.name?.trim() || q.id;
+  const details = q.details ?? "";
+  const displayDetails = htmlToDisplay(details);
+  // Default checklistId to the question's own id so each question maps to
+  // its own checklist entry (per-question granularity).
+  const cid = checklistId ?? q.id;
+  const api = (answerShape: ApiQuestionMeta["answerShape"]): Episode["api"] => ({
+    name: title,
+    question: details || displayDetails,
+    answerShape,
+    checklistId: cid,
+  });
+  const base: Episode = { apiKey: q.id, kind: "card", checklistId: cid };
+
+  switch (q.type) {
+    case "file":
+      return [
+        {
+          ...base,
+          card: {
+            title,
+            description: displayDetails,
+            fields: [
+              { kind: "upload-grid", count: q.max_files ?? 4, accept: "image/*" },
+            ],
+          },
+          api: api("urls"),
+        },
+      ];
+    case "textarea":
+      return [
+        {
+          ...base,
+          card: {
+            title,
+            description: displayDetails,
+            fields: [
+              {
+                kind: "textarea",
+                placeholder: q.placeholder ?? "Share your thoughts",
+                rows: 4,
+                required: q.required,
+              },
+            ],
+          },
+          api: api("text"),
+        },
+      ];
+    case "radio":
+      return [
+        {
+          ...base,
+          card: {
+            title,
+            description: displayDetails,
+            fields: [
+              {
+                kind: "radio",
+                required: q.required,
+                options: normalizeOptions(q.options),
+              },
+            ],
+          },
+          api: api("text"),
+        },
+      ];
+    case "checkbox":
+      return [
+        {
+          ...base,
+          card: {
+            title,
+            description: displayDetails,
+            fields: [{ kind: "checkbox", options: normalizeOptions(q.options) }],
+          },
+          api: api("value-notes"),
+        },
+      ];
+    case "checkbox_with_notes":
+      return [
+        {
+          ...base,
+          card: {
+            title,
+            description: displayDetails,
+            fields: [
+              {
+                kind: "checkbox",
+                options: normalizeOptions(q.options),
+                notesPlaceholder: "Enter your notes",
+              },
+            ],
+          },
+          api: api("value-notes"),
+        },
+      ];
+    case "files_with_description":
+      return [
+        {
+          ...base,
+          card: {
+            title,
+            description: displayDetails,
+            fields: [
+              {
+                kind: "textarea",
+                placeholder: "Share your thoughts",
+                rows: 3,
+                required: q.required,
+              },
+              { kind: "upload-grid", count: q.max_files ?? 4, accept: "image/*" },
+            ],
+          },
+          api: api("files-notes"),
+        },
+      ];
+    case "multi_questions":
+      // Each child gets its own checklistId (its apiKey) by default.
+      return (q.multi_questions ?? []).flatMap((child) =>
+        questionToEpisodes(child)
+      );
+    case "display":
+      return [];
+    default:
+      return [
+        {
+          ...base,
+          card: {
+            title,
+            description: displayDetails,
+            fields: [{ kind: "textarea", placeholder: "Share your thoughts", rows: 4 }],
+          },
+        },
+      ];
+  }
+}
+
+/**
+ * Swap the engage-designer wording (from CustomQuestions.json) onto matching
+ * episodes, replacing the `{designer}` token with the host-provided designer
+ * name. Only applied to the enterprise custom flow.
+ */
+function applyEngageDesigner(episodes: Episode[], dcName?: string): Episode[] {
+  const designer = dcName?.trim() || "your designer";
+  return episodes.map((ep) => {
+    const variant = (customQuestionsJson as Episode[]).find(
+      (e) => e.apiKey === ep.apiKey
+    )?.engageDesigner;
+    if (!variant) return ep;
+    const description = variant.description.replaceAll("{designer}", designer);
+    const question = (variant.question ?? variant.description).replaceAll(
+      "{designer}",
+      designer
+    );
+    return {
+      ...ep,
+      ...(ep.card ? { card: { ...ep.card, description } } : {}),
+      ...(ep.api ? { api: { ...ep.api, question } } : {}),
+    };
+  });
+}
+
+/**
+ * Build the episode list for an AllQuestion.json-driven flow (enterprise /
+ * enterprise-client roles). The intake comes from `question_sets.original`
+ * phases, the summary from the phase's design_summary question, and the
+ * revision loop from `question_sets.revision` phases. Falls back to the
+ * legacy Questions.json / CustomQuestions.json flow when no AllQuestion.json
+ * path matches the context.
+ */
+export function buildEpisodesFromContext(ctx: FlowContext): Episode[] {
+  const resolved = resolveAllQuestionFlow(ctx);
+  console.log("resolved-->", resolved)
+  if (!resolved) {
+    return buildEpisodes(ctx.work_type ?? undefined, {
+      engageDesigner: ctx.engageDesigner ?? undefined,
+      dcName: ctx.dcName ?? undefined,
+    });
+  }
+
+  const { phases, originalPhases, revisionPhases } = resolved;
+
+  // Every AllQuestion flow starts with the overview screen so the user sees
+  // the dynamic checklist before answering any questions.
+  const episodes: Episode[] = [{
+    apiKey: "overview",
+    kind: "ready",
+    content:
+      "To give you an overview of what information I will be gathering so you know what to expect, I will be touching on the following:",
+    showChecklist: true,
+    options: ["I am ready to proceed  →"],
+    editable: false,
+  }];
+  const summaryParts: string[] = [];
+
+  for (const phaseKey of originalPhases) {
+    const phase = phases[phaseKey];
+    if (!phase) continue;
+    for (const q of phase.questions) {
+      if (q.id === "design_summary") {
+        if (q.details) summaryParts.push(htmlToDisplay(q.details));
+        if (q.example) summaryParts.push(htmlToDisplay(q.example));
+        continue;
+      }
+      if (q.id === "design_direction_approval") continue;
+      if (q.is_ai_design) continue; // post-design review — rendered by result cards
+      episodes.push(...questionToEpisodes(q));
+    }
+  }
+
+  // Enterprise landscape-design yard flows gate the two upload cards behind
+  // the legacy Yes/No intro questions (photos / files).
+  if (shouldGateUploads(ctx)) {
+    insertUploadGates(episodes);
+  }
+
+  episodes.push({
+    apiKey: "summary",
+    kind: "summary",
+    title: "Design Summary",
+    content: summaryParts.filter(Boolean).join("\n\n") || DEFAULT_SUMMARY_TEXT,
+  });
+
+  for (const phaseKey of revisionPhases) {
+    const phase = phases[phaseKey];
+    if (!phase) continue;
+    for (const q of phase.questions) {
+      if (q.is_ai_design) continue; // revision_approval — rendered by result cards
+      // Revision summaries are display questions; some phases omit `type` on
+      // the summary marker (revision_design_summary), so treat missing types
+      // as display too.
+      if (q.type === "display" || !q.type) {
+        const content =
+          [q.details, q.example]
+            .filter((s): s is string => Boolean(s))
+            .map(htmlToDisplay)
+            .join("\n\n") || DEFAULT_SUMMARY_TEXT;
+        episodes.push({ apiKey: "revision-summary", kind: "summary", content });
+        continue;
+      }
+      for (const ep of questionToEpisodes(q)) {
+        // The canonical revision-comments card keeps the "revision" apiKey so
+        // the revision loop (regenerate / make-changes / round ids) works
+        // unchanged; other revision-phase questions keep their own ids.
+        // Revision questions never enter the intake `original` payload.
+        episodes.push({
+          ...ep,
+          apiKey: ep.apiKey === "revision_comments" ? "revision" : ep.apiKey,
+          revisionStep: true,
+          api: undefined,
+        });
+      }
+    }
+  }
+
+  if (
+    ctx.engageDesigner &&
+    normalizeRole(ctx.role) === "enterprise" &&
+    normalizeWorkType(ctx.work_type ?? "") === "custom"
+  ) {
+    return applyEngageDesigner(episodes, ctx.dcName ?? undefined);
+  }
+  return episodes;
+}
+
+/** The apiKey of the first revision-step episode ("revision" when absent). */
+export function revisionApiKey(episodes: Episode[]): string {
+  return episodes.find((e) => e.revisionStep)?.apiKey ?? "revision";
+}
+
+/**
+ * Enterprise landscape yard flows gate their upload cards behind the legacy
+ * Yes/No intro questions. Restricting this to the three yard work types keeps
+ * custom / value_added_services flows (which the host drives with their own
+ * question_sets) unchanged.
+ */
+const GATED_LANDSCAPE_WORK_TYPES = new Set([
+  "front_yard",
+  "rear_yard",
+  "whole_property",
+]);
+
+function shouldGateUploads(ctx: FlowContext): boolean {
+  return (
+    normalizeRole(ctx.role) === "enterprise" &&
+    GATED_LANDSCAPE_WORK_TYPES.has(normalizeWorkType(ctx.work_type ?? ""))
+  );
+}
+
+/**
+ * Insert the Yes/No photo & file intro questions (reusing the legacy
+ * EPISODES definitions) immediately before their upload cards.
+ */
+function insertUploadGates(episodes: Episode[]): void {
+  const photosGate = EPISODES.find((e) => e.apiKey === "photos");
+  const filesGate = EPISODES.find((e) => e.apiKey === "files");
+  const hasPhotos = episodes.some((e) => e.apiKey === "additional_images_upload");
+  const hasFiles = episodes.some((e) => e.apiKey === "supporting_files_upload");
+  if ((!hasPhotos || !photosGate) && (!hasFiles || !filesGate)) return;
+
+  // Clone gates so we can override checklistId without mutating the shared
+  // EPISODES objects. The gate shares the target card's checklistId so
+  // answering Yes/No marks the same checklist item as the upload card.
+  const photosTarget = episodes.find((e) => e.apiKey === "additional_images_upload");
+  const filesTarget = episodes.find((e) => e.apiKey === "supporting_files_upload");
+  const clonedPhotos = photosGate && photosTarget
+    ? { ...photosGate, checklistId: photosTarget.checklistId }
+    : photosGate;
+  const clonedFiles = filesGate && filesTarget
+    ? { ...filesGate, checklistId: filesTarget.checklistId }
+    : filesGate;
+
+  const out: Episode[] = [];
+  for (const ep of episodes) {
+    if (ep.apiKey === "additional_images_upload" && clonedPhotos) out.push(clonedPhotos);
+    if (ep.apiKey === "supporting_files_upload" && clonedFiles) out.push(clonedFiles);
+    out.push(ep);
+  }
+  episodes.splice(0, episodes.length, ...out);
+}
+
+/**
+ * Question-level intake checklist for AllQuestion.json-driven flows; null when
+ * the context resolves to the legacy flow (callers fall back to the static
+ * lists). Each non-display question in the selected original phases becomes
+ * one checklist item, keyed by its question id so completion tracks per-
+ * question rather than per-phase.
+ */
+export function checklistFromFlowContext(ctx: FlowContext): ChecklistItem[] | null {
+  const resolved = resolveAllQuestionFlow(ctx);
+  if (!resolved) return null;
+  const { phases, originalPhases } = resolved;
+  const items: ChecklistItem[] = [];
+  const seen = new Set<string>();
+  for (const key of originalPhases) {
+    const phase = phases[key];
+    if (!phase) continue;
+    for (const q of phase.questions) {
+      // Skip display-only markers and approval gates — they aren't questions
+      // the user answers, so they shouldn't appear in the checklist.
+      if (q.type === "display" || q.id === "design_direction_approval") continue;
+      if (seen.has(q.id)) continue;
+      seen.add(q.id);
+      items.push({ id: q.id, number: items.length + 1, label: q.name || q.id });
+    }
+  }
+  return items.length > 0 ? items : null;
+}
+
 export { EPISODES };
 
 /**
@@ -715,7 +1272,10 @@ export function episodeById(apiKey: string, episodes?: Episode[]): Episode {
  * Resolve the next episode apiKey after the user answers the current one.
  * The linear chain is derived from the episodes list order, so the color/
  * material question set routes correctly without a second hardcoded switch.
- * The two Yes/No branch points stay explicit — they depend on the answer.
+ * The Yes/No branch points stay explicit — they depend on the answer: Yes
+ * opens the upload card right after the intro question, No skips straight to
+ * the episode after it (derived from the list, so it works for both the
+ * legacy EPISODES and the AllQuestion-driven yard flows).
  */
 export function nextEpisodeId(
   apiKey: string,
@@ -728,11 +1288,13 @@ export function nextEpisodeId(
     idx >= 0 && idx < list.length - 1 ? list[idx + 1].apiKey : "summary";
   switch (apiKey) {
     case "photos":
-      return answer === "Yes I do" ? "additional_images_upload" : "files";
+      if (answer === "Yes I do" && idx + 1 < list.length) return list[idx + 1].apiKey;
+      if (answer !== "Yes I do" && idx + 2 < list.length) return list[idx + 2].apiKey;
+      return "files";
     case "files":
-      return answer === "Yes I do"
-        ? "supporting_files_upload"
-        : "project_goals_or_brief_description";
+      if (answer === "Yes I do" && idx + 1 < list.length) return list[idx + 1].apiKey;
+      if (answer !== "Yes I do" && idx + 2 < list.length) return list[idx + 2].apiKey;
+      return "project_goals_or_brief_description";
     default:
       return next;
   }
@@ -752,15 +1314,11 @@ export function buildMessage(episode: Episode): Message {
     card: episode.card,
     showChecklist: episode.showChecklist,
     checklistId: episode.checklistId,
+    ...(episode.title ? { title: episode.title } : {}),
   };
 }
 
-/**
- * Canonical message id for an episode. Round 1 keeps the base id
- * (`ep-revision`, `ep-revision-summary`); later rounds get a counter suffix
- * (`ep-revision-2`, `ep-revision-summary-2`, …) so every loop iteration of
- * the revision flow renders as a distinct message in the transcript.
- */
+
 export function episodeMessageId(apiKey: string, round?: number): string {
   const base = `ep-${apiKey}`;
   return round === undefined || round <= 1 ? base : `${base}-${round}`;
@@ -770,11 +1328,15 @@ export function episodeMessageId(apiKey: string, round?: number): string {
  * Number of revision-comment cards (`ep-revision`, `ep-revision-2`, …) in a
  * transcript. Summaries (`ep-revision-summary[-N]`) are deliberately excluded
  * so the count always reflects how many loop rounds have been started.
+ * AllQuestion-driven flows may key their revision cards on a different
+ * apiKey (the first `revisionStep` episode); pass it via `apiKey`.
  */
-export function countRevisionRounds(messages: Pick<Message, "id">[]): number {
-  return messages.filter(
-    (m) => m.id === "ep-revision" || /^ep-revision-\d+$/.test(m.id)
-  ).length;
+export function countRevisionRounds(
+  messages: Pick<Message, "id">[],
+  apiKey = "revision"
+): number {
+  const re = new RegExp(`^ep-${apiKey}-\\d+$`);
+  return messages.filter((m) => m.id === `ep-${apiKey}` || re.test(m.id)).length;
 }
 
 /** 1-based round of a revision-summary message id; 0 when the id is not one. */
@@ -944,11 +1506,15 @@ export function buildRestoredTranscript(
     summaryMsg.isRestored = true;
     messages.push(summaryMsg);
 
+    // The revision loop's card apiKey — the first revisionStep episode, or the
+    // canonical "revision" id for legacy flows.
+    const revKey = revisionApiKey(list);
+
     // One revision round = assistant comment card → user's comment → summary.
     const pushRevisionRound = (round: number, notes: string) => {
       // 1. Assistant revision card
-      const revCard = buildMessage(episodeById("revision", episodes));
-      const cardMsgId = episodeMessageId("revision", round);
+      const revCard = buildMessage(episodeById(revKey, episodes));
+      const cardMsgId = episodeMessageId(revKey, round);
       revCard.id = cardMsgId;
       revCard.isRestored = true;
       messages.push(revCard);
@@ -961,7 +1527,7 @@ export function buildRestoredTranscript(
         content: notes,
         isRestored: true,
       });
-      messageEpisodes[userMsgId] = "revision";
+      messageEpisodes[userMsgId] = revKey;
 
       // 3. Assistant revision summary
       const revSummary = buildMessage(episodeById("revision-summary", episodes));

@@ -3,10 +3,8 @@ import {
   configureStore,
   type Middleware,
 } from "@reduxjs/toolkit";
-import { buildEpisodes, getApiQuestions } from "../components/chat/flow";
-import { buildApiPayload, type ApiBriefPayload } from "../lib/apiBrief";
 import { isPersistenceConfigured } from "../lib/persistenceConfig";
-import briefReducer, { resetBrief, type BriefState } from "./briefSlice";
+import briefReducer, { resetBrief, payloadFromState } from "./briefSlice";
 import enterpriseReducer, { resetEnterprise } from "./enterprise/enterpriseSlice";
 import persistenceReducer from "./persistence/persistenceSlice";
 import {
@@ -14,23 +12,9 @@ import {
   saveProject,
 } from "./persistence/persistenceThunk";
 
-const isBrowser = typeof window !== "undefined";
+export { payloadFromState };
 
-/** Serialize the chat slice into the schema.md payload shape for storage. */
-export function payloadFromState(state: BriefState): ApiBriefPayload {
-  return buildApiPayload(
-    getApiQuestions(buildEpisodes(state.work_type ?? undefined)),
-    state.original,
-    {
-      id: state.id ?? 0,
-      watermark: state.watermark ?? "",
-      work_type: state.work_type ?? "",
-      image_url: state.image_url ?? "",
-      value: state.value ?? "",
-      revision: state.revision_comment,
-    }
-  );
-}
+const isBrowser = typeof window !== "undefined";
 
 /**
  * Persistence middleware — mirrors the old localStorage middleware but writes

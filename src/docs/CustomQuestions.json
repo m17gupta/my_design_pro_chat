@@ -6,7 +6,7 @@
     "checklistId": "goals",
     "card": {
       "title": "Project Goals/Brief Description",
-      "description": "Give me a brief overview of what you are looking to do?",
+      "description": "Give me a brief overview of what you are looking to do ?",
       "fields": [{ "kind": "textarea", "placeholder": "Share your thoughts", "rows": 4, "required": true }]
     },
     "api": {
@@ -14,6 +14,9 @@
       "question": "Give me a brief overview of what you are looking to do?",
       "answerShape": "text",
       "checklistId": "goals"
+    },
+    "engageDesigner": {
+      "description": "Ok, great. I will get you over to {designer}. First, please give me a quick description of what it is you are looking to do on this project so I can let {designer} know"
     }
   },
   {
@@ -26,17 +29,19 @@
     },
     "api": {
       "name": "Inspirational Photos",
- 
       "question":
         "<p class='mb-3'>Do you have any inspirational photos you would like me to analyze that portray the look or feel you are trying to achieve?.</p>",
       "answerShape": "urls",
       "checklistId": "files"
+    },
+    "engageDesigner": {
+      "description": "To ensure efficiency, can you please upload any additional photo angles of the project, inspo images, survey… that would be helpful to us"
     }
   },
   {
     "apiKey": "summary",
     "kind": "summary",
-    "content": "I let me generate an initial rendering based on my understanding of what you are looking for."
+    "content": "Let me generate an initial rendering based on my understanding of what you are looking for."
   },
   {
     "apiKey": "revision",

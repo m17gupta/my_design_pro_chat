@@ -5,14 +5,15 @@ import {
 } from '@reduxjs/toolkit'
 import type { AnswerValue, WorkType } from '../components/chat/types'
 import { toWorkType } from '../components/chat/types'
-import { buildEpisodes, getApiQuestions } from '../components/chat/flow'
+import { buildEpisodesFromContext, getApiQuestions } from '../components/chat/flow'
 import {
   buildApiPayload,
   buildQuestionItem,
   type ApiBriefItem,
   type ApiBriefPayload,
   type BriefContext,
-  type RevisionComment
+  type RevisionComment,
+  type QuestionSets
 } from '../lib/apiBrief'
 import { isAnswerEmpty } from '../lib/briefDisplay'
 
@@ -27,13 +28,14 @@ export interface BriefState {
   user_type?: string | null
   dc_name?: string | null
   role?: string | null
+  custom_engage_designer?: boolean | null
   work_type: WorkType | null
   watermark: string | null
-
   image_url: string | null
   value: string | null
   original: Record<string, ApiBriefItem>
   revision_comment: RevisionComment
+  question_sets?: QuestionSets | null
 }
 
 /**
@@ -45,24 +47,69 @@ export interface BriefState {
  */
 export function stateFromPayload (payload: ApiBriefPayload): BriefState {
   const original: Record<string, ApiBriefItem> = {}
-  getApiQuestions(buildEpisodes(payload.work_type ?? undefined)).forEach(q => {
+  getApiQuestions(
+    buildEpisodesFromContext({
+      work_type: payload.work_type ?? undefined,
+      user_type: payload.user_type,
+      role: payload.role,
+      question_sets: payload.question_sets,
+      engageDesigner: payload.custom_engage_designer,
+      dcName: payload.dc_name ?? undefined,
+    })
+  ).forEach(q => {
     const item = payload.original[q.apiKey]
     if (item && !isAnswerEmpty(item.answer)) {
       original[q.apiKey] = item
     }
   })
   return {
-    id: payload.id,
+    id: payload.projectId,
     original,
     watermark: payload.watermark,
     work_type: toWorkType(payload.work_type),
     image_url: payload.image_url,
     value: payload.value ?? null,
     revision_comment: payload.revision_comment ?? { files: [], notes: '' },
-    user_type: payload?.user_type??"",
-    dc_name: payload?.dc_name??"",
-    role: payload?.role??"",
+    user_type: payload?.user_type ?? "",
+    dc_name: payload?.dc_name ?? "",
+    role: payload?.role ?? null,
+    custom_engage_designer: payload?.custom_engage_designer ?? null,
+    question_sets: payload?.question_sets ?? null,
   }
+}
+
+/**
+ * Serialize a brief state into the schema.md payload shape for storage /
+ * API submission. Lives next to its inverse `stateFromPayload` so the
+ * persistence layer and the payload selector share one implementation.
+ */
+export function payloadFromState (state: BriefState): ApiBriefPayload {
+  return buildApiPayload(
+    getApiQuestions(
+      buildEpisodesFromContext({
+        work_type: state.work_type ?? undefined,
+        user_type: state.user_type,
+        role: state.role,
+        question_sets: state.question_sets,
+        engageDesigner: state.custom_engage_designer ?? false,
+        dcName: state.dc_name ?? undefined,
+      })
+    ),
+    state.original,
+    {
+      projectId: state.id ?? 0,
+      user_type: state.user_type ?? "",
+      dc_name: state.dc_name ?? "",
+      role: state.role ?? null,
+      custom_engage_designer: state.custom_engage_designer ?? undefined,
+      watermark: state.watermark ?? "",
+      work_type: state.work_type ?? "",
+      image_url: state.image_url ?? "",
+      value: state.value ?? "",
+      revision: state.revision_comment,
+      question_sets: state.question_sets ?? undefined,
+    }
+  )
 }
 
 const initialState: BriefState = {
@@ -70,12 +117,14 @@ const initialState: BriefState = {
   user_type: null,
   dc_name: null,
   role: null,
+  custom_engage_designer: null,
   watermark: null,
   work_type: null,
   image_url: '',
   value: null,
   original: {},
-  revision_comment: { files: [], notes: '' }
+  revision_comment: { files: [], notes: '' },
+  question_sets: null
 }
 
 const briefSlice = createSlice({
@@ -87,10 +136,17 @@ const briefSlice = createSlice({
       state,
       action: PayloadAction<{ apiKey: string; answer: AnswerValue }>
     ) {
-      // Resolve question text from the current work type so the stored item
-      // (and the payload it feeds) carries the right wording.
+      // Resolve question text from the current flow context so the stored
+      // item (and the payload it feeds) carries the right wording.
       const meta = getApiQuestions(
-        buildEpisodes(state.work_type ?? undefined)
+        buildEpisodesFromContext({
+          work_type: state.work_type ?? undefined,
+          user_type: state.user_type,
+          role: state.role,
+          question_sets: state.question_sets,
+          engageDesigner: state.custom_engage_designer ?? false,
+          dcName: state.dc_name ?? undefined,
+        })
       ).find(q => q.apiKey === action.payload.apiKey)
       if (meta) {
         state.original[meta.apiKey] = buildQuestionItem(
@@ -103,6 +159,13 @@ const briefSlice = createSlice({
     /** Merge top-level context fields (id / watermark / work_type / image_url / value). */
     setContext (state, action: PayloadAction<BriefContext>) {
       if (action.payload.id !== undefined) state.id = action.payload.id
+      if (action.payload.user_type !== undefined)
+        state.user_type = action.payload.user_type
+      if (action.payload.dc_name !== undefined)
+        state.dc_name = action.payload.dc_name
+      if (action.payload.role !== undefined) state.role = action.payload.role
+      if (action.payload.custom_engage_designer !== undefined)
+        state.custom_engage_designer = action.payload.custom_engage_designer
       if (action.payload.watermark !== undefined)
         state.watermark = action.payload.watermark
       if (action.payload.work_type !== undefined)
@@ -110,6 +173,8 @@ const briefSlice = createSlice({
       if (action.payload.image_url !== undefined)
         state.image_url = action.payload.image_url
       if (action.payload.value !== undefined) state.value = action.payload.value
+      if (action.payload.question_sets !== undefined)
+        state.question_sets = action.payload.question_sets
     },
     /** Record the 1786514733.png"revision comments (files + notes) from the feedback step. */
     setRevision (state, action: PayloadAction<RevisionComment>) {
@@ -149,17 +214,5 @@ export interface BriefSliceState {
  */
 export const selectBriefPayload = createSelector(
   (state: BriefSliceState) => state.chat,
-  (brief): ApiBriefPayload =>
-    buildApiPayload(
-      getApiQuestions(buildEpisodes(brief.work_type ?? undefined)),
-      brief.original,
-      {
-        id: brief?.id ?? 0,
-        watermark: brief.watermark ?? '',
-        work_type: brief.work_type ?? '',
-        image_url: brief.image_url ?? '',
-        value: brief.value ?? '',
-        revision: brief.revision_comment
-      }
-    )
+  (brief): ApiBriefPayload => payloadFromState(brief)
 )

@@ -43,14 +43,7 @@ export interface CheckboxField {
 
 export type QuestionField = UploadGridField | TextareaField | RadioField | CheckboxField;
 
-/**
- * The structured answer value the design API expects for a question.
- * The shape is determined by the question's `answerShape`:
- * - "urls"         → string[]  (upload-only questions)
- * - "text"         → string    (textarea / radio questions)
- * - "files-notes"  → { files, notes } (textarea + upload questions)
- * - "value-notes"  → { value, notes } (checkbox questions)
- */
+
 export type AnswerValue =
   | string
   | string[]
@@ -60,12 +53,6 @@ export type AnswerValue =
 /** How a question's answer is serialized for the design API. */
 export type ApiAnswerShape = "urls" | "text" | "files-notes" | "value-notes";
 
-/**
- * Known work_type values — the section keys in Questions.json, normalized to
- * underscores (matching `normalizeWorkType` in flow.ts). Incoming host values
- * may be hyphenated ("front-yard"); `toWorkType` normalizes them on entry to
- * the store so state only ever holds canonical values.
- */
 export const WORK_TYPES = [
   "front_yard",
   "rear_yard",
@@ -144,6 +131,8 @@ export interface Message {
    * animations so the restored chat appears instantly.
    */
   isRestored?: boolean;
+  /** Optional headline for summary-kind messages (AllQuestion-driven flows). */
+  title?: string;
 }
 
 /** One item of the persistent intake checklist. */
@@ -193,6 +182,59 @@ export const ARC_CHECKLIST: ChecklistItem[] = [
   { id: "budget", number: 7, label: "Budget" },
   { id: "restrictions", number: 8, label: "Property restrictions (HOA requirements)" },
 ];
+
+
+export interface SummaryCopy {
+  title: string;
+  description: string;
+}
+
+export const SUMMARY_COPY: Record<string, SummaryCopy> = {
+  front_yard: {
+    title: "Front Yard Design Summary",
+    description:
+      "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?",
+  },
+  rear_yard: {
+    title: "Rear Yard Design Summary",
+    description:
+      "Amazing, I have logged our discussion for your rear yard based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?",
+  },
+  whole_property: {
+    title: "Whole Property Design Summary",
+    description:
+      "Amazing, I have logged our discussion for your entire property based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?",
+  },
+  color_material: {
+    title: "Color & Material Summary",
+    description:
+      "Amazing, I have logged our discussion about your exterior color and material preferences based on the details and inspiration you’ve shared with me! Can you please confirm?",
+  },
+  arc_addition: {
+    title: "Architectural Addition Summary",
+    description:
+      "Amazing, I have logged our discussion about your architectural project based on the details, preferences, and uploaded information you’ve shared with me! Can you please confirm?",
+  },
+  value_added_services: {
+    title: "Value Added Services Summary",
+    description:
+      "Amazing, I have logged our discussion about the value added services based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?",
+  },
+  custom: {
+    title: "Custom Design Summary",
+    description:
+      "Let me generate an initial rendering based on my understanding of what you are looking for.",
+  },
+};
+
+/** Resolve summary title/description copy for a work type. */
+export function summaryCopyForWorkType(workType?: string): SummaryCopy {
+  const normalized = (workType ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_");
+  return SUMMARY_COPY[normalized] ?? SUMMARY_COPY.front_yard;
+}
 
 /**
  * Pick the intake checklist for a work type: the color/material and

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CHECKLIST, type ChecklistItem } from "../types";
+import { summaryCopyForWorkType } from "../types";
 
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -19,8 +19,11 @@ interface DesignSummaryCardProps {
    * (e.g. once the design has been generated — the result card takes over).
    */
   showActions?: boolean;
-  /** Checklist rows shown in the summary — work-type aware (default landscape). */
-  checklist?: ChecklistItem[];
+
+  /** Override the summary headline (AllQuestion-driven flows). */
+  summaryTitle?: string;
+  /** Override the summary body (AllQuestion-driven flows). */
+  summaryText?: string;
   onGenerate: () => void;
   onChanges: () => void;
 }
@@ -31,28 +34,19 @@ export default function DesignSummaryCard({
   generating = false,
   disabled = false,
   showActions = true,
-  checklist = CHECKLIST,
+
+  summaryTitle,
+  summaryText,
   onGenerate,
   onChanges,
 }: DesignSummaryCardProps) {
-  // console.log("checklist--",checklist)
-  // console.log("answers--",answers)
-  // console.log("uploadTotal--",uploadTotal)
 
-  const {original}= useSelector((state:RootState)=>state.chat)
-//   if(original && Object.keys(original).length > 0){
-//        Object.keys(original).forEach((key)=>{
-//         console.log("original======", key)
-//         console.log("original======", original[key])
-//         if(original[key]){
-//             const objectAnswer= original[key].answer
-//             const objectName= original[key].name
+  const { original, work_type } = useSelector((state: RootState) => state.chat)
 
-//             console.log("objectAnswer", objectAnswer)
-//             console.log("objectName", objectName)
-//         }
-//        })
-//   }
+  const fallback = summaryCopyForWorkType(work_type ?? undefined)
+  const title = summaryTitle ?? fallback.title
+  const description = summaryText?.trim() ? summaryText.trim() : fallback.description
+
 
   return (
     <motion.div
@@ -62,54 +56,14 @@ export default function DesignSummaryCard({
       className="w-full rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
     >
       <h3 className="text-base font-semibold tracking-tight text-emerald-700 dark:text-emerald-400">
-        Design Summary
+        {title}
       </h3>
       <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
-        Amazing, I have logged our discussion based on the project details,
-        preferences, and uploaded information you’ve shared with me! Can you please
-        confirm?
+        {description}
       </p>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200/80 dark:border-zinc-800">
-        {/* {checklist.map((item, i) => {
-          const answer = answers[item.id];
-          return (
-            <div
-              key={item.id}
-              className={`flex items-center gap-3 px-3.5 py-2.5 ${
-                i > 0 ? "border-t border-zinc-200/80 dark:border-zinc-800" : ""
-              }`}
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                className="shrink-0 text-emerald-500"
-              >
-                <path d="M3 10.5L12 3l9 7.5" />
-                <path d="M5 9.5V21h14V9.5" />
-              </svg>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  {item.label}
-                </p>
-              </div>
-              <p className="min-w-0 max-w-[45%] truncate text-right text-sm text-zinc-800 dark:text-zinc-100">
-                {answer &&(
-                  <span className="italic text-zinc-400 dark:text-zinc-500">
-                    Not answered
-                  </span>
-                )}
-              </p>
-            </div>
-          );
-        })} */}
+
         { original && Object.keys(original).length > 0 &&
           Object.keys(original).map((key, i) => {
             const item = original[key];

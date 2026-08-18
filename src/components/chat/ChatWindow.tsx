@@ -9,14 +9,16 @@ import ProgressChecklist from "./ProgressChecklist";
 import type { CardResult } from "./QuestionCard";
 import TypingIndicator from "./TypingIndicator";
 import {
-  buildEpisodes,
+  buildEpisodesFromContext,
   buildMessage,
   buildRestoredTranscript,
+  checklistFromFlowContext,
   countRevisionRounds,
   episodeById,
   episodeMessageId,
   getApiQuestions,
   nextEpisodeId,
+  revisionApiKey,
   revisionRoundFromMessage,
 } from "./flow";
 import {
@@ -95,8 +97,7 @@ export default function ChatWindow() {
   const [announcement, setAnnouncement] = useState("");
   const announcedIdRef = useRef<string | null>(null);
 
-  // Enterprise status poll
-  const [pollCount, setPollCount] = useState(0);
+
   const [submittedAction, setSubmittedAction] = useState<SubmitAction | null>(null);
   const [pendingRevisionGenerate, setPendingRevisionGenerate] = useState<number | null>(
     null
@@ -114,15 +115,35 @@ export default function ChatWindow() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<number | null>(null);
-  const {watermark, image_url, work_type, id,original:chat_original} = briefPayload;
+  const {watermark, image_url, work_type, projectId: id, original:chat_original, user_type, dc_name, role, custom_engage_designer, question_sets} = briefPayload;
   const busyRef = useRef(false);
   const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>({});
 
-  // Build the work-type-specific episode list (description text only changes).
-  // Memoised on work_type so it only recomputes when the project type changes.
-  const episodes = useMemo(() => buildEpisodes(work_type ?? undefined), [work_type]);
-  // Checklist labels follow the work type (landscape vs color/material).
-  const checklist = useMemo(() => checklistForWorkType(work_type ?? undefined), [work_type]);
+  // Build the flow from the full brief context: enterprise / enterprise-client
+  // roles resolve their phases from AllQuestion.json via question_sets;
+  // everything else falls back to the legacy per-work-type flow.
+  const flowContext = useMemo(
+    () => ({
+      work_type: work_type ?? undefined,
+      user_type,
+      role,
+      question_sets,
+      engageDesigner: custom_engage_designer,
+      dcName: dc_name ?? undefined,
+    }),
+    [work_type, user_type, role, question_sets, custom_engage_designer, dc_name]
+  );
+  const episodes = useMemo(() => buildEpisodesFromContext(flowContext), [flowContext]);
+  // The revision loop's card apiKey ("revision" for legacy / most flows).
+  const revisionKey = useMemo(() => revisionApiKey(episodes), [episodes]);
+  // Checklist labels follow the flow: phases for AllQuestion flows, the
+  // work-type-specific static list for the legacy flows.
+  const checklist = useMemo(
+    () =>
+      checklistFromFlowContext(flowContext) ??
+      checklistForWorkType(work_type ?? undefined),
+    [flowContext, work_type]
+  );
 
   const restoredTranscript = useMemo(
     () => buildRestoredTranscript(restoredItems, entries, episodes, revisionComment),
@@ -211,32 +232,7 @@ export default function ChatWindow() {
     [uploads]
   );
 
-  const startOver = useCallback(() => {
-    clearTypingTimeout();
-    busyRef.current = false;
-    setTyping(false);
-    const firstEp = episodes[0];
-    setMessages([buildMessage(firstEp)]);
-    setCurrentId(firstEp.apiKey);
-    setAnswers({});
-    dispatch(resetBrief());
-    dispatch(resetEnterprise());
-    setUploads({});
-    setCompleted(new Set());
-    setGenerating(false);
-    setEditingId(null);
-    setMessageEpisodes({});
-    setRatings({});
-    setSubmittedAction(null);
-    setPendingRevisionGenerate(null);
-    announcedIdRef.current = null;
-    setMenuOpen(false);
-  }, [clearTypingTimeout, dispatch, episodes]);
 
-  /**
-   * Record an answer for the current episode, then (after Luna "types") push
-   * the next episode's message.
-   */
   const commit = useCallback(
     (
       userText: string,
@@ -277,16 +273,15 @@ export default function ChatWindow() {
       if (filesByField) {
         // Revision rounds are keyed by their round-specific message id so each
         // loop's uploaded files never leak into the next round's comments card.
-        const key =
-          ep.apiKey === "revision"
-            ? episodeMessageId("revision", countRevisionRounds(messages))
-            : ep.apiKey;
+        const key = ep.revisionStep
+          ? episodeMessageId(revisionKey, countRevisionRounds(messages, revisionKey))
+          : ep.apiKey;
         setUploads((prev) => ({ ...prev, [key]: filesByField }));
       }
 
       // Revision feedback stores `{ files: [uploaded URLs], notes: text }` in
       // the brief payload so the regeneration POST carries the changes.
-      if (ep.apiKey === "revision") {
+      if (ep.revisionStep) {
         const urls = urlsByField
           ? Object.values(urlsByField).flatMap((byKey) => Object.values(byKey))
           : [];
@@ -318,7 +313,7 @@ export default function ChatWindow() {
         setCurrentId(nextEpisode);
       }, TYPING_MS);
     },
-    [typing, currentId, messages, clearTypingTimeout, dispatch]
+    [typing, currentId, messages, clearTypingTimeout, dispatch, revisionKey]
   );
 
   const advance = useCallback((rawAnswer: string) => commit(rawAnswer), [commit]);
@@ -446,8 +441,11 @@ export default function ChatWindow() {
   const handleCardEditSave = useCallback(
     (cardMessageId: string, result: CardResult) => {
       const text = result.answerText.trim();
-      const epId = cardMessageId.replace(/^ep-/, "");
-      const baseEpId = epId.startsWith("revision") ? "revision" : epId;
+      const rawEpId = cardMessageId.replace(/^ep-/, "");
+      const baseEpId =
+        rawEpId === revisionKey || rawEpId.startsWith(`${revisionKey}-`)
+          ? revisionKey
+          : rawEpId;
 
       setMessages((prev) => {
         const cardIndex = prev.findIndex((m) => m.id === cardMessageId);
@@ -476,7 +474,7 @@ export default function ChatWindow() {
           const apiKey = ep.apiKey;
           dispatch(answerQuestion({ apiKey, answer: result.answer }));
         }
-        if (baseEpId === "revision") {
+        if (baseEpId === revisionKey) {
           const ans = result.answer;
           if (ans && typeof ans === "object" && "notes" in ans) {
             dispatch(
@@ -487,13 +485,15 @@ export default function ChatWindow() {
             );
           }
         }
-        const filesKey = cardMessageId.startsWith("ep-revision") ? cardMessageId : ep.apiKey;
+        const filesKey = cardMessageId.startsWith(`ep-${revisionKey}`)
+          ? cardMessageId
+          : ep.apiKey;
         setUploads((prev) => ({ ...prev, [filesKey]: result.files }));
       }
 
       setEditingId(null);
     },
-    [dispatch]
+    [dispatch, revisionKey]
   );
 
   const handleEditCancel = useCallback(() => setEditingId(null), []);
@@ -504,11 +504,13 @@ export default function ChatWindow() {
     setGenerating(true);
     try {
        const payload = buildApiPayload(getApiQuestions(episodes), chat_original, {
-          // id: chat.id,
-          watermark: watermark,
-          work_type: work_type,
-          image_url: image_url,
-          revision: revisionComment,
+        projectId: id,
+        role: role,
+        watermark: watermark,
+        work_type: work_type,
+        image_url: image_url,
+        revision: revisionComment,
+        question_sets: question_sets,
         });
       await dispatch(generateEnterpriseDesign({ payload })).unwrap();
       toast.success("Your design brief has been sent to Brooke Edwards for review!");
@@ -523,7 +525,7 @@ export default function ChatWindow() {
     } finally {
       setGenerating(false);
     }
-  }, [dispatch, generating, chat_original, watermark, image_url, work_type, revisionComment]);
+  }, [dispatch, generating, chat_original, watermark, image_url, work_type, revisionComment, user_type, dc_name, role, custom_engage_designer, question_sets]);
 
   /**
    * Status polling: once the POST lands a `task_id` in the store, wait 3s,
@@ -747,18 +749,22 @@ export default function ChatWindow() {
     setTyping(false);
     setEditingId(null);
     announcedIdRef.current = null;
-    const round = countRevisionRounds(messages) + 1;
+    if (!episodes.some((e) => e.apiKey === revisionKey)) {
+      toast("No revision questions are configured for this project.");
+      return;
+    }
+    const round = countRevisionRounds(messages, revisionKey) + 1;
     if (round > MAX_REVISION_ROUNDS) {
       toast("More than 4 revisions — please engage your designer for further changes.");
       return;
     }
     // Clear previous round's comment so the new revision card starts empty
     dispatch(setRevision({ files: [], notes: "" }));
-    const revisionMsg = buildMessage(episodeById("revision", episodes));
-    const id = episodeMessageId("revision", round);
+    const revisionMsg = buildMessage(episodeById(revisionKey, episodes));
+    const id = episodeMessageId(revisionKey, round);
     setMessages((prev) => [...prev, { ...revisionMsg, id }]);
-    setCurrentId("revision");
-  }, [clearTypingTimeout, messages, dispatch]);
+    setCurrentId(revisionKey);
+  }, [clearTypingTimeout, messages, dispatch, episodes, revisionKey]);
 
   /**
    * Generate a revision round (round N) — same single generate + polling path
@@ -782,6 +788,7 @@ export default function ChatWindow() {
         work_type: work_type ?? "",
         image_url: entries[entries.length - 1]?.url ?? "",
         revision: { files, notes },
+        question_sets: question_sets,
       });
       try {
         await dispatch(generateEnterpriseDesign({ payload, round })).unwrap();
@@ -797,7 +804,7 @@ export default function ChatWindow() {
         );
       }
     },
-    [pendingRevisionGenerate, entries, revisionComment, chat_original, watermark, work_type, dispatch]
+    [pendingRevisionGenerate, entries, revisionComment, chat_original, watermark, work_type, question_sets, dispatch]
   );
 
   /**
@@ -812,7 +819,7 @@ export default function ChatWindow() {
       setEditingId(null);
       announcedIdRef.current = null;
 
-      const commentId = episodeMessageId("revision", round);
+      const commentId = episodeMessageId(revisionKey, round);
       const revisions = entries.filter((entry) => entry.type === "revision");
       const entry = revisions[round - 1];
       const notes = entry?.questions[0]?.answer.notes ?? revisionComment.notes;
@@ -833,7 +840,7 @@ export default function ChatWindow() {
             : m
         );
       });
-      setCurrentId("revision");
+      setCurrentId(revisionKey);
       setPendingRevisionGenerate(null);
       // Scroll to the freshly-editable comments card.
       window.setTimeout(() => {
@@ -842,7 +849,7 @@ export default function ChatWindow() {
           ?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 60);
     },
-    [messages, entries, revisionComment, clearTypingTimeout]
+    [messages, entries, revisionComment, clearTypingTimeout, revisionKey]
   );
 
   /**
@@ -853,13 +860,16 @@ export default function ChatWindow() {
     (messageId: string) => {
       const epId = messageEpisodes[messageId];
       dispatch(setEditId(epId))
-      if (epId === "revision") {
+      if (epId && episodeById(epId, episodes).revisionStep) {
         const msgIdx = messages.findIndex((m) => m.id === messageId);
         if (msgIdx >= 0) {
           for (let i = msgIdx - 1; i >= 0; i--) {
-            if (messages[i].id === "ep-revision" || messages[i].id.startsWith("ep-revision-")) {
+            const isRevCard =
+              messages[i].id === `ep-${revisionKey}` ||
+              messages[i].id.startsWith(`ep-${revisionKey}-`);
+            if (isRevCard) {
               const cardId = messages[i].id;
-              const roundMatch = /^ep-revision(?:-(\d+))?$/.exec(cardId);
+              const roundMatch = new RegExp(`^ep-${revisionKey}(?:-(\\d+))?$`).exec(cardId);
               if (roundMatch) {
                 const round = roundMatch[1] ? parseInt(roundMatch[1], 10) : 1;
                 handleMakeChanges(round);
@@ -886,7 +896,7 @@ export default function ChatWindow() {
       }
       setEditingId(editingId === targetId ? null : targetId);
     },
-    [editingId, messageEpisodes, messages, handleMakeChanges, episodes]
+    [editingId, messageEpisodes, messages, handleMakeChanges, episodes, revisionKey]
   );
 
 
@@ -965,7 +975,7 @@ export default function ChatWindow() {
                   // Revision comment cards are keyed by their round message id
                   // so each round's uploaded files stay with their own round.
                   const filesKey =
-                    m.id.startsWith("ep-revision") && !isRevisionSummary
+                    m.id.startsWith(`ep-${revisionKey}`) && !isRevisionSummary
                       ? m.id
                       : episodeApiKey;
                   // Only editable episodes get an edit icon on their user answer
@@ -986,7 +996,7 @@ export default function ChatWindow() {
                     (entry) => entry.type === "revision"
                   );
                   const hideRevisionEdit =
-                    msgEpId === "revision" &&
+                    msgEpId === revisionKey &&
                     revisionEntries.length === 1 &&
                     revisionEntries[0].status === "completed";
 
@@ -1003,7 +1013,8 @@ export default function ChatWindow() {
 
                   // Hide revision question card once the user has submitted it
                   // (i.e. it is no longer the current active card).
-                  const isRevisionQuestionCard = m.id.startsWith("ep-revision") && !isRevisionSummary;
+                  const isRevisionQuestionCard =
+                    m.id.startsWith(`ep-${revisionKey}`) && !isRevisionSummary;
                   if (isRevisionQuestionCard && !isCurrent) return null;
 
                   const isCardBeingEdited = msgEpId && editingId === `ep-${msgEpId}`;
@@ -1063,11 +1074,11 @@ export default function ChatWindow() {
                        }
                        onCardCancel={editingId === m.id ? handleEditCancel : undefined}
                        initialAnswer={
-                          m.id.startsWith("ep-revision") && !isRevisionSummary
+                          m.id.startsWith(`ep-${revisionKey}`) && !isRevisionSummary
                             ? (() => {
-                                const round = m.id === "ep-revision"
+                                const round = m.id === `ep-${revisionKey}`
                                   ? 1
-                                  : parseInt(m.id.replace("ep-revision-", ""), 10) || 1;
+                                  : parseInt(m.id.replace(`ep-${revisionKey}-`, ""), 10) || 1;
                                 const revEntry = entries.filter((e) => e.type === "revision")[round - 1];
                                 const ans = revEntry?.questions?.[0]?.answer;
                                 // If this round already has a saved entry answer, pre-fill it (edit/retry case).

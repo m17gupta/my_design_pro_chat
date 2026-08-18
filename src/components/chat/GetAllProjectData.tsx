@@ -13,6 +13,14 @@ interface ClientParams {
   image_url?: string;
   watermark?: string;
   value?: string;
+  user_type?: string;
+  dc_name?: string;
+  role?: string | null;
+  custom_engage_designer?: boolean;
+  question_sets?: {
+    original?: string[];
+    revision?: string[];
+  };
 }
 
 /** URL-safe base64 → JSON object; returns undefined when absent/malformed. */
@@ -38,6 +46,7 @@ const GetAllProjectData = () => {
     hydrationDispatchedRef.current = true;
 
     const params = decodeClientParams(searchParams.get("params"));
+    console.log("params",params)
     if (params) {
       dispatch(
         setContext({
@@ -46,6 +55,11 @@ const GetAllProjectData = () => {
           image_url: params.image_url,
           watermark: params.watermark,
           value: params.value,
+          user_type:params?.user_type??"",
+          dc_name:params.dc_name,
+          role:params.role,
+          custom_engage_designer:params.custom_engage_designer,
+          question_sets: params.question_sets
         })
       );
       const incomingProjectId = params.id ? String(params.id) : "";

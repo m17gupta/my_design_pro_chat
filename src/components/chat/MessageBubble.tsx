@@ -371,11 +371,12 @@ export const MessageBubble = ({
             <>
               <DesignSummaryCard
                 answers={answers}
-                checklist={checklist}
                 uploadTotal={uploadTotal}
                 generating={generating}
                 disabled={summaryDisabled}
                 showActions={!summaryActionsHidden}
+                summaryTitle={message.title}
+                summaryText={message.content}
                 onGenerate={onSummaryGenerate ?? (() => {})}
                 onChanges={onSummaryChanges ?? (() => {})}
               />

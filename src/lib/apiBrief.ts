@@ -8,24 +8,26 @@ import type {
  * Top-level context for the brief payload. These come from the host app / API
  * (the chat itself never collects them); defaults are used until wired up.
  */
+export interface QuestionSets {
+  original?: string[]
+  revision?: string[]
+}
+
 export interface BriefContext {
-  /** Job id from the host app / API. */
+  /** Job id from the host app / API (used by setContext for internal state). */
   id?: number
-
-  /** Logo URL stamped on the generated design. */
+  /** Project id on the brief payload (mirrors schema.md's projectId). */
+  projectId?: number
+  user_type?: string | null,
+  dc_name?: string | null,
   watermark?: string
-
-  /** e.g. "front-yard". */
   work_type?: string
-
-  /** Main property photo URL (provided by the host app / API). */
   image_url?: string
-
-  /** Generic value string passed from the host app. */
-  value?: string
-
-  /** Revision comments from the post-render feedback step. */
+  value?: string,
+  role?: string | null
+  custom_engage_designer?: boolean
   revision?: RevisionComment
+  question_sets?: QuestionSets
 }
 
 export interface ApiBriefItem {
@@ -46,16 +48,18 @@ export interface RevisionComment {
 
 /** The exact payload shape the design API expects (see schema.md). */
 export interface ApiBriefPayload {
-  id: number
+  projectId: number
   user_type?: string | null
   dc_name?: string | null
   role?: string | null
+  custom_engage_designer?: boolean
   watermark: string
   work_type: string
   image_url: string
   value: string
   original: Record<string, ApiBriefItem>
   revision_comment: RevisionComment
+  question_sets?: QuestionSets
 }
 
 export const DEFAULT_WATERMARK = 'http://mydesigns.pro/img/luna-logo.png'
@@ -149,13 +153,18 @@ export function buildApiPayload (
   })
 
   return {
-    id: context.id ?? 0,
+    projectId: context.projectId ?? context.id ?? 0,
     // `||` (not `??`) so an empty-string context value means "not set" → default.
     watermark: context.watermark || DEFAULT_WATERMARK,
     work_type: context.work_type || DEFAULT_WORK_TYPE,
     image_url: context.image_url ?? '',
     value: context.value ?? '',
+    user_type: context.user_type ?? '',
+    dc_name: context.dc_name ?? '',
+    role: context.role ?? null,
+    custom_engage_designer: context.custom_engage_designer ?? undefined,
     original,
-    revision_comment: context.revision ?? { files: [], notes: '' }
+    revision_comment: context.revision ?? { files: [], notes: '' },
+    question_sets: context.question_sets
   }
 }

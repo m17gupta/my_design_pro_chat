@@ -6,13 +6,16 @@ import {
   WORK_TYPE_API_KEYS,
   buildColorMaterialEpisodes,
   buildEpisodes,
+  buildEpisodesFromContext,
   buildMessage,
   buildRestoredTranscript,
+  checklistFromFlowContext,
   countRevisionRounds,
   episodeById,
   episodeMessageId,
   getApiQuestions,
   nextEpisodeId,
+  revisionApiKey,
   revisionRoundFromMessage,
 } from "./flow";
 import type { Message } from "./types";
@@ -337,6 +340,60 @@ describe("buildEpisodes", () => {
     expect(photos?.card?.title).toBe("Inspirational Photos");
     expect(photos?.card?.description).toMatch(/inspirational photos/);
     expect(photos?.api?.name).toBe("Inspirational Photos");
+  });
+
+  it("leaves the custom flow unchanged when engageDesigner is off/absent", () => {
+    const plain = buildEpisodes("custom");
+    expect(buildEpisodes("custom", { engageDesigner: false })).toEqual(plain);
+    expect(buildEpisodes("custom", { engageDesigner: false, dcName: "Brooke Edwards" })).toEqual(plain);
+  });
+
+  it("swaps the engage-designer copy onto the goals question with the designer's name", () => {
+    const eps = buildEpisodes("custom", {
+      engageDesigner: true,
+      dcName: "Brooke Edwards",
+    });
+    const goals = eps.find((e) => e.apiKey === "project_goals_or_brief_description");
+    expect(goals?.card?.description).toBe(
+      "Ok, great. I will get you over to Brooke Edwards. First, please give me a quick description of what it is you are looking to do on this project so I can let Brooke Edwards know"
+    );
+    // The API question mirrors the card text.
+    expect(goals?.api?.question).toBe(goals?.card?.description);
+    // Card title and answer shape stay as CustomQuestions.json defines them.
+    expect(goals?.card?.title).toBe("Project Goals/Brief Description");
+    expect(goals?.api?.answerShape).toBe("text");
+  });
+
+  it("falls back to 'your designer' when dcName is blank", () => {
+    const eps = buildEpisodes("custom", { engageDesigner: true, dcName: "  " });
+    const goals = eps.find((e) => e.apiKey === "project_goals_or_brief_description");
+    expect(goals?.card?.description).toContain("I will get you over to your designer");
+    expect(goals?.card?.description).toContain("so I can let your designer know");
+  });
+
+  it("swaps the photo question copy for the engage-designer flow", () => {
+    const eps = buildEpisodes("custom", {
+      engageDesigner: true,
+      dcName: "Brooke Edwards",
+    });
+    const photos = eps.find((e) => e.apiKey === "additional_images_upload");
+    expect(photos?.card?.description).toMatch(/To ensure efficiency, can you please upload any additional photo angles/);
+    expect(photos?.api?.question).toBe(photos?.card?.description);
+    // Layout/answer shape untouched.
+    expect(photos?.card?.title).toBe("Inspirational Photos");
+    expect(photos?.api?.answerShape).toBe("urls");
+    // apiKey order and kinds are identical to the plain custom flow.
+    expect(eps.map((e) => e.apiKey)).toEqual(buildEpisodes("custom").map((e) => e.apiKey));
+  });
+
+  it("never applies engage-designer copy to non-custom work types", () => {
+    const front = buildEpisodes("front_yard", {
+      engageDesigner: true,
+      dcName: "Brooke Edwards",
+    });
+    const goals = front.find((e) => e.apiKey === "project_goals_or_brief_description");
+    expect(goals?.card?.description).not.toMatch(/I will get you over to/);
+    expect(front).toEqual(buildEpisodes("front_yard"));
   });
 });
 
@@ -725,5 +782,332 @@ describe("buildRestoredTranscript", () => {
     expect(ids).toContain("ep-summary");
     expect(ids).not.toContain("ep-revision-summary");
     expect(t.currentId).toBe("summary");
+  });
+});
+
+describe("buildEpisodesFromContext (AllQuestion.json)", () => {
+  /** Enterprise color-material intake: role → user_type → work_type → phases. */
+  const ENTERPRISE_CM = {
+    role: "enterprise",
+    user_type: "color-material",
+    work_type: "color_material",
+    question_sets: { original: ["phase_1"], revision: ["phase_4"] },
+  };
+
+  it("falls back to the legacy flow when the role has no AllQuestion.json path", () => {
+    expect(buildEpisodesFromContext({ role: "homeowner", work_type: "front_yard" })).toEqual(
+      buildEpisodes("front_yard")
+    );
+    expect(buildEpisodesFromContext({ work_type: "custom" })).toEqual(
+      buildEpisodes("custom")
+    );
+    expect(buildEpisodesFromContext({ work_type: "front-yard" })).toEqual(
+      buildEpisodes("front_yard")
+    );
+  });
+
+  it("builds the enterprise intake from question_sets.original phases", () => {
+    const eps = buildEpisodesFromContext(ENTERPRISE_CM);
+    expect(eps.map((e) => e.apiKey)).toEqual([
+      "overview",
+      "additional_images_upload",
+      "project_goals_or_brief_description",
+      "exterior_color_and_material_style",
+      "primary_material_preferences",
+      "budget",
+      "important_proprty_information",
+      "summary",
+      "revision",
+      "revision-summary",
+    ]);
+  });
+
+  it("maps each JSON question type to the right card field and answer shape", () => {
+    const eps = buildEpisodesFromContext(ENTERPRISE_CM);
+    const goals = eps.find((e) => e.apiKey === "project_goals_or_brief_description");
+    expect(goals?.card?.fields[0].kind).toBe("textarea");
+    expect(goals?.api?.answerShape).toBe("text");
+    const style = eps.find((e) => e.apiKey === "exterior_color_and_material_style");
+    expect(style?.card?.fields.map((f) => f.kind)).toEqual(["textarea", "upload-grid"]);
+    expect(style?.api?.answerShape).toBe("files-notes");
+    const budget = eps.find((e) => e.apiKey === "budget");
+    expect(budget?.card?.fields[0].kind).toBe("radio");
+    expect((budget?.card?.fields[0] as { options: string[] }).options).toContain("Under $25,000");
+    const info = eps.find((e) => e.apiKey === "important_proprty_information");
+    expect(info?.card?.fields[0].kind).toBe("checkbox");
+    expect(info?.api?.answerShape).toBe("value-notes");
+  });
+
+  it("carries the AllQuestion.json wording onto the card and API question", () => {
+    const eps = buildEpisodesFromContext(ENTERPRISE_CM);
+    const goals = eps.find((e) => e.apiKey === "project_goals_or_brief_description");
+    expect(goals?.card?.title).toBe("Project Goals/Brief Description");
+    expect(goals?.card?.description).toMatch(/colors\/materials/);
+    expect(goals?.api?.question).toBe(
+      "In a few sentences, tell me what you'd love to accomplish with this project.  Note- I will ask you about specific colors/materials in a minute.  Just a broad overview here is what I need"
+    );
+    const photos = eps.find((e) => e.apiKey === "additional_images_upload");
+    expect(photos?.card?.description).not.toMatch(/<p/);
+    expect(photos?.api?.question).toMatch(/<p/);
+  });
+
+  it("defaults question_sets to intake-through-approval plus the last revision phase", () => {
+    const eps = buildEpisodesFromContext({
+      role: "enterprise",
+      user_type: "landscape-design",
+      work_type: "front_yard",
+    });
+    const keys = eps.map((e) => e.apiKey);
+    // overview + phase_1 intake (8 questions) + 2 upload gates + summary + revision + revision-summary.
+    expect(keys.length).toBe(14);
+    expect(keys[0]).toBe("overview");
+    expect(keys[keys.length - 2]).toBe("revision");
+    expect(keys[keys.length - 1]).toBe("revision-summary");
+    expect(eps.find((e) => e.apiKey === "summary")?.content).toMatch(/Amazing, I have logged our discussion/);
+  });
+
+  it("gates the upload cards behind Yes/No intro questions on enterprise yard flows", () => {
+    for (const wt of ["front_yard", "rear_yard", "whole_property"]) {
+      const eps = buildEpisodesFromContext({
+        role: "enterprise",
+        user_type: "landscape-design",
+        work_type: wt,
+        question_sets: { original: ["phase_1"], revision: ["phase_4"] },
+      });
+      const keys = eps.map((e) => e.apiKey);
+      const photos = keys.indexOf("photos");
+      const files = keys.indexOf("files");
+      expect(photos).toBeGreaterThanOrEqual(0);
+      expect(files).toBeGreaterThan(photos);
+      expect(keys[photos + 1]).toBe("additional_images_upload");
+      expect(keys[files + 1]).toBe("supporting_files_upload");
+      const photosEp = eps[photos];
+      expect(photosEp?.options).toEqual(["Yes I do", "No I don't"]);
+      // Gate shares the target upload card's checklistId so one checklist
+      // item covers both the Yes/No question and the upload.
+      const photosCard = eps.find((e) => e.apiKey === "additional_images_upload");
+      expect(photosEp?.checklistId).toBe(photosCard?.checklistId);
+      const filesEp = eps[files];
+      expect(filesEp?.options).toEqual(["Yes I do", "No I don't"]);
+      const filesCard = eps.find((e) => e.apiKey === "supporting_files_upload");
+      expect(filesEp?.checklistId).toBe(filesCard?.checklistId);
+    }
+  });
+
+  it("routes the upload gates through the Yes/No branches on yard flows", () => {
+    const eps = buildEpisodesFromContext({
+      role: "enterprise",
+      user_type: "landscape-design",
+      work_type: "front_yard",
+      question_sets: { original: ["phase_1"], revision: ["phase_4"] },
+    });
+    expect(nextEpisodeId("photos", "Yes I do", eps)).toBe("additional_images_upload");
+    expect(nextEpisodeId("photos", "No I don't", eps)).toBe("files");
+    expect(nextEpisodeId("files", "Yes I do", eps)).toBe("supporting_files_upload");
+    expect(nextEpisodeId("files", "No I don't", eps)).toBe(
+      "project_goals_or_brief_description"
+    );
+    // whole_property's goals question uses the double-underscore id from the JSON.
+    const whole = buildEpisodesFromContext({
+      role: "enterprise",
+      user_type: "landscape-design",
+      work_type: "whole_property",
+      question_sets: { original: ["phase_1"], revision: ["phase_4"] },
+    });
+    expect(nextEpisodeId("files", "No I don't", whole)).toBe(
+      "project_goals_or__brief_description"
+    );
+  });
+
+  it("does not gate uploads on non-yard enterprise flows", () => {
+    const cm = buildEpisodesFromContext(ENTERPRISE_CM);
+    expect(cm.map((e) => e.apiKey)).not.toContain("photos");
+    expect(cm.map((e) => e.apiKey)).not.toContain("files");
+  });
+
+  it("restores a gated yard flow with the photo branch", () => {
+    const eps = buildEpisodesFromContext({
+      role: "enterprise",
+      user_type: "landscape-design",
+      work_type: "rear_yard",
+      question_sets: { original: ["phase_1"], revision: ["phase_4"] },
+    });
+    const t = buildRestoredTranscript(
+      { additional_images_upload: item(["https://cdn/img1.jpg"]) },
+      [],
+      eps
+    );
+    const ids = t.messages.map((m) => m.id);
+    expect(ids).toContain("ep-photos");
+    expect(ids).toContain("ep-additional_images_upload");
+    expect(t.currentId).toBe("files");
+    // Gate's checklistId now matches the target upload card's checklistId.
+    expect(t.completed.has("additional_images_upload")).toBe(true);
+  });
+
+  it("builds the enterprise-client flow without a work_type level", () => {
+    const eps = buildEpisodesFromContext({
+      role: "enterprise-client",
+      user_type: "landscape-design",
+      question_sets: { original: ["phase_1", "phase_2"], revision: ["phase_5"] },
+    });
+    const keys = eps.map((e) => e.apiKey);
+    expect(keys).toContain("property_verified");
+    expect(keys).toContain("primary_uses");
+    expect(keys).toContain("summary");
+    expect(keys).toContain("architecture_changes");
+    expect(keys).toContain("revision-summary");
+    // is_ai_design questions are rendered by the result cards, not the flow.
+    expect(keys).not.toContain("revision_approval");
+  });
+
+  it("flattens multi_questions into child episodes", () => {
+    const eps = buildEpisodesFromContext({
+      role: "enterprise-client",
+      user_type: "landscape-design",
+      question_sets: { original: ["phase_1"], revision: ["phase_5"] },
+    });
+    const keys = eps.map((e) => e.apiKey);
+    expect(keys).toContain("ai_site_assessment_existing_conditions");
+    expect(keys).toContain("ai_site_assessment_opportunities");
+    expect(keys).toContain("ai_site_assessment_potential_constraints");
+    const child = eps.find((e) => e.apiKey === "ai_site_assessment_opportunities");
+    expect(child?.api?.answerShape).toBe("value-notes");
+  });
+
+  it("marks revision-phase episodes and keeps the canonical revision card id", () => {
+    const eps = buildEpisodesFromContext(ENTERPRISE_CM);
+    const revision = eps.find((e) => e.apiKey === "revision");
+    expect(revision?.revisionStep).toBe(true);
+    expect(revision?.api).toBeUndefined();
+    expect(revisionApiKey(eps)).toBe("revision");
+    expect(eps.find((e) => e.apiKey === "revision-summary")?.content).toMatch(/revised design/);
+  });
+
+  it("uses the first revision-phase question as the revision key when not revision_comments", () => {
+    const eps = buildEpisodesFromContext({
+      role: "enterprise-client",
+      user_type: "landscape-design",
+      question_sets: { original: ["phase_1"], revision: ["phase_5"] },
+    });
+    expect(revisionApiKey(eps)).toBe("architecture_changes");
+    const others = eps.filter((e) => e.revisionStep && e.apiKey !== "architecture_changes");
+    expect(others.map((e) => e.apiKey).sort()).toEqual([
+      "hardscape_changes",
+      "landscape_changes",
+      "material_changes",
+      "other_revision_notes",
+    ]);
+  });
+
+  it("applies the engage-designer variant only on the enterprise custom flow", () => {
+    const custom = buildEpisodesFromContext({
+      role: "enterprise",
+      user_type: "landscape-design",
+      work_type: "custom",
+      engageDesigner: true,
+      dcName: "Brooke Edwards",
+      question_sets: { original: ["phase_1"], revision: ["phase_4"] },
+    });
+    const goals = custom.find((e) => e.apiKey === "project_goals_or_brief_description");
+    expect(goals?.card?.description).toContain("Brooke Edwards");
+
+    const front = buildEpisodesFromContext({
+      role: "enterprise",
+      user_type: "landscape-design",
+      work_type: "front_yard",
+      engageDesigner: true,
+      dcName: "Brooke Edwards",
+    });
+    const frontGoals = front.find((e) => e.apiKey === "project_goals_or_brief_description");
+    expect(frontGoals?.card?.description).not.toContain("Brooke Edwards");
+  });
+
+  it("counts revision rounds keyed by the flow's revision apiKey", () => {
+    const ids = [
+      { id: "ep-architecture_changes" },
+      { id: "ep-architecture_changes-summary" },
+      { id: "ep-architecture_changes-2" },
+    ] as Pick<Message, "id">[];
+    expect(countRevisionRounds(ids, "architecture_changes")).toBe(2);
+  });
+
+  it("derives a question-level checklist for AllQuestion flows (null for legacy)", () => {
+    const checklist = checklistFromFlowContext(ENTERPRISE_CM);
+    // Each non-display question in phase_1 becomes its own checklist item.
+    expect(checklist?.length).toBeGreaterThan(0);
+    expect(checklist?.every((c) => typeof c.id === "string" && typeof c.label === "string")).toBe(true);
+    // checklist items are keyed by question id, not phase key.
+    const ids = checklist?.map((c) => c.id) ?? [];
+    expect(ids).toContain("additional_images_upload");
+    expect(ids).toContain("project_goals_or_brief_description");
+    expect(ids).not.toContain("phase_1");
+    expect(checklistFromFlowContext({ role: "homeowner" })).toBeNull();
+  });
+
+  it("restores a partial AllQuestion transcript with overview and resumes at the next card", () => {
+    const eps = buildEpisodesFromContext(ENTERPRISE_CM);
+    const t = buildRestoredTranscript(
+      { project_goals_or_brief_description: item("repaint the front") },
+      [],
+      eps
+    );
+    const ids = t.messages.map((m) => m.id);
+    expect(ids).toContain("ep-overview");
+    expect(ids).toContain("ep-project_goals_or_brief_description");
+    expect(t.currentId).toBe("exterior_color_and_material_style");
+  });
+
+  it("starts the AllQuestion flow with the overview episode", () => {
+    const eps = buildEpisodesFromContext(ENTERPRISE_CM);
+    expect(eps[0].apiKey).toBe("overview");
+    expect(eps[0].showChecklist).toBe(true);
+    expect(eps[0].options).toEqual(["I am ready to proceed  →"]);
+  });
+
+  it("assigns per-question checklistIds so each question tracks individually", () => {
+    const eps = buildEpisodesFromContext(ENTERPRISE_CM);
+    const intakeEps = eps.filter((e) => e.api && !e.revisionStep);
+    // Every intake episode should have a checklistId matching its own apiKey.
+    for (const ep of intakeEps) {
+      expect(ep.checklistId).toBe(ep.apiKey);
+    }
+  });
+
+  it("syncs upload gate checklistId with the target card on yard flows", () => {
+    const eps = buildEpisodesFromContext({
+      role: "enterprise",
+      user_type: "landscape-design",
+      work_type: "front_yard",
+      question_sets: { original: ["phase_1"], revision: ["phase_4"] },
+    });
+    const photosGate = eps.find((e) => e.apiKey === "photos");
+    const filesGate = eps.find((e) => e.apiKey === "files");
+    const photosCard = eps.find((e) => e.apiKey === "additional_images_upload");
+    const filesCard = eps.find((e) => e.apiKey === "supporting_files_upload");
+    expect(photosGate?.checklistId).toBe(photosCard?.checklistId);
+    expect(filesGate?.checklistId).toBe(filesCard?.checklistId);
+  });
+
+  it("produces a question-level checklist with correct labels from AllQuestion.json", () => {
+    const eps = buildEpisodesFromContext({
+      role: "enterprise",
+      user_type: "landscape-design",
+      work_type: "front_yard",
+      question_sets: { original: ["phase_1"], revision: ["phase_4"] },
+    });
+    const checklist = checklistFromFlowContext({
+      role: "enterprise",
+      user_type: "landscape-design",
+      work_type: "front_yard",
+      question_sets: { original: ["phase_1"], revision: ["phase_4"] },
+    });
+    expect(checklist).not.toBeNull();
+    // Numbered sequentially.
+    const numbers = checklist?.map((c) => c.number) ?? [];
+    expect(numbers).toEqual(checklist?.map((_, i) => i + 1));
+    // No duplicate ids.
+    const ids = checklist?.map((c) => c.id) ?? [];
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
