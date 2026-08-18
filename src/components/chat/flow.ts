@@ -336,7 +336,7 @@ function resolveWorkTypeEpisodes(workType: string | undefined): Episode[] {
  * Normalize a work_type value: "front-yard" → "front_yard".
  * @see normalizeWorkType
  */
-function normalizeWorkType(workType: string | undefined): string {
+export function normalizeWorkType(workType: string | undefined): string {
   return (workType ?? "front_yard").trim().toLowerCase().replace(/-/g, "_");
 }
 
@@ -677,6 +677,8 @@ export function buildEpisodes(
         );
         return {
           ...ep,
+          kind: ep.apiKey === "summary" ? "ready" : ep.kind,
+          content: ep.apiKey === "summary" ? description : ep.content,
           ...(ep.card ? { card: { ...ep.card, description } } : {}),
           ...(ep.api ? { api: { ...ep.api, question } } : {}),
         };
@@ -1057,6 +1059,8 @@ function applyEngageDesigner(episodes: Episode[], dcName?: string): Episode[] {
     );
     return {
       ...ep,
+      kind: ep.apiKey === "summary" ? "ready" : ep.kind,
+      content: ep.apiKey === "summary" ? description : ep.content,
       ...(ep.card ? { card: { ...ep.card, description } } : {}),
       ...(ep.api ? { api: { ...ep.api, question } } : {}),
     };

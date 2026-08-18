@@ -71,9 +71,8 @@ interface MessageBubbleProps {
   editOptions?: string[]
 
   answerImageUrls?: string[]
-
+  apiKey?: string
   editingNextMessage?: boolean
- 
   onOptionEditSave?: (text: string) => void
 }
 
@@ -162,6 +161,7 @@ export const MessageBubble = ({
   onEditCancel,
   editOptions,
   answerImageUrls = [],
+  apiKey,
   editingNextMessage = false,
   onOptionEditSave,
 }: MessageBubbleProps) => {
@@ -206,6 +206,7 @@ export const MessageBubble = ({
           {/* ── User message: delegate to UserAnswerBubble ── */}
           {isUser ? (
             <UserAnswerBubble
+              apiKey={apiKey}
               content={message.content}
               imageUrls={answerImageUrls}
               editing={editing}

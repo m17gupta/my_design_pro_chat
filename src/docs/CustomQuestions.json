@@ -41,7 +41,10 @@
   {
     "apiKey": "summary",
     "kind": "summary",
-    "content": "Let me generate an initial rendering based on my understanding of what you are looking for."
+    "content": "Let me generate an initial rendering based on my understanding of what you are looking for.",
+    "engageDesigner": {
+      "description": "Thank you.  I am now notifying {designer} of our conversation.  {designer} will review your request and get back to you within 1 business day with next steps"
+    }
   },
   {
     "apiKey": "revision",

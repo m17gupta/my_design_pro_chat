@@ -18,11 +18,13 @@ import {
   episodeMessageId,
   getApiQuestions,
   nextEpisodeId,
+  normalizeWorkType,
   revisionApiKey,
   revisionRoundFromMessage,
 } from "./flow";
 import {
   HOST_ACTION_CANCEL_ALL_NEED,
+  HOST_ACTION_CUSTOM_PROJECT,
   HOST_ACTION_SUBMIT_PROJECT,
   isFromParent,
   noteHostOrigin,
@@ -205,9 +207,27 @@ export default function ChatWindow() {
       scrollTarget();
       const frameId = requestAnimationFrame(scrollTarget);
       return () => cancelAnimationFrame(frameId);
-    } else {
-      scrollToBottom();
     }
+
+    scrollToBottom();
+
+    const chatPanel = document.getElementById("chat-panel");
+    if (!chatPanel) return;
+
+    let rAFId: number | null = null;
+    const observer = new ResizeObserver(() => {
+      if (rAFId) cancelAnimationFrame(rAFId);
+      rAFId = requestAnimationFrame(() => {
+        scrollToBottom();
+      });
+    });
+
+    observer.observe(chatPanel);
+
+    return () => {
+      observer.disconnect();
+      if (rAFId) cancelAnimationFrame(rAFId);
+    };
   }, [messages, typing, editingId, scrollToBottom]);
 
   useEffect(() => clearTypingTimeout, [clearTypingTimeout]);
@@ -233,6 +253,22 @@ export default function ChatWindow() {
   );
 
 
+    // calling  action custom 
+  const submitCustomProject = useCallback(
+    (action: SubmitAction, rating: number) => {
+      const data = {
+        id,
+        original: chat_original,
+        design: entries,
+        rating,
+        action,
+      };
+      postToHost({ action: HOST_ACTION_CUSTOM_PROJECT, data });
+      setSubmittedAction(action);
+    },
+    [id, chat_original, entries]
+  );
+
   const commit = useCallback(
     (
       userText: string,
@@ -244,10 +280,6 @@ export default function ChatWindow() {
       busyRef.current = true;
       const ep = episodeById(currentId, episodes);
 
-      // Clicking "I am ready to proceed →" on the overview screen starts a fresh
-      // intake: wipe the Redux brief (and its localStorage copy), the design
-      // history (enterprise entries), plus any restored/display state before
-      // recording the first answer.
       if (currentId === "overview") {
         dispatch(resetBrief());
         dispatch(resetEnterprise());
@@ -289,6 +321,10 @@ export default function ChatWindow() {
       }
 
       const nextEpisode = nextEpisodeId(ep.apiKey, userText, episodes);
+      const isCustomEngage =
+        Boolean(custom_engage_designer) &&
+        normalizeWorkType(work_type ?? "") === "custom";
+
       setTyping(true);
       clearTypingTimeout();
       timeoutRef.current = window.setTimeout(() => {
@@ -311,9 +347,26 @@ export default function ChatWindow() {
           return [...prev, { ...nextMsg, id }];
         });
         setCurrentId(nextEpisode);
+        if (
+          isCustomEngage &&
+          (ep.apiKey === "additional_images_upload" || nextEpisode === "summary")
+        ) {
+          submitCustomProject("engage_designer", 0);
+        }
       }, TYPING_MS);
     },
-    [typing, currentId, messages, clearTypingTimeout, dispatch, revisionKey]
+    [
+      typing,
+      currentId,
+      episodes,
+      dispatch,
+      messages,
+      revisionKey,
+      clearTypingTimeout,
+      custom_engage_designer,
+      work_type,
+      submitCustomProject,
+    ]
   );
 
   const advance = useCallback((rawAnswer: string) => commit(rawAnswer), [commit]);
@@ -691,6 +744,8 @@ export default function ChatWindow() {
     [id, chat_original, entries]
   );
 
+
+
   const handleCancelAllNeed = useCallback(() => {
     setSubmittedAction(null);
   }, []);
@@ -723,6 +778,8 @@ export default function ChatWindow() {
     const originalEntry = entries.find((entry) => entry.type === "original");
     submitLunaProject("engage_designer", ratings[originalEntry?.id ?? ""] ?? 0);
   }, [submitLunaProject, entries, ratings]);
+
+
 
   const handleRevisionAllINeed = useCallback(
     (rating: number) => submitLunaProject("this_is_all_i_need", rating),
@@ -1054,6 +1111,7 @@ export default function ChatWindow() {
                      >
                      <MessageBubble
                        message={m}
+                       apiKey={msgEpId}
                        filesByField={uploads[filesKey] ?? EMPTY_FILES}
                        disabled={typing || (!isCurrent && editingId !== m.id && !editingNextMessage)}
                        selectedValue={messages[i + 1]?.role === "user" ? messages[i + 1].content : undefined}
@@ -1179,7 +1237,7 @@ export default function ChatWindow() {
 
               <AnimatePresence>{typing && <TypingIndicator key="typing" />}</AnimatePresence>
 
-              <div ref={bottomRef} className="h-1" />
+              <div ref={bottomRef} className="h-16 shrink-0" />
           </div>
         </main>
       </div>

@@ -2,11 +2,16 @@
 
 import { memo, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { useAppSelector } from "../../store/hooks";
+import { selectBriefPayload } from "../../store/briefSlice";
+import { answerToText, itemUrls } from "../../lib/briefDisplay";
 
 interface UserAnswerBubbleProps {
-  /** The plain-text answer (may be empty for image-only answers). */
+  /** The episode apiKey to read Redux original state from. */
+  apiKey?: string;
+  /** The plain-text answer (fallback when Redux item is absent). */
   content: string;
-  /** Image URLs already uploaded as part of this answer. */
+  /** Image URLs already uploaded as part of this answer (fallback). */
   imageUrls?: string[];
   /** True while the inline text edit textarea is active. */
   editing?: boolean;
@@ -22,9 +27,11 @@ interface UserAnswerBubbleProps {
 /**
  * Right-aligned chat bubble that shows the user's submitted answer.
  * Renders text, a grid of image thumbnails, or both intelligently.
+ * Reads answer text and uploaded image URLs directly from Redux briefPayload.original.
  * The pencil icon triggers the parent's edit flow (QuestionCard reopen).
  */
 function UserAnswerBubble({
+  apiKey,
   content,
   imageUrls = [],
   editing = false,
@@ -34,12 +41,18 @@ function UserAnswerBubble({
   onEditCancel,
   isRestored = false,
 }: UserAnswerBubbleProps) {
+  const briefPayload = useAppSelector(selectBriefPayload);
+  const item = apiKey ? briefPayload.original[apiKey] : undefined;
+
+  const finalContent = item ? answerToText(item) : content;
+  const finalImageUrls = item ? itemUrls(item) : imageUrls;
+
   const editRef = useRef<HTMLTextAreaElement>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const isOptionEdit = Boolean(editing && editOptions?.length);
-  const hasText = content.trim().length > 0;
-  const hasImages = imageUrls.length > 0;
+  const hasText = finalContent.trim().length > 0;
+  const hasImages = finalImageUrls.length > 0;
   // Auto-resize textarea
   useEffect(() => {
     if (editing && editRef.current) {
@@ -121,9 +134,9 @@ function UserAnswerBubble({
               <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-3">
                 <textarea
                   ref={editRef}
-                  defaultValue={content}
+                  defaultValue={finalContent}
                   aria-label="Edit your answer"
-                  rows={Math.max(2, Math.min(6, content.split("\n").length + 1))}
+                  rows={Math.max(2, Math.min(6, finalContent.split("\n").length + 1))}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -148,16 +161,16 @@ function UserAnswerBubble({
                 {hasImages && (
                   <div
                     className={`grid gap-1.5 p-2 ${
-                      imageUrls.length === 1
+                      finalImageUrls.length === 1
                         ? "grid-cols-1"
-                        : imageUrls.length === 2
+                        : finalImageUrls.length === 2
                         ? "grid-cols-2"
-                        : imageUrls.length === 3
+                        : finalImageUrls.length === 3
                         ? "grid-cols-3"
                         : "grid-cols-2 sm:grid-cols-4"
                     }`}
                   >
-                    {imageUrls.slice(0, 8).map((url, idx) => (
+                    {finalImageUrls.slice(0, 8).map((url, idx) => (
                       <button
                         key={idx}
                         type="button"
@@ -178,9 +191,9 @@ function UserAnswerBubble({
                           </svg>
                         </div>
                         {/* Overflow count badge */}
-                        {idx === 7 && imageUrls.length > 8 && (
+                        {idx === 7 && finalImageUrls.length > 8 && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-semibold text-white">
-                            +{imageUrls.length - 8}
+                            +{finalImageUrls.length - 8}
                           </div>
                         )}
                       </button>
@@ -197,14 +210,14 @@ function UserAnswerBubble({
                         : "text-zinc-800 dark:text-zinc-100 border-t border-zinc-100 dark:border-zinc-800"
                     }`}
                   >
-                    {content}
+                    {finalContent}
                   </p>
                 )}
 
                 {/* Image-only fallback label when no text at all */}
                 {!hasText && hasImages && (
                   <p className="px-3 pb-2 text-xs text-zinc-400 dark:text-zinc-500">
-                    {imageUrls.length} image{imageUrls.length > 1 ? "s" : ""} uploaded
+                    {finalImageUrls.length} image{finalImageUrls.length > 1 ? "s" : ""} uploaded
                   </p>
                 )}
               </>
@@ -244,7 +257,7 @@ function UserAnswerBubble({
               <button
                 type="button"
                 onClick={onEditStart}
-                aria-label={`Edit answer: ${content || "uploaded images"}`}
+                aria-label={`Edit answer: ${finalContent || "uploaded images"}`}
                 title="Edit answer"
                 className="flex h-6 w-6 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400"
               >

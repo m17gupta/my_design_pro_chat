@@ -22,6 +22,7 @@
 
 export const HOST_ACTION_SUBMIT_PROJECT = "submitLunaProject" as const;
 export const HOST_ACTION_CANCEL_ALL_NEED = "cancelAllNeed" as const;
+export const HOST_ACTION_CUSTOM_PROJECT = "custom" as const;
 
 /** Payload of the chat → host submit message (schema-shaped brief + design history). */
 export interface SubmitLunaProjectData {
@@ -34,7 +35,8 @@ export interface SubmitLunaProjectData {
 
 export type HostMessage =
   | { action: typeof HOST_ACTION_SUBMIT_PROJECT; data: SubmitLunaProjectData }
-  | { action: typeof HOST_ACTION_CANCEL_ALL_NEED };
+  | { action: typeof HOST_ACTION_CANCEL_ALL_NEED }
+  | { action: typeof HOST_ACTION_CUSTOM_PROJECT; data: SubmitLunaProjectData };
 
 /** Origin of the embedding host once learned (null until the host talks to us). */
 let hostOrigin: string | null = null;
