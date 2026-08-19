@@ -45,17 +45,23 @@ export interface BriefState {
  * Lives here (not in the store) so the persistence thunk can restore a project
  * without creating a circular import.
  */
-export function stateFromPayload (payload: ApiBriefPayload): BriefState {
+export function stateFromPayload (
+  payload: ApiBriefPayload,
+  questionnaires?: Record<string, unknown> | null
+): BriefState {
   const original: Record<string, ApiBriefItem> = {}
   getApiQuestions(
-    buildEpisodesFromContext({
-      work_type: payload.work_type ?? undefined,
-      user_type: payload.user_type,
-      role: payload.role,
-      question_sets: payload.question_sets,
-      engageDesigner: payload.custom_engage_designer,
-      dcName: payload.dc_name ?? undefined,
-    })
+    buildEpisodesFromContext(
+      {
+        work_type: payload.work_type ?? undefined,
+        user_type: payload.user_type,
+        role: payload.role,
+        question_sets: payload.question_sets,
+        engageDesigner: payload.custom_engage_designer,
+        dcName: payload.dc_name ?? undefined,
+      },
+      questionnaires
+    )
   ).forEach(q => {
     const item = payload.original[q.apiKey]
     if (item && !isAnswerEmpty(item.answer)) {
@@ -83,17 +89,23 @@ export function stateFromPayload (payload: ApiBriefPayload): BriefState {
  * API submission. Lives next to its inverse `stateFromPayload` so the
  * persistence layer and the payload selector share one implementation.
  */
-export function payloadFromState (state: BriefState): ApiBriefPayload {
+export function payloadFromState (
+  state: BriefState,
+  questionnaires?: Record<string, unknown> | null
+): ApiBriefPayload {
   return buildApiPayload(
     getApiQuestions(
-      buildEpisodesFromContext({
-        work_type: state.work_type ?? undefined,
-        user_type: state.user_type,
-        role: state.role,
-        question_sets: state.question_sets,
-        engageDesigner: state.custom_engage_designer ?? false,
-        dcName: state.dc_name ?? undefined,
-      })
+      buildEpisodesFromContext(
+        {
+          work_type: state.work_type ?? undefined,
+          user_type: state.user_type,
+          role: state.role,
+          question_sets: state.question_sets,
+          engageDesigner: state.custom_engage_designer ?? false,
+          dcName: state.dc_name ?? undefined,
+        },
+        questionnaires
+      )
     ),
     state.original,
     {
@@ -134,19 +146,26 @@ const briefSlice = createSlice({
     /** Record (or override, e.g. on edit) one question's full payload item. */
     answerQuestion (
       state,
-      action: PayloadAction<{ apiKey: string; answer: AnswerValue }>
+      action: PayloadAction<{
+        apiKey: string
+        answer: AnswerValue
+        questionnaires?: Record<string, unknown> | null
+      }>
     ) {
       // Resolve question text from the current flow context so the stored
       // item (and the payload it feeds) carries the right wording.
       const meta = getApiQuestions(
-        buildEpisodesFromContext({
-          work_type: state.work_type ?? undefined,
-          user_type: state.user_type,
-          role: state.role,
-          question_sets: state.question_sets,
-          engageDesigner: state.custom_engage_designer ?? false,
-          dcName: state.dc_name ?? undefined,
-        })
+        buildEpisodesFromContext(
+          {
+            work_type: state.work_type ?? undefined,
+            user_type: state.user_type,
+            role: state.role,
+            question_sets: state.question_sets,
+            engageDesigner: state.custom_engage_designer ?? false,
+            dcName: state.dc_name ?? undefined,
+          },
+          action.payload.questionnaires
+        )
       ).find(q => q.apiKey === action.payload.apiKey)
       if (meta) {
         state.original[meta.apiKey] = buildQuestionItem(
@@ -176,7 +195,7 @@ const briefSlice = createSlice({
       if (action.payload.question_sets !== undefined)
         state.question_sets = action.payload.question_sets
     },
-    /** Record the 1786514733.png"revision comments (files + notes) from the feedback step. */
+    /** Record the revision comments (files + notes) from the feedback step. */
     setRevision (state, action: PayloadAction<RevisionComment>) {
       state.revision_comment = action.payload
     },
@@ -204,6 +223,9 @@ export default briefSlice.reducer
 /** Shape used by selectors (a slice of the root state). */
 export interface BriefSliceState {
   chat: BriefState
+  questionnaires?: {
+    data: Record<string, unknown> | null
+  }
 }
 
 /**
@@ -213,6 +235,9 @@ export interface BriefSliceState {
  * needless re-renders of consumers like ChatWindow).
  */
 export const selectBriefPayload = createSelector(
-  (state: BriefSliceState) => state.chat,
-  (brief): ApiBriefPayload => payloadFromState(brief)
+  [
+    (state: BriefSliceState) => state.chat,
+    (state: BriefSliceState) => state.questionnaires?.data ?? null,
+  ],
+  (brief, questionnaires): ApiBriefPayload => payloadFromState(brief, questionnaires)
 )

@@ -16,7 +16,7 @@ async function fetchApi(path: string, init?: RequestInit) {
     throw new Error("Network error — could not reach the persistence API");
   }
 
-  let data: any = null;
+  let data: unknown = null;
   try {
     data = await res.json();
   } catch {
@@ -24,7 +24,10 @@ async function fetchApi(path: string, init?: RequestInit) {
   }
 
   if (!res.ok) {
-    const message = data?.error || `API error (${res.status})`;
+    const message =
+      data && typeof data === "object" && "error" in data && typeof data.error === "string"
+        ? data.error
+        : `API error (${res.status})`;
     throw new Error(message);
   }
 
@@ -41,26 +44,28 @@ export const hydrateProject = createAsyncThunk<
   { projectId: string; row: LunaMyDesignProject | null },
   { projectId: string },
   { rejectValue: string }
->("persistence/hydrateProject", async ({ projectId }, { dispatch, rejectWithValue }) => {
+>("persistence/hydrateProject", async ({ projectId }, { dispatch, getState, rejectWithValue }) => {
   try {
     const data = await fetchApi(`/api/projects/${encodeURIComponent(projectId)}`, {
       method: "GET",
       cache: "no-store",
     });
 
-    const project = data?.project;
+    const project = (data as { project?: LunaMyDesignProject } | null)?.project;
 
     if (project) {
       // Restore the brief payload (context + answered questions) and the
       // design history exactly as they were saved.
       if (project.chats && typeof project.chats === "object") {
-        dispatch(setBriefState(stateFromPayload(project.chats)));
+        const rootState = getState() as { questionnaires?: { data?: Record<string, unknown> | null } };
+        const questionnaires = rootState.questionnaires?.data ?? null;
+        dispatch(setBriefState(stateFromPayload(project.chats, questionnaires)));
       }
       if (Array.isArray(project.design_data)) {
         dispatch(setEntries(project.design_data));
       }
     }
-    return { projectId, row: project };
+    return { projectId, row: project ?? null };
   } catch (error) {
     return rejectWithValue(
       error instanceof Error ? error.message : "Failed to restore project"

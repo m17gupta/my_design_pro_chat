@@ -776,7 +776,7 @@ export interface FlowContext {
 }
 
 /** AllQuestion.json root — role → (user_type → (work_type →) phase → questions). */
-const allQuestionsRoot = allQuestionsJson as Record<string, unknown>;
+ const allQuestionsRoot = allQuestionsJson as Record<string, unknown>;
 
 function normalizeRole(role: string | null | undefined): string {
   return (role ?? "").trim().toLowerCase();
@@ -805,10 +805,17 @@ interface ResolvedAllQuestionFlow {
  * which drive the revision loop. Returns null when the path doesn't exist —
  * callers then fall back to the legacy Questions.json flow.
  */
-function resolveAllQuestionFlow(ctx: FlowContext): ResolvedAllQuestionFlow | null {
+function resolveAllQuestionFlow(
+  ctx: FlowContext,
+  questionnaires?: Record<string, unknown> | null
+): ResolvedAllQuestionFlow | null {
   const role = normalizeRole(ctx.role);
   if (!role) return null;
-  const roleSection = allQuestionsRoot[role];
+  const root =
+    questionnaires && typeof questionnaires === "object" && Object.keys(questionnaires).length > 0
+      ? questionnaires
+      : allQuestionsRoot;
+  const roleSection = root[role];
   if (!roleSection || typeof roleSection !== "object") return null;
   const roleMap = roleSection as Record<string, unknown>;
 
@@ -1084,8 +1091,11 @@ function applyEngageDesigner(episodes: Episode[], dcName?: string): Episode[] {
  * legacy Questions.json / CustomQuestions.json flow when no AllQuestion.json
  * path matches the context.
  */
-export function buildEpisodesFromContext(ctx: FlowContext): Episode[] {
-  const resolved = resolveAllQuestionFlow(ctx);
+export function buildEpisodesFromContext(
+  ctx: FlowContext,
+  questionnaires?: Record<string, unknown> | null
+): Episode[] {
+  const resolved = resolveAllQuestionFlow(ctx, questionnaires);
   
   if (!resolved) {
     return buildEpisodes(ctx.work_type ?? undefined, {
@@ -1250,8 +1260,11 @@ function insertUploadGates(episodes: Episode[]): void {
  * one checklist item, keyed by its question id so completion tracks per-
  * question rather than per-phase.
  */
-export function checklistFromFlowContext(ctx: FlowContext): ChecklistItem[] | null {
-  const resolved = resolveAllQuestionFlow(ctx);
+export function checklistFromFlowContext(
+  ctx: FlowContext,
+  questionnaires?: Record<string, unknown> | null
+): ChecklistItem[] | null {
+  const resolved = resolveAllQuestionFlow(ctx, questionnaires);
   if (!resolved) return null;
   const { phases, originalPhases } = resolved;
   const items: ChecklistItem[] = [];

@@ -41,7 +41,7 @@ const persistenceSlice = createSlice({
       .addCase(hydrateProject.rejected, (state, action) => {
         // Never block the chat on a DB failure — restore is best-effort.
         state.hydrated = true;
-        state.error = action.payload ?? "Failed to restore project";
+        state.error = action.payload || "Failed to restore project";
       })
       .addCase(saveProject.pending, (state) => {
         state.saving = true;
@@ -53,7 +53,7 @@ const persistenceSlice = createSlice({
       })
       .addCase(saveProject.rejected, (state, action) => {
         state.saving = false;
-        state.error = action.payload ?? "Failed to save project";
+        state.error = action.payload || "Failed to save project";
       })
       .addCase(deleteProject.fulfilled, (state, action) => {
         state.saving = false;

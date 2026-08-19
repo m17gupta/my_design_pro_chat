@@ -1,10 +1,11 @@
 "use client";
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppDispatch } from "../../store/hooks";
 import { setContext } from "../../store/briefSlice";
 import { hydrateProject } from "../../store/persistence/persistenceThunk";
 import { hydrationSkipped } from "../../store/persistence/persistenceSlice";
+import { fetchQuestionnaires } from "../../store/questionnaires/questionnaireThunk";
 
 /** Decoded shape of the base64 `?params` query string sent from the site. */
 interface ClientParams {
@@ -45,8 +46,10 @@ const GetAllProjectData = () => {
     if (hydrationDispatchedRef.current) return;
     hydrationDispatchedRef.current = true;
 
+    dispatch(fetchQuestionnaires());
+
     const params = decodeClientParams(searchParams.get("params"));
-    console.log("params",params)
+    // console.log("params",params)
     if (params) {
       dispatch(
         setContext({
@@ -72,7 +75,6 @@ const GetAllProjectData = () => {
     } else {
       dispatch(hydrationSkipped());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, dispatch]);
 
   return null;

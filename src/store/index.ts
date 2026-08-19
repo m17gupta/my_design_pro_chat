@@ -7,6 +7,7 @@ import { isPersistenceConfigured } from "../lib/persistenceConfig";
 import briefReducer, { resetBrief, payloadFromState } from "./briefSlice";
 import enterpriseReducer, { resetEnterprise } from "./enterprise/enterpriseSlice";
 import persistenceReducer from "./persistence/persistenceSlice";
+import questionnaireReducer from "./questionnaires/questionnaireSlice";
 import {
   deleteProject,
   saveProject,
@@ -103,6 +104,7 @@ const rootReducer = combineReducers({
   chat: briefReducer,
   enterprise: enterpriseReducer,
   persistence: persistenceReducer,
+  questionnaires: questionnaireReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

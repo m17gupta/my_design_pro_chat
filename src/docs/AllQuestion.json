@@ -1,2174 +1,2174 @@
 {
-  "homeowner": [],
-  "realtor": [],
-  "builder": [],
-  "trade": [],
-  "enterprise": {
-    "color-material": {
-      "color_material": {
-        "phase_1": {
-          "title": "Color and Materials",
-          "questions": [
-            {
-              "required": false,
-              "id": "additional_images_upload",
-              "type": "file",
-              "max_files": 4,
-              "name": "Additional House Photos",
-              "label": "",
-              "details": "<p class='mb-3'>First, do you have any additional photo angles of the <b>front yard</b> that you think are helpful for us to see?</p>"
+    "homeowner": [],
+    "realtor": [],
+    "builder": [],
+    "trade": [],
+    "enterprise": {
+        "color-material": {
+            "color_material": {
+                "phase_1": {
+                    "title": "Color and Materials",
+                    "questions": [
+                        {
+                            "required": false,
+                            "id": "additional_images_upload",
+                            "type": "file",
+                            "max_files": 4,
+                            "name": "Additional House Photos",
+                            "label": "",
+                            "details": "<p class='mb-3'>First, do you have any additional photo angles of the <b>front yard</b> that you think are helpful for us to see?</p>"
+                        },
+                        {
+                            "required": true,
+                            "id": "project_goals_or_brief_description",
+                            "type": "textarea",
+                            "name": "Project Goals/Brief Description",
+                            "label": "",
+                            "details": "In a few sentences, tell me what you'd love to accomplish with this project.  Note- I will ask you about specific colors/materials in a minute.  Just a broad overview here is what I need"
+                        },
+                        {
+                            "required": true,
+                            "id": "exterior_color_and_material_style",
+                            "type": "files_with_description",
+                            "max_files": 4,
+                            "name": "Exterior Style",
+                            "label": "",
+                            "details": "Is there a preferred exterior style or overall look your client is drawn to? For example- modern, classic, traditional, farmhouse, craftsman."
+                        },
+                        {
+                            "required": true,
+                            "id": "primary_material_preferences",
+                            "type": "files_with_description",
+                            "max_files": 4,
+                            "name": "Primary Material and Color Preferences",
+                            "label": "",
+                            "details": "Are there any exterior materials or color finishes you'd like us to keep in mind for this design? Paint colors, siding, brick, stone, stucco, wood accents, roofing, windows… Inspo pictures are helpful too."
+                        },
+                        {
+                            "required": true,
+                            "id": "budget",
+                            "name": "Budget",
+                            "label": "",
+                            "details": "What investment range feels most comfortable for this project?",
+                            "type": "radio",
+                            "options": [
+                                "Under $25,000",
+                                "$25,000-$50,000",
+                                "$50,000-$75,000",
+                                "$75,000-$150,000",
+                                "$150,000+"
+                            ]
+                        },
+                        {
+                            "required": true,
+                            "id": "important_proprty_information",
+                            "type": "checkbox_with_notes",
+                            "name": "Important Property Information",
+                            "label": "",
+                            "details": "Is there anything else that comes to mind such as HOA requirements that we should know before we wrap up?",
+                            "options": [
+                                "HOA requirements",
+                                "Easements",
+                                "Utility lines",
+                                "Septic field",
+                                "Planned additions",
+                                "Accessibility needs",
+                                "Other Special considerations"
+                            ]
+                        }
+                    ]
+                },
+                "phase_2": {
+                    "title": "DESIGN SUMMARY",
+                    "questions": [
+                        {
+                            "id": "design_summary",
+                            "type": "display",
+                            "name": "Design Summary",
+                            "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
+                        },
+                        {
+                            "required": true,
+                            "id": "design_direction_approval",
+                            "type": "radio",
+                            "name": "Design Direction Approval",
+                            "details": "Does this design direction accurately reflect your vision?",
+                            "options": {
+                                "generate_design": "Yes, Generate My Design",
+                                "make_changes": "I'd Like To Make Changes"
+                            }
+                        }
+                    ]
+                },
+                "phase_3": {
+                    "title": "RENDERING REVIEW",
+                    "questions": [
+                        {
+                            "id": "render_satisfaction",
+                            "name": "Initial Reaction",
+                            "details": "Overall, how satisfied are you with this concept?",
+                            "label": "",
+                            "is_ai_design": true,
+                            "type": "display"
+                        }
+                    ]
+                },
+                "phase_4": {
+                    "title": "Revision Requests",
+                    "questions": [
+                        {
+                            "id": "revision_comments",
+                            "name": "Revision Comments",
+                            "details": "Please share your revision requests, I will incorporate them into the design.",
+                            "label": "",
+                            "type": "files_with_description",
+                            "required": true,
+                            "max_files": 4,
+                            "placeholder": "Enter your revision comments here..."
+                        },
+                        {
+                            "id": "revision_design_summary",
+                            "name": "Revision Design Summary",
+                            "details": "Based on your answers, Luna will create a revised design featuring:",
+                            "type": "display"
+                        }
+                    ]
+                }
             },
-            {
-              "required": true,
-              "id": "project_goals_or_brief_description",
-              "type": "textarea",
-              "name": "Project Goals/Brief Description",
-              "label": "",
-              "details": "In a few sentences, tell me what you'd love to accomplish with this project.  Note- I will ask you about specific colors/materials in a minute.  Just a broad overview here is what I need"
+            "arc_addition": {
+                "phase_1": {
+                    "title": "Architectural Changes / Additions",
+                    "questions": [
+                        {
+                            "required": false,
+                            "id": "additional_images_upload",
+                            "type": "file",
+                            "max_files": 4,
+                            "name": "Additional House Photos",
+                            "label": "",
+                            "details": "<p class='mb-3'>First, do you have any additional photo angles of the <b>front yard</b> that you think are helpful for us to see?</p>"
+                        },
+                        {
+                            "required": false,
+                            "id": "supporting_files_upload",
+                            "type": "file",
+                            "max_files": 4,
+                            "name": "Supporting Files Upload (Optional)",
+                            "label": "",
+                            "details": "<p class='mb-3'>Do you have any other files that would be helpful like a survey, site plan, inspiration images...?</p> <p class='mb-3'>If so, please upload them.  If not, no worries at all, you can always add them later</p>"
+                        },
+                        {
+                            "required": true,
+                            "id": "project_goals_or_brief_description",
+                            "type": "textarea",
+                            "name": "Project Goals/Brief Description",
+                            "label": "",
+                            "details": "In a few sentences, tell me what you’d love to accomplish with this project.  Note- I will ask you about specific colors/materials in a minute.  Just a broad overview here is what I need."
+                        },
+                        {
+                            "required": true,
+                            "id": "type_of_architectural_project",
+                            "type": "checkbox",
+                            "name": "Type of Architectural Project",
+                            "label": "",
+                            "details": "What type of architectural changes are you considering? Select all that apply?",
+                            "options": [
+                                "Home addition",
+                                "Front porch",
+                                "Covered porch",
+                                "Garage addition",
+                                "Second story",
+                                "Dormers",
+                                "Entry enhancement",
+                                "Portico",
+                                "Sunroom",
+                                "Outdoor living space",
+                                "Roof modifications",
+                                "Window changes",
+                                "Door changes",
+                                "Exterior facelift",
+                                "Detached structure",
+                                "Other"
+                            ]
+                        },
+                        {
+                            "required": true,
+                            "id": "architectural_style_preference",
+                            "type": "files_with_description",
+                            "max_files": 4,
+                            "name": "Architectural Style Preference",
+                            "label": "",
+                            "details": "Do you have a preferred architectural style or overall look you'd like to achieve? For example- modern, classic, traditional, farmhouse, craftsman..."
+                        },
+                        {
+                            "required": true,
+                            "id": "exterior_materials_and_finishes",
+                            "type": "checkbox",
+                            "name": "Exterior Materials & Finishes",
+                            "label": "",
+                            "details": "Are there any exterior materials or finishes you'd like us to incorporate into the design? Select all that apply?",
+                            "options": [
+                                "Brick",
+                                "Stone",
+                                "Siding",
+                                "Stucco",
+                                "Wood accents",
+                                "Metal roofing",
+                                "Decorative columns",
+                                "Timber beams",
+                                "Modern windows",
+                                "Black window frames",
+                                "Decorative trim"
+                            ]
+                        },
+                        {
+                            "required": true,
+                            "id": "budget",
+                            "name": "Budget",
+                            "label": "",
+                            "details": "What investment range feels most comfortable for this project?",
+                            "type": "radio",
+                            "options": [
+                                "Under $25,000",
+                                "$25,000-$50,000",
+                                "$50,000-$75,000",
+                                "$75,000-$150,000",
+                                "$150,000+"
+                            ]
+                        },
+                        {
+                            "required": true,
+                            "id": "important_proprty_information",
+                            "type": "checkbox_with_notes",
+                            "name": "Important Property Information",
+                            "label": "",
+                            "details": "Is there anything else that comes to mind that we should know before we wrap up?",
+                            "options": [
+                                "HOA requirements",
+                                "Easements",
+                                "Utility lines",
+                                "Septic field",
+                                "Planned additions",
+                                "Accessibility needs",
+                                "Other Special considerations"
+                            ]
+                        }
+                    ]
+                },
+                "phase_2": {
+                    "title": "DESIGN SUMMARY",
+                    "questions": [
+                        {
+                            "id": "design_summary",
+                            "type": "display",
+                            "name": "Design Summary",
+                            "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
+                        },
+                        {
+                            "required": true,
+                            "id": "design_direction_approval",
+                            "type": "radio",
+                            "name": "Design Direction Approval",
+                            "details": "Does this design direction accurately reflect your vision?",
+                            "options": {
+                                "generate_design": "Yes, Generate My Design",
+                                "make_changes": "I'd Like To Make Changes"
+                            }
+                        }
+                    ]
+                },
+                "phase_3": {
+                    "title": "RENDERING REVIEW",
+                    "questions": [
+                        {
+                            "id": "render_satisfaction",
+                            "name": "Initial Reaction",
+                            "details": "Overall, how satisfied are you with this concept?",
+                            "label": "",
+                            "is_ai_design": true,
+                            "type": "display"
+                        }
+                    ]
+                },
+                "phase_4": {
+                    "title": "Revision Requests",
+                    "questions": [
+                        {
+                            "id": "revision_comments",
+                            "name": "Revision Comments",
+                            "details": "Please share your revision requests, I will incorporate them into the design.",
+                            "label": "",
+                            "type": "files_with_description",
+                            "required": true,
+                            "max_files": 4,
+                            "placeholder": "Enter your revision comments here..."
+                        },
+                        {
+                            "id": "revision_design_summary",
+                            "name": "Revision Design Summary",
+                            "details": "Based on your answers, Luna will create a revised design featuring:",
+                            "type": "display"
+                        }
+                    ]
+                }
             },
-            {
-              "required": true,
-              "id": "exterior_color_and_material_style",
-              "type": "files_with_description",
-              "max_files": 4,
-              "name": "Exterior Style",
-              "label": "",
-              "details": "Is there a preferred exterior style or overall look your client is drawn to? For example- modern, classic, traditional, farmhouse, craftsman."
+            "custom": {
+                "phase_1": {
+                    "title": "Custom Request",
+                    "questions": [
+                        {
+                            "required": true,
+                            "id": "project_goals_or_brief_description",
+                            "type": "textarea",
+                            "name": "Project Goals/Brief Description",
+                            "label": "",
+                            "details": "Give me a brief overview of what you are looking to do?"
+                        },
+                        {
+                            "required": false,
+                            "id": "additional_images_upload",
+                            "type": "file",
+                            "max_files": 4,
+                            "name": "Inspirational Photos",
+                            "label": "",
+                            "details": "<p class='mb-3'>Do you have any inspirational photos you would like me to analyze that portray the look or feel you are trying to achieve?.</p>"
+                        }
+                    ]
+                },
+                "phase_2": {
+                    "title": "DESIGN SUMMARY",
+                    "questions": [
+                        {
+                            "id": "design_summary",
+                            "type": "display",
+                            "name": "Design Summary",
+                            "details": "I let me generate an initial rendering based on my understanding of what you are looking for."
+                        },
+                        {
+                            "required": true,
+                            "id": "design_direction_approval",
+                            "type": "radio",
+                            "name": "Design Direction Approval",
+                            "details": "Does this design direction accurately reflect your vision?",
+                            "options": {
+                                "generate_design": "Yes, Generate My Design",
+                                "make_changes": "I'd Like To Make Changes"
+                            }
+                        }
+                    ]
+                },
+                "phase_3": {
+                    "title": "RENDERING REVIEW",
+                    "questions": [
+                        {
+                            "id": "render_satisfaction",
+                            "name": "Initial Reaction",
+                            "details": "Does this rendering capture what you are looking for?  If not, please describe the issues you are seeing.",
+                            "label": "",
+                            "is_ai_design": true,
+                            "type": "display"
+                        }
+                    ]
+                },
+                "phase_4": {
+                    "title": "Revision Requests",
+                    "questions": [
+                        {
+                            "id": "revision_comments",
+                            "name": "Feedback",
+                            "details": "Let me know incorporate this feedback and re-render now.",
+                            "label": "",
+                            "type": "files_with_description",
+                            "required": true,
+                            "max_files": 4,
+                            "placeholder": "Enter your feedback here..."
+                        },
+                        {
+                            "id": "revision_design_summary",
+                            "name": "Design Summary",
+                            "details": "Based on your answers, Luna will create a revised design featuring:",
+                            "type": "display"
+                        }
+                    ]
+                }
             },
-            {
-              "required": true,
-              "id": "primary_material_preferences",
-              "type": "files_with_description",
-              "max_files": 4,
-              "name": "Primary Material and Color Preferences",
-              "label": "",
-              "details": "Are there any exterior materials or color finishes you'd like us to keep in mind for this design? Paint colors, siding, brick, stone, stucco, wood accents, roofing, windows… Inspo pictures are helpful too."
-            },
-            {
-              "required": true,
-              "id": "budget",
-              "name": "Budget",
-              "label": "",
-              "details": "What investment range feels most comfortable for this project?",
-              "type": "radio",
-              "options": [
-                "Under $25,000",
-                "$25,000-$50,000",
-                "$50,000-$75,000",
-                "$75,000-$150,000",
-                "$150,000+"
-              ]
-            },
-            {
-              "required": true,
-              "id": "important_proprty_information",
-              "type": "checkbox_with_notes",
-              "name": "Important Property Information",
-              "label": "",
-              "details": "Is there anything else that comes to mind such as HOA requirements that we should know before we wrap up?",
-              "options": [
-                "HOA requirements",
-                "Easements",
-                "Utility lines",
-                "Septic field",
-                "Planned additions",
-                "Accessibility needs",
-                "Other Special considerations"
-              ]
+            "value_added_services": {
+                "phase_1": {
+                    "title": "Value Added Services",
+                    "questions": [
+                        {
+                            "required": true,
+                            "id": "Service Selection",
+                            "type": "radio",
+                            "name": "service_selection",
+                            "label": "",
+                            "details": "What updates or changes would you like to make to your existing design?",
+                            "options": [
+                                "New Plantings/Materials",
+                                "New area",
+                                "Custom Request"
+                            ]
+                        },
+                        {
+                            "required": false,
+                            "id": "supporting_files_upload",
+                            "type": "files_with_description",
+                            "max_files": 4,
+                            "name": "Supporting Files Upload (Optional)",
+                            "label": "",
+                            "details": "<p class='mb-3'>Have any project files you'd like to share? Feel free to upload them here!</p> <p class='mb-3'>This could include <b>surveys, site plans, PDFs, SketchUp models (.SKP), architectural drawings, inspiration images, or any other documents</b> that will help us better understand your project.</p> <p>If you don't have any supporting files, simply continue to the next step, you can always add them later!</p>"
+                        },
+                        {
+                            "required": true,
+                            "id": "project_goals_or_brief_description",
+                            "type": "textarea",
+                            "name": "Project Goals/Brief Description",
+                            "label": "",
+                            "details": "In a few sentences, tell me what you’d love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind; I’d love to hear them."
+                        }
+                    ]
+                },
+                "phase_2": {
+                    "title": "DESIGN SUMMARY",
+                    "questions": [
+                        {
+                            "id": "design_summary",
+                            "type": "display",
+                            "name": "Design Summary",
+                            "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
+                        },
+                        {
+                            "required": true,
+                            "id": "design_direction_approval",
+                            "type": "radio",
+                            "name": "Design Direction Approval",
+                            "details": "Does this design direction accurately reflect your vision?",
+                            "options": {
+                                "generate_design": "Yes, Generate My Design",
+                                "make_changes": "I'd Like To Make Changes"
+                            }
+                        }
+                    ]
+                },
+                "phase_3": {
+                    "title": "RENDERING REVIEW",
+                    "questions": [
+                        {
+                            "id": "render_satisfaction",
+                            "name": "Initial Reaction",
+                            "details": "Overall, how satisfied are you with this concept?",
+                            "label": "",
+                            "is_ai_design": true,
+                            "type": "display"
+                        }
+                    ]
+                },
+                "phase_4": {
+                    "title": "Revision Requests",
+                    "questions": [
+                        {
+                            "id": "revision_comments",
+                            "name": "Revision Comments",
+                            "details": "Please share your revision requests, I will incorporate them into the design.",
+                            "label": "",
+                            "type": "files_with_description",
+                            "required": true,
+                            "max_files": 4,
+                            "placeholder": "Enter your revision comments here..."
+                        },
+                        {
+                            "id": "revision_design_summary",
+                            "name": "Revision Design Summary",
+                            "details": "Based on your answers, Luna will create a revised design featuring:",
+                            "type": "display"
+                        }
+                    ]
+                }
             }
-          ]
         },
-        "phase_2": {
-          "title": "DESIGN SUMMARY",
-          "questions": [
-            {
-              "id": "design_summary",
-              "type": "display",
-              "name": "Design Summary",
-              "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
+        "landscape-design": {
+            "front_yard": {
+                "phase_1": {
+                    "title": "Front Yard Design",
+                    "questions": [
+                        {
+                            "required": false,
+                            "id": "additional_images_upload",
+                            "type": "file",
+                            "max_files": 4,
+                            "name": "",
+                            "label": "",
+                            "details": "<p class='mb-3'>Perfect! Go ahead and upload any additional angles of the front yard. These extra views help us better understand your property.</p><p class='mb-3'>You can upload up to four additional images below.</p>"
+                        },
+                        {
+                            "required": false,
+                            "id": "supporting_files_upload",
+                            "type": "file",
+                            "max_files": 4,
+                            "name": "",
+                            "label": "",
+                            "details": "<p class='mb-3'>Perfect! Go ahead and upload any supporting files you’d like us to reference during the design process, such as a survey, site plan, or inspirational images</p><p class='mb-3'>You can upload up to four files below.</p>"
+                        },
+                        {
+                            "required": true,
+                            "id": "project_goals_or_brief_description",
+                            "type": "textarea",
+                            "name": "",
+                            "label": "",
+                            "details": "<p class='mb-3'>In a few sentences, tell me what you'd love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind.</p>"
+                        },
+                        {
+                            "required": true,
+                            "id": "landscape_design_style_preference",
+                            "type": "files_with_description",
+                            "max_files": 4,
+                            "name": "",
+                            "label": "",
+                            "details": "<p class='mb-3'>Does your client have a preferred style they’re drawn to? For example, clean and modern, classic and timeless, natural and relaxed, or something else?</p><p class='mb-3'>Feel free to upload up to 4 inspirational images that help show the style or look your client has in mind.</p>"
+                        },
+                        {
+                            "required": true,
+                            "id": "hardscape_material_preferences",
+                            "type": "files_with_description",
+                            "max_files": 4,
+                            "name": "",
+                            "label": "",
+                            "details": "<p class='mb-3'>Are there any specific hardscape materials or styles you’d like us to keep in mind for this design?</p><p class='mb-3'>Feel free to upload up to 4 inspirational images that help show the style or look your client has in mind.</p>"
+                        },
+                        {
+                            "required": true,
+                            "id": "softscape_planting_preferences",
+                            "type": "files_with_description",
+                            "max_files": 4,
+                            "name": "Softscape / Planting Preferences",
+                            "label": "",
+                            "details": "<p class='mb-3'>Are there any plant styles, colors, or types you’d like us to keep in mind?</p><p class='mb-3'>Feel free to upload up to 4 inspirational images of plants, planting styles, or landscapes that reflect what your client has in mind.</p>"
+                        },
+                        {
+                            "required": true,
+                            "id": "budget",
+                            "name": "",
+                            "label": "",
+                            "details": "What investment range feels most comfortable for this project?",
+                            "type": "radio",
+                            "options": [
+                                "Under $25,000",
+                                "$25,000-$50,000",
+                                "$50,000-$75,000",
+                                "$75,000-$150,000",
+                                "$150,000+"
+                            ]
+                        },
+                        {
+                            "required": true,
+                            "id": "important_proprty_information",
+                            "type": "checkbox_with_notes",
+                            "name": "",
+                            "label": "",
+                            "details": "Is there anything else that comes to mind on this property we should know before we wrap up?",
+                            "options": [
+                                "HOA requirements",
+                                "Easements",
+                                "Utility lines",
+                                "Septic field",
+                                "Planned additions",
+                                "Accessibility needs",
+                                "Other Special considerations"
+                            ]
+                        }
+                    ]
+                },
+                "phase_2": {
+                    "title": "DESIGN SUMMARY",
+                    "questions": [
+                        {
+                            "id": "design_summary",
+                            "type": "display",
+                            "name": "Design Summary",
+                            "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you've shared with me! Can you please confirm?"
+                        },
+                        {
+                            "required": true,
+                            "id": "design_direction_approval",
+                            "type": "radio",
+                            "name": "Design Direction Approval",
+                            "details": "Does this design direction accurately reflect your vision?",
+                            "options": {
+                                "generate_design": "Yes, Generate My Design",
+                                "make_changes": "I'd Like To Make Changes"
+                            }
+                        }
+                    ]
+                },
+                "phase_3": {
+                    "title": "RENDERING REVIEW",
+                    "questions": [
+                        {
+                            "id": "render_satisfaction",
+                            "name": "Initial Reaction",
+                            "details": "Overall, how satisfied are you with this concept?",
+                            "label": "",
+                            "is_ai_design": true,
+                            "type": "display"
+                        }
+                    ]
+                },
+                "phase_4": {
+                    "title": "Revision Requests",
+                    "questions": [
+                        {
+                            "id": "revision_comments",
+                            "name": "Revision Comments",
+                            "details": "Please share your revision requests, I will incorporate them into the design.",
+                            "label": "",
+                            "type": "files_with_description",
+                            "required": true,
+                            "max_files": 4,
+                            "placeholder": "Enter your revision comments here..."
+                        },
+                        {
+                            "id": "revision_design_summary",
+                            "name": "Revision Design Summary",
+                            "details": "Based on your answers, Luna will create a revised design featuring:",
+                            "type": "display"
+                        }
+                    ]
+                }
             },
-            {
-              "required": true,
-              "id": "design_direction_approval",
-              "type": "radio",
-              "name": "Design Direction Approval",
-              "details": "Does this design direction accurately reflect your vision?",
-              "options": {
-                "generate_design": "Yes, Generate My Design",
-                "make_changes": "I'd Like To Make Changes"
-              }
-            }
-          ]
-        },
-        "phase_3": {
-          "title": "RENDERING REVIEW",
-          "questions": [
-            {
-              "id": "render_satisfaction",
-              "name": "Initial Reaction",
-              "details": "Overall, how satisfied are you with this concept?",
-              "label": "",
-              "is_ai_design": true,
-              "type": "display"
-            }
-          ]
-        },
-        "phase_4": {
-          "title": "Revision Requests",
-          "questions": [
-            {
-              "id": "revision_comments",
-              "name": "Revision Comments",
-              "details": "Please share your revision requests, I will incorporate them into the design.",
-              "label": "",
-              "type": "files_with_description",
-              "required": true,
-              "max_files": 4,
-              "placeholder": "Enter your revision comments here..."
+            "rear_yard": {
+                "phase_1": {
+                    "title": "Rear Yard Design",
+                    "questions": [
+                        {
+                            "required": false,
+                            "id": "additional_images_upload",
+                            "type": "file",
+                            "max_files": 4,
+                            "name": "Additional House Photos",
+                            "label": "",
+                            "details": "<p class='mb-3'>First, do you have any additional photo angles of the <b>rear yard</b> that you think are helpful for us to see?</p>"
+                        },
+                        {
+                            "required": false,
+                            "id": "supporting_files_upload",
+                            "type": "file",
+                            "max_files": 4,
+                            "name": "Supporting Files Upload",
+                            "label": "",
+                            "details": "<p class='mb-3'>Do you have any other files that would be helpful like a survey, site plan, inspiration images...?</p> <p class='mb-3'>If so, please upload them.  If not, no worries at all, you can always add them later</p>"
+                        },
+                        {
+                            "required": true,
+                            "id": "project_goals_or_brief_description",
+                            "type": "textarea",
+                            "name": "Project Goals/Brief Description",
+                            "label": "",
+                            "details": "In a few sentences, tell me what you'd love to accomplish with this project. Especially required features such as pool, covered space, fire pit area."
+                        },
+                        {
+                            "required": true,
+                            "id": "landscape_design_style_preference",
+                            "type": "files_with_description",
+                            "max_files": 4,
+                            "name": "Landscape Design Style Preference",
+                            "label": "",
+                            "details": "Do you have a preferred landscape style or overall look for your backyard? For example, you might love something clean and modern, classic and timeless, natural and relaxed, or something completely unique to you?"
+                        },
+                        {
+                            "required": true,
+                            "id": "hardscape_material_preferences",
+                            "max_files": 4,
+                            "type": "files_with_description",
+                            "name": "Hardscape / Material Preferences",
+                            "label": "",
+                            "details": "Are there any specific hardscape materials or styles you'd like us to keep in mind for this design?"
+                        },
+                        {
+                            "required": true,
+                            "id": "softscape_planting_preferences",
+                            "type": "files_with_description",
+                            "max_files": 4,
+                            "name": "Softscape / Planting Preferences",
+                            "label": "",
+                            "details": "Are there any plant styles, colors, or types you'd like us to keep in mind?"
+                        },
+                        {
+                            "required": true,
+                            "id": "budget",
+                            "name": "Budget",
+                            "label": "",
+                            "details": "What investment range feels most comfortable for this project?",
+                            "type": "radio",
+                            "options": [
+                                "Under $25,000",
+                                "$25,000-$50,000",
+                                "$50,000-$75,000",
+                                "$75,000-$150,000",
+                                "$150,000+"
+                            ]
+                        },
+                        {
+                            "required": true,
+                            "id": "important_proprty_information",
+                            "type": "checkbox_with_notes",
+                            "name": "Important Property Information",
+                            "label": "",
+                            "details": "Is there anything else that comes to mind on this property we should know before we wrap up?",
+                            "options": [
+                                "HOA requirements",
+                                "Easements",
+                                "Utility lines",
+                                "Septic field",
+                                "Planned additions",
+                                "Accessibility needs",
+                                "Other Special considerations"
+                            ]
+                        }
+                    ]
+                },
+                "phase_2": {
+                    "title": "DESIGN SUMMARY",
+                    "questions": [
+                        {
+                            "id": "design_summary",
+                            "type": "display",
+                            "name": "Design Summary",
+                            "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
+                        },
+                        {
+                            "required": true,
+                            "id": "design_direction_approval",
+                            "type": "radio",
+                            "name": "Design Direction Approval",
+                            "details": "Does this design direction accurately reflect your vision?",
+                            "options": {
+                                "generate_design": "Yes, Generate My Design",
+                                "make_changes": "I'd Like To Make Changes"
+                            }
+                        }
+                    ]
+                },
+                "phase_3": {
+                    "title": "RENDERING REVIEW",
+                    "questions": [
+                        {
+                            "id": "render_satisfaction",
+                            "name": "Initial Reaction",
+                            "details": "Overall, how satisfied are you with this concept?",
+                            "label": "",
+                            "is_ai_design": true,
+                            "type": "display"
+                        }
+                    ]
+                },
+                "phase_4": {
+                    "title": "Revision Requests",
+                    "questions": [
+                        {
+                            "id": "revision_comments",
+                            "name": "Revision Comments",
+                            "details": "Please share your revision requests, I will incorporate them into the design.",
+                            "label": "",
+                            "type": "files_with_description",
+                            "required": true,
+                            "max_files": 4,
+                            "placeholder": "Enter your revision comments here..."
+                        },
+                        {
+                            "id": "revision_design_summary",
+                            "name": "Revision Design Summary",
+                            "details": "Based on your answers, Luna will create a revised design featuring:",
+                            "type": "display"
+                        }
+                    ]
+                }
             },
-            {
-              "id": "revision_design_summary",
-              "name": "Revision Design Summary",
-              "details": "Based on your answers, Luna will create a revised design featuring:",
-              "type": "display"
+            "whole_property": {
+                "phase_1": {
+                    "title": "Whole Property Design",
+                    "questions": [
+                        {
+                            "required": false,
+                            "id": "additional_images_upload",
+                            "type": "file",
+                            "max_files": 4,
+                            "name": "Additional House Photos",
+                            "label": "",
+                            "details": "<p class='mb-3'>First, do you have any additional photo angles of the house that you think are helpful for us to see? If so, please upload them here.</p>"
+                        },
+                        {
+                            "required": false,
+                            "id": "supporting_files_upload",
+                            "type": "file",
+                            "max_files": 4,
+                            "name": "Supporting Files Upload",
+                            "label": "",
+                            "details": "<p class='mb-3'>Do you have any other files that would be helpful like a survey, site plan, inspiration images...?</p> <p class='mb-3'>If so, please upload them.  If not, no worries at all, you can always add them later</p>"
+                        },
+                        {
+                            "required": true,
+                            "id": "project_goals_or__brief_description",
+                            "type": "textarea",
+                            "name": "Project Goals/Brief Description",
+                            "label": "",
+                            "details": "In a few sentences, tell me what you’d love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind."
+                        },
+                        {
+                            "required": true,
+                            "id": "landscape_design_style_preference",
+                            "type": "files_with_description",
+                            "max_files": 4,
+                            "name": "Landscape Design Style Preference",
+                            "label": "",
+                            "details": "Does your client have a preferred style they are drawn to? For example clean and modern, classic and timeless, natural and relaxed and so on."
+                        },
+                        {
+                            "required": true,
+                            "id": "hardscape_material_preferences",
+                            "type": "files_with_description",
+                            "name": "Hardscape / Material Preferences",
+                            "label": "",
+                            "max_files": 4,
+                            "details": "Are there any specific hardscape materials or styles you'd like us to keep in mind for this design?"
+                        },
+                        {
+                            "required": true,
+                            "id": "softscape_planting_preferences",
+                            "type": "files_with_description",
+                            "name": "Softscape / Planting Preferences",
+                            "label": "",
+                            "max_files": 4,
+                            "details": "Are there any plant styles, colors, or types you'd like us to keep in mind?"
+                        },
+                        {
+                            "required": true,
+                            "id": "budget",
+                            "name": "Budget",
+                            "label": "",
+                            "details": "What investment range feels most comfortable for this project?",
+                            "type": "radio",
+                            "options": [
+                                "Under $25,000",
+                                "$25,000-$50,000",
+                                "$50,000-$75,000",
+                                "$75,000-$150,000",
+                                "$150,000+"
+                            ]
+                        },
+                        {
+                            "required": true,
+                            "id": "important_proprty_information",
+                            "type": "checkbox_with_notes",
+                            "name": "Important Property Information",
+                            "label": "",
+                            "details": "Is there anything else that comes to mind on this property we should know before we wrap up?",
+                            "options": [
+                                "HOA requirements",
+                                "Easements",
+                                "Utility lines",
+                                "Septic field",
+                                "Planned additions",
+                                "Accessibility needs",
+                                "Other Special considerations"
+                            ]
+                        }
+                    ]
+                },
+                "phase_2": {
+                    "title": "DESIGN SUMMARY",
+                    "questions": [
+                        {
+                            "id": "design_summary",
+                            "type": "display",
+                            "name": "Design Summary",
+                            "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
+                        },
+                        {
+                            "required": true,
+                            "id": "design_direction_approval",
+                            "type": "radio",
+                            "name": "Design Direction Approval",
+                            "details": "Does this design direction accurately reflect your vision?",
+                            "options": {
+                                "generate_design": "Yes, Generate My Design",
+                                "make_changes": "I'd Like To Make Changes"
+                            }
+                        }
+                    ]
+                },
+                "phase_3": {
+                    "title": "RENDERING REVIEW",
+                    "questions": [
+                        {
+                            "id": "render_satisfaction",
+                            "name": "Initial Reaction",
+                            "details": "Overall, how satisfied are you with this concept?",
+                            "label": "",
+                            "is_ai_design": true,
+                            "type": "display"
+                        }
+                    ]
+                },
+                "phase_4": {
+                    "title": "Revision Requests",
+                    "questions": [
+                        {
+                            "id": "revision_comments",
+                            "name": "Revision Comments",
+                            "details": "Please share your revision requests, I will incorporate them into the design.",
+                            "label": "",
+                            "type": "files_with_description",
+                            "required": true,
+                            "max_files": 4,
+                            "placeholder": "Enter your revision comments here..."
+                        },
+                        {
+                            "id": "revision_design_summary",
+                            "name": "Revision Design Summary",
+                            "details": "Based on your answers, Luna will create a revised design featuring:",
+                            "type": "display"
+                        }
+                    ]
+                }
+            },
+            "custom": {
+                "phase_1": {
+                    "title": "Custom Request",
+                    "questions": [
+                        {
+                            "required": true,
+                            "id": "project_goals_or_brief_description",
+                            "type": "textarea",
+                            "name": "Project Goals/Brief Description",
+                            "label": "",
+                            "details": "Give me a brief overview of what you are looking to do?"
+                        },
+                        {
+                            "required": false,
+                            "id": "additional_images_upload",
+                            "type": "file",
+                            "max_files": 4,
+                            "name": "Inspirational Photos",
+                            "label": "",
+                            "details": "<p class='mb-3'>Do you have any inspirational photos you would like me to analyze that portray the look or feel you are trying to achieve?.</p>"
+                        }
+                    ]
+                },
+                "phase_2": {
+                    "title": "DESIGN SUMMARY",
+                    "questions": [
+                        {
+                            "id": "design_summary",
+                            "type": "display",
+                            "name": "Design Summary",
+                            "details": "I let me generate an initial rendering based on my understanding of what you are looking for."
+                        },
+                        {
+                            "required": true,
+                            "id": "design_direction_approval",
+                            "type": "radio",
+                            "name": "Design Direction Approval",
+                            "details": "Does this design direction accurately reflect your vision?",
+                            "options": {
+                                "generate_design": "Yes, Generate My Design",
+                                "make_changes": "I'd Like To Make Changes"
+                            }
+                        }
+                    ]
+                },
+                "phase_3": {
+                    "title": "RENDERING REVIEW",
+                    "questions": [
+                        {
+                            "id": "render_satisfaction",
+                            "name": "Initial Reaction",
+                            "details": "Does this rendering capture what you are looking for?  If not, please describe the issues you are seeing.",
+                            "label": "",
+                            "is_ai_design": true,
+                            "type": "display"
+                        }
+                    ]
+                },
+                "phase_4": {
+                    "title": "Revision Requests",
+                    "questions": [
+                        {
+                            "id": "revision_comments",
+                            "name": "Feedback",
+                            "details": "Let me know incorporate this feedback and re-render now.",
+                            "label": "",
+                            "type": "files_with_description",
+                            "required": true,
+                            "max_files": 4,
+                            "placeholder": "Enter your feedback here..."
+                        },
+                        {
+                            "id": "revision_design_summary",
+                            "name": "Design Summary",
+                            "details": "Based on your answers, Luna will create a revised design featuring:",
+                            "type": "display"
+                        }
+                    ]
+                }
+            },
+            "value_added_services": {
+                "phase_1": {
+                    "title": "Value Added Services",
+                    "questions": [
+                        {
+                            "required": true,
+                            "id": "Service Selection",
+                            "type": "radio",
+                            "name": "service_selection",
+                            "label": "",
+                            "details": "What updates or changes would you like to make to your existing design?",
+                            "options": [
+                                "New Plantings/Materials",
+                                "New area",
+                                "Custom Request"
+                            ]
+                        },
+                        {
+                            "required": false,
+                            "id": "supporting_files_upload",
+                            "type": "files_with_description",
+                            "max_files": 4,
+                            "name": "Supporting Files Upload (Optional)",
+                            "label": "",
+                            "details": "<p class='mb-3'>Have any project files you'd like to share? Feel free to upload them here!</p> <p class='mb-3'>This could include <b>surveys, site plans, PDFs, SketchUp models (.SKP), architectural drawings, inspiration images, or any other documents</b> that will help us better understand your project.</p> <p>If you don't have any supporting files, simply continue to the next step, you can always add them later!</p>"
+                        },
+                        {
+                            "required": true,
+                            "id": "project_goals_or_brief_description",
+                            "type": "textarea",
+                            "name": "Project Goals/Brief Description",
+                            "label": "",
+                            "details": "In a few sentences, tell me what you’d love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind; I’d love to hear them."
+                        }
+                    ]
+                },
+                "phase_2": {
+                    "title": "DESIGN SUMMARY",
+                    "questions": [
+                        {
+                            "id": "design_summary",
+                            "type": "display",
+                            "name": "Design Summary",
+                            "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
+                        },
+                        {
+                            "required": true,
+                            "id": "design_direction_approval",
+                            "type": "radio",
+                            "name": "Design Direction Approval",
+                            "details": "Does this design direction accurately reflect your vision?",
+                            "options": {
+                                "generate_design": "Yes, Generate My Design",
+                                "make_changes": "I'd Like To Make Changes"
+                            }
+                        }
+                    ]
+                },
+                "phase_3": {
+                    "title": "RENDERING REVIEW",
+                    "questions": [
+                        {
+                            "id": "render_satisfaction",
+                            "name": "Initial Reaction",
+                            "details": "Overall, how satisfied are you with this concept?",
+                            "label": "",
+                            "is_ai_design": true,
+                            "type": "display"
+                        }
+                    ]
+                },
+                "phase_4": {
+                    "title": "Revision Requests",
+                    "questions": [
+                        {
+                            "id": "revision_comments",
+                            "name": "Revision Comments",
+                            "details": "Please share your revision requests, I will incorporate them into the design.",
+                            "label": "",
+                            "type": "files_with_description",
+                            "required": true,
+                            "max_files": 4,
+                            "placeholder": "Enter your revision comments here..."
+                        },
+                        {
+                            "id": "revision_design_summary",
+                            "name": "Revision Design Summary",
+                            "details": "Based on your answers, Luna will create a revised design featuring:",
+                            "type": "display"
+                        }
+                    ]
+                }
             }
-          ]
         }
-      },
-      "arc_addition": {
-        "phase_1": {
-          "title": "Architectural Changes / Additions",
-          "questions": [
-            {
-              "required": false,
-              "id": "additional_images_upload",
-              "type": "file",
-              "max_files": 4,
-              "name": "Additional House Photos",
-              "label": "",
-              "details": "<p class='mb-3'>First, do you have any additional photo angles of the <b>front yard</b> that you think are helpful for us to see?</p>"
-            },
-            {
-              "required": false,
-              "id": "supporting_files_upload",
-              "type": "file",
-              "max_files": 4,
-              "name": "Supporting Files Upload (Optional)",
-              "label": "",
-              "details": "<p class='mb-3'>Do you have any other files that would be helpful like a survey, site plan, inspiration images...?</p> <p class='mb-3'>If so, please upload them.  If not, no worries at all, you can always add them later</p>"
-            },
-            {
-              "required": true,
-              "id": "project_goals_or_brief_description",
-              "type": "textarea",
-              "name": "Project Goals/Brief Description",
-              "label": "",
-              "details": "In a few sentences, tell me what you’d love to accomplish with this project.  Note- I will ask you about specific colors/materials in a minute.  Just a broad overview here is what I need."
-            },
-            {
-              "required": true,
-              "id": "type_of_architectural_project",
-              "type": "checkbox",
-              "name": "Type of Architectural Project",
-              "label": "",
-              "details": "What type of architectural changes are you considering? Select all that apply?",
-              "options": [
-                "Home addition",
-                "Front porch",
-                "Covered porch",
-                "Garage addition",
-                "Second story",
-                "Dormers",
-                "Entry enhancement",
-                "Portico",
-                "Sunroom",
-                "Outdoor living space",
-                "Roof modifications",
-                "Window changes",
-                "Door changes",
-                "Exterior facelift",
-                "Detached structure",
-                "Other"
-              ]
-            },
-            {
-              "required": true,
-              "id": "architectural_style_preference",
-              "type": "files_with_description",
-              "max_files": 4,
-              "name": "Architectural Style Preference",
-              "label": "",
-              "details": "Do you have a preferred architectural style or overall look you'd like to achieve? For example- modern, classic, traditional, farmhouse, craftsman..."
-            },
-            {
-              "required": true,
-              "id": "exterior_materials_and_finishes",
-              "type": "checkbox",
-              "name": "Exterior Materials & Finishes",
-              "label": "",
-              "details": "Are there any exterior materials or finishes you'd like us to incorporate into the design? Select all that apply?",
-              "options": [
-                "Brick",
-                "Stone",
-                "Siding",
-                "Stucco",
-                "Wood accents",
-                "Metal roofing",
-                "Decorative columns",
-                "Timber beams",
-                "Modern windows",
-                "Black window frames",
-                "Decorative trim"
-              ]
-            },
-            {
-              "required": true,
-              "id": "budget",
-              "name": "Budget",
-              "label": "",
-              "details": "What investment range feels most comfortable for this project?",
-              "type": "radio",
-              "options": [
-                "Under $25,000",
-                "$25,000-$50,000",
-                "$50,000-$75,000",
-                "$75,000-$150,000",
-                "$150,000+"
-              ]
-            },
-            {
-              "required": true,
-              "id": "important_proprty_information",
-              "type": "checkbox_with_notes",
-              "name": "Important Property Information",
-              "label": "",
-              "details": "Is there anything else that comes to mind that we should know before we wrap up?",
-              "options": [
-                "HOA requirements",
-                "Easements",
-                "Utility lines",
-                "Septic field",
-                "Planned additions",
-                "Accessibility needs",
-                "Other Special considerations"
-              ]
-            }
-          ]
-        },
-        "phase_2": {
-          "title": "DESIGN SUMMARY",
-          "questions": [
-            {
-              "id": "design_summary",
-              "type": "display",
-              "name": "Design Summary",
-              "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
-            },
-            {
-              "required": true,
-              "id": "design_direction_approval",
-              "type": "radio",
-              "name": "Design Direction Approval",
-              "details": "Does this design direction accurately reflect your vision?",
-              "options": {
-                "generate_design": "Yes, Generate My Design",
-                "make_changes": "I'd Like To Make Changes"
-              }
-            }
-          ]
-        },
-        "phase_3": {
-          "title": "RENDERING REVIEW",
-          "questions": [
-            {
-              "id": "render_satisfaction",
-              "name": "Initial Reaction",
-              "details": "Overall, how satisfied are you with this concept?",
-              "label": "",
-              "is_ai_design": true,
-              "type": "display"
-            }
-          ]
-        },
-        "phase_4": {
-          "title": "Revision Requests",
-          "questions": [
-            {
-              "id": "revision_comments",
-              "name": "Revision Comments",
-              "details": "Please share your revision requests, I will incorporate them into the design.",
-              "label": "",
-              "type": "files_with_description",
-              "required": true,
-              "max_files": 4,
-              "placeholder": "Enter your revision comments here..."
-            },
-            {
-              "id": "revision_design_summary",
-              "name": "Revision Design Summary",
-              "details": "Based on your answers, Luna will create a revised design featuring:",
-              "type": "display"
-            }
-          ]
-        }
-      },
-      "custom": {
-        "phase_1": {
-          "title": "Custom Request",
-          "questions": [
-            {
-              "required": true,
-              "id": "project_goals_or_brief_description",
-              "type": "textarea",
-              "name": "Project Goals/Brief Description",
-              "label": "",
-              "details": "Give me a brief overview of what you are looking to do?"
-            },
-            {
-              "required": false,
-              "id": "additional_images_upload",
-              "type": "file",
-              "max_files": 4,
-              "name": "Inspirational Photos",
-              "label": "",
-              "details": "<p class='mb-3'>Do you have any inspirational photos you would like me to analyze that portray the look or feel you are trying to achieve?.</p>"
-            }
-          ]
-        },
-        "phase_2": {
-          "title": "DESIGN SUMMARY",
-          "questions": [
-            {
-              "id": "design_summary",
-              "type": "display",
-              "name": "Design Summary",
-              "details": "I let me generate an initial rendering based on my understanding of what you are looking for."
-            },
-            {
-              "required": true,
-              "id": "design_direction_approval",
-              "type": "radio",
-              "name": "Design Direction Approval",
-              "details": "Does this design direction accurately reflect your vision?",
-              "options": {
-                "generate_design": "Yes, Generate My Design",
-                "make_changes": "I'd Like To Make Changes"
-              }
-            }
-          ]
-        },
-        "phase_3": {
-          "title": "RENDERING REVIEW",
-          "questions": [
-            {
-              "id": "render_satisfaction",
-              "name": "Initial Reaction",
-              "details": "Does this rendering capture what you are looking for?  If not, please describe the issues you are seeing.",
-              "label": "",
-              "is_ai_design": true,
-              "type": "display"
-            }
-          ]
-        },
-        "phase_4": {
-          "title": "Revision Requests",
-          "questions": [
-            {
-              "id": "revision_comments",
-              "name": "Feedback",
-              "details": "Let me know incorporate this feedback and re-render now.",
-              "label": "",
-              "type": "files_with_description",
-              "required": true,
-              "max_files": 4,
-              "placeholder": "Enter your feedback here..."
-            },
-            {
-              "id": "revision_design_summary",
-              "name": "Design Summary",
-              "details": "Based on your answers, Luna will create a revised design featuring:",
-              "type": "display"
-            }
-          ]
-        }
-      },
-      "value_added_services": {
-        "phase_1": {
-          "title": "Value Added Services",
-          "questions": [
-            {
-              "required": true,
-              "id": "Service Selection",
-              "type": "radio",
-              "name": "service_selection",
-              "label": "",
-              "details": "What updates or changes would you like to make to your existing design?",
-              "options": [
-                "New Plantings/Materials",
-                "New area",
-                "Custom Request"
-              ]
-            },
-            {
-              "required": false,
-              "id": "supporting_files_upload",
-              "type": "files_with_description",
-              "max_files": 4,
-              "name": "Supporting Files Upload (Optional)",
-              "label": "",
-              "details": "<p class='mb-3'>Have any project files you'd like to share? Feel free to upload them here!</p> <p class='mb-3'>This could include <b>surveys, site plans, PDFs, SketchUp models (.SKP), architectural drawings, inspiration images, or any other documents</b> that will help us better understand your project.</p> <p>If you don't have any supporting files, simply continue to the next step, you can always add them later!</p>"
-            },
-            {
-              "required": true,
-              "id": "project_goals_or_brief_description",
-              "type": "textarea",
-              "name": "Project Goals/Brief Description",
-              "label": "",
-              "details": "In a few sentences, tell me what you’d love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind; I’d love to hear them."
-            }
-          ]
-        },
-        "phase_2": {
-          "title": "DESIGN SUMMARY",
-          "questions": [
-            {
-              "id": "design_summary",
-              "type": "display",
-              "name": "Design Summary",
-              "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
-            },
-            {
-              "required": true,
-              "id": "design_direction_approval",
-              "type": "radio",
-              "name": "Design Direction Approval",
-              "details": "Does this design direction accurately reflect your vision?",
-              "options": {
-                "generate_design": "Yes, Generate My Design",
-                "make_changes": "I'd Like To Make Changes"
-              }
-            }
-          ]
-        },
-        "phase_3": {
-          "title": "RENDERING REVIEW",
-          "questions": [
-            {
-              "id": "render_satisfaction",
-              "name": "Initial Reaction",
-              "details": "Overall, how satisfied are you with this concept?",
-              "label": "",
-              "is_ai_design": true,
-              "type": "display"
-            }
-          ]
-        },
-        "phase_4": {
-          "title": "Revision Requests",
-          "questions": [
-            {
-              "id": "revision_comments",
-              "name": "Revision Comments",
-              "details": "Please share your revision requests, I will incorporate them into the design.",
-              "label": "",
-              "type": "files_with_description",
-              "required": true,
-              "max_files": 4,
-              "placeholder": "Enter your revision comments here..."
-            },
-            {
-              "id": "revision_design_summary",
-              "name": "Revision Design Summary",
-              "details": "Based on your answers, Luna will create a revised design featuring:",
-              "type": "display"
-            }
-          ]
-        }
-      }
     },
-    "landscape-design": {
-      "front_yard": {
-        "phase_1": {
-          "title": "Front Yard Design",
-          "questions": [
-            {
-              "required": false,
-              "id": "additional_images_upload",
-              "type": "file",
-              "max_files": 4,
-              "name": "Additional House Photos",
-              "label": "",
-              "details": "<p class='mb-3'>First, do you have any additional photo angles of the <b>front yard</b> that you think are helpful for us to see?</p>"
+    "enterprise-client": {
+        "landscape-design": {
+            "phase_1": {
+                "title": "PROPERTY VERIFICATION & SITE ASSESSMENT",
+                "questions": [
+                    {
+                        "id": "property_verified",
+                        "name": "Verify Property",
+                        "details": "Please confirm this is the property you would like redesigned",
+                        "type": "radio",
+                        "is_property_address": true,
+                        "required": true,
+                        "label": "",
+                        "options": {
+                            "yes": "Yes, this is correct",
+                            "no": "No, this is not the correct property"
+                        }
+                    },
+                    {
+                        "id": "most_important_improvement",
+                        "name": "Most Important Improvement",
+                        "details": "What is the single most important thing you would like to improve about your property?",
+                        "type": "checkbox",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "Better curb appeal",
+                            "More entertaining space",
+                            "Increased privacy",
+                            "Improved functionality",
+                            "Better landscaping",
+                            "Better curb appeal",
+                            "Improved outdoor dining ",
+                            "Family gathering space",
+                            "Low-maintenance design "
+                        ]
+                    },
+                    {
+                        "id": "site_concerns",
+                        "name": "Site Concerns",
+                        "details": "Are there any issues you would like the new design to help solve?",
+                        "type": "checkbox",
+                        "label": "Select all that apply:",
+                        "required": true,
+                        "options": [
+                            "Drainage Issues",
+                            "Lack of Privacy",
+                            "Difficult Maintenance",
+                            "Outdated Appearance",
+                            "Lack of Outdoor Living Space",
+                            "Poor Functionality",
+                            "Too Much Shade",
+                            "Too Much Sun",
+                            "Standing Water",
+                            "No Major Concerns"
+                        ]
+                    },
+                    {
+                        "id": "existing_features",
+                        "name": "Existing Features",
+                        "details": "Which existing features would you like to preserve in the new design?",
+                        "label": "Select all that apply:",
+                        "type": "checkbox",
+                        "required": true,
+                        "options": [
+                            "Existing Patio",
+                            "Covered Patio",
+                            "Deck",
+                            "Pool",
+                            "Hot Tub",
+                            "Mature Trees",
+                            "Lawn Areas",
+                            "Fencing",
+                            "Existing Garden Beds",
+                            "Existing Landscape Features",
+                            "Other"
+                        ]
+                    },
+                    {
+                        "id": "important_property_notes",
+                        "name": "Important Property Notes",
+                        "details": "Is there anything about your property that Luna should know before creating your design?",
+                        "type": "checkbox",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "HOA requirements",
+                            "Utility lines",
+                            "Easements",
+                            "Septic field",
+                            "Planned additions",
+                            "Accessibility needs",
+                            "Other"
+                        ]
+                    },
+                    {
+                        "id": "ai_site_assessment",
+                        "name": "AI Site Assessment",
+                        "details": "Luna automatically analyzes: ",
+                        "type": "multi_questions",
+                        "required": true,
+                        "label": "",
+                        "multi_questions": [
+                            {
+                                "id": "ai_site_assessment_existing_conditions",
+                                "name": "Existing Conditions",
+                                "type": "checkbox",
+                                "required": true,
+                                "label": "Existing Conditions",
+                                "options": [
+                                    "Existing structures",
+                                    "Existing landscape features",
+                                    "Architectural style ",
+                                    "Sun/shade observations",
+                                    "Privacy observations"
+                                ]
+                            },
+                            {
+                                "id": "ai_site_assessment_opportunities",
+                                "name": "Opportunities",
+                                "type": "checkbox",
+                                "required": true,
+                                "label": "Opportunities",
+                                "options": [
+                                    "Privacy enhancement opportunities ",
+                                    "Landscape enhancement opportunities ",
+                                    "Outdoor living opportunities ",
+                                    "Circulation improvements ",
+                                    "Lighting opportunities "
+                                ]
+                            },
+                            {
+                                "id": "ai_site_assessment_potential_constraints",
+                                "name": "Potential Constraints ",
+                                "type": "checkbox",
+                                "required": true,
+                                "label": "Potential Constraints",
+                                "options": [
+                                    "Drainage concerns ",
+                                    "Grade changes ",
+                                    "Existing structures ",
+                                    "Space limitations "
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "id": "assessment_confirmation",
+                        "name": "Assessment Confirmation",
+                        "details": "Does this assessment look accurate?",
+                        "type": "radio",
+                        "required": true,
+                        "label": "",
+                        "options": {
+                            "yes_continue": "Yes, Continue",
+                            "correction": "I&apos;d Like to Make Corrections"
+                        }
+                    }
+                ]
             },
-            {
-              "required": false,
-              "id": "supporting_files_upload",
-              "type": "file",
-              "max_files": 4,
-              "name": "Supporting Files Upload",
-              "label": "",
-              "details": "<p class='mb-3'>Do you have any other files that would be helpful like a survey, site plan, inspiration images...?</p> <p class='mb-3'>If so, please upload them.  If not, no worries at all, you can always add them later</p>"
+            "phase_2": {
+                "title": "DESIGN DISCOVERY",
+                "questions": [
+                    {
+                        "id": "primary_uses",
+                        "name": "Primary Uses",
+                        "details": "How do you plan to use this space most often?",
+                        "type": "checkbox",
+                        "label": "Select all that apply:",
+                        "required": true,
+                        "options": [
+                            "Relaxation",
+                            "Entertaining Guests",
+                            "Outdoor Dining",
+                            "Family Activities",
+                            "Pets",
+                            "Gardening",
+                            "Cooking & Grilling",
+                            "Fire Feature",
+                            "Pool Activities",
+                            "Hot Tub",
+                            "Watching TV Outdoors"
+                        ]
+                    },
+                    {
+                        "id": "must_have_features",
+                        "name": "Must-Have Features",
+                        "details": "What features would you most like to include?",
+                        "type": "checkbox",
+                        "label": "",
+                        "required": true,
+                        "max_selection": 5,
+                        "options": [
+                            "Fire Pit",
+                            "Outdoor Fireplace",
+                            "Outdoor Kitchen",
+                            "Dining Area",
+                            "Pergola",
+                            "Covered Structure",
+                            "Hot Tub",
+                            "Pool",
+                            "Water Feature",
+                            "Landscape Lighting",
+                            "Privacy Screening",
+                            "Garden Beds",
+                            "Seating Area",
+                            "Bar Area"
+                        ]
+                    },
+                    {
+                        "id": "design_style",
+                        "name": "Design Style",
+                        "details": "Which design style best reflects your vision?",
+                        "type": "radio",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "Transitional",
+                            "Traditional",
+                            "Modern",
+                            "Contemporary",
+                            "Farmhouse",
+                            "Cottage Garden",
+                            "Mediterranean",
+                            "Resort Style",
+                            "Rustic",
+                            "Not Sure"
+                        ]
+                    },
+                    {
+                        "id": "desired_feeling",
+                        "name": "Desired Feeling",
+                        "details": "How would you like the space to feel?",
+                        "type": "checkbox",
+                        "label": "",
+                        "required": true,
+                        "max_selection": 3,
+                        "options": [
+                            "Relaxing",
+                            "Cozy",
+                            "Elegant",
+                            "Luxurious",
+                            "Family-Friendly",
+                            "Natural",
+                            "Private",
+                            "Resort-Like",
+                            "Timeless",
+                            "Entertaining Focused",
+                            "Modern",
+                            "Romantic"
+                        ]
+                    },
+                    {
+                        "id": "design_preferences",
+                        "name": "Design Preferences",
+                        "details": "What would you prefer NOT to see in your design?",
+                        "label": "Select all that apply:",
+                        "required": true,
+                        "type": "checkbox",
+                        "options": [
+                            "High Maintenance Landscaping",
+                            "Bright Flower Colors",
+                            "Large Patio Areas",
+                            "Modern Architecture",
+                            "Formal Landscaping",
+                            "Artificial Turf",
+                            "Water Features",
+                            "Dense Planting",
+                            "Large Trees Near House",
+                            "Other"
+                        ]
+                    },
+                    {
+                        "id": "material_preferences_material",
+                        "name": "Material Preferences (Materials)",
+                        "details": "Which materials do you prefer?",
+                        "type": "checkbox",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "Natural Stone",
+                            "Brick",
+                            "Porcelain Pavers",
+                            "Concrete",
+                            "Cedar",
+                            "Teak",
+                            "Composite Materials"
+                        ]
+                    },
+                    {
+                        "id": "material_preferences_accent_colors",
+                        "name": "Material Preferences (Accent Colors)",
+                        "details": "Which accent colors do you prefer?",
+                        "type": "checkbox",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "Black",
+                            "Bronze",
+                            "White",
+                            "Natural Wood",
+                            "Gray",
+                            "Earth Tones"
+                        ]
+                    },
+                    {
+                        "id": "evening_use_lighting",
+                        "name": "Evening Use & Lighting",
+                        "details": "How important is evening use and outdoor lighting?",
+                        "type": "radio",
+                        "required": true,
+                        "options": [
+                            "Not Important",
+                            "Somewhat Important",
+                            "Very Important"
+                        ]
+                    },
+                    {
+                        "id": "privacy_importance",
+                        "name": "Privacy Importance",
+                        "details": "How important is privacy?",
+                        "type": "radio",
+                        "required": true,
+                        "options": [
+                            "Not Important",
+                            "Somewhat Important",
+                            "Very Important"
+                        ]
+                    },
+                    {
+                        "id": "maintenance_preference",
+                        "name": "Maintenance Preference",
+                        "details": "How much ongoing maintenance are you comfortable with?",
+                        "type": "radio",
+                        "required": true,
+                        "options": [
+                            "Low",
+                            "Medium",
+                            "High"
+                        ]
+                    },
+                    {
+                        "id": "budget_range",
+                        "name": "Budget Range",
+                        "details": "What investment range feels comfortable for this project?",
+                        "type": "radio",
+                        "required": true,
+                        "options": [
+                            "Under $25,000",
+                            "$25,000-$50,000",
+                            "$50,000-$75,000",
+                            "$75,000-$150,000",
+                            "$150,000+"
+                        ]
+                    },
+                    {
+                        "id": "defining_success",
+                        "name": "Defining Success",
+                        "details": "If we could only accomplish ONE thing with this design, what would make you happiest?",
+                        "type": "textarea"
+                    }
+                ]
             },
-            {
-              "required": true,
-              "id": "project_goals_or_brief_description",
-              "type": "textarea",
-              "name": "Project Goals/Brief Description",
-              "label": "",
-              "details": "In a few sentences, tell me what you'd love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind"
+            "phase_3": {
+                "title": "DESIGN BRIEF APPROVAL",
+                "questions": [
+                    {
+                        "id": "design_summary",
+                        "name": "Design Summary",
+                        "details": "Based on your answers, Luna will create a design featuring:",
+                        "example": "<ul><li>Style Direction</li><li>Desired Feelings</li><li>Primary Activities</li><li>Must-Have Features</li><li>Material Preferences</li><li>Landscape Strategy</li><li>Privacy Strategy</li><li>Lighting Strategy</li></ul>"
+                    },
+                    {
+                        "id": "design_direction_approval",
+                        "name": "Design Direction Approval",
+                        "details": "Does this design direction accurately reflect your vision?",
+                        "type": "radio",
+                        "required": true,
+                        "options": {
+                            "generate_design": "Yes, Generate My Design",
+                            "make_changes": "I'd Like To Make Changes"
+                        }
+                    }
+                ]
             },
-            {
-              "required": true,
-              "id": "landscape_design_style_preference",
-              "type": "files_with_description",
-              "max_files": 4,
-              "name": "Landscape Design Style Preference",
-              "label": "",
-              "details": "Does your client have a preferred style they are drawn to? For example clean and modern, classic and timeless, natural and relaxed and so on."
+            "phase_4": {
+                "title": "RENDERING REVIEW",
+                "questions": [
+                    {
+                        "id": "render_satisfaction",
+                        "name": "Initial Reaction",
+                        "details": "Overall, how satisfied are you with this concept?",
+                        "label": "",
+                        "is_ai_design": true,
+                        "type": "radio",
+                        "required": true,
+                        "options": [
+                            "Love It",
+                            "Mostly Like It",
+                            "Needs Changes"
+                        ]
+                    }
+                ]
             },
-            {
-              "required": true,
-              "id": "hardscape_material_preferences",
-              "type": "files_with_description",
-              "max_files": 4,
-              "name": "Hardscape / Material Preferences",
-              "label": "",
-              "details": "Are there any specific hardscape materials or styles you’d like us to keep in mind for this design?"
+            "phase_5": {
+                "title": "Revision Requests",
+                "questions": [
+                    {
+                        "id": "architecture_changes",
+                        "name": "Architecture",
+                        "details": "What would you like adjusted?",
+                        "label": "",
+                        "type": "radio",
+                        "required": true,
+                        "options": [
+                            "Roof",
+                            "Porch",
+                            "Windows",
+                            "Doors",
+                            "Don't Change"
+                        ]
+                    },
+                    {
+                        "id": "hardscape_changes",
+                        "name": "Hardscape",
+                        "details": "What would you like adjusted?",
+                        "label": "",
+                        "required": true,
+                        "type": "radio",
+                        "options": [
+                            "Patio",
+                            "Walkways",
+                            "Fire Pit",
+                            "Seating Areas",
+                            "Don't Change"
+                        ]
+                    },
+                    {
+                        "id": "landscape_changes",
+                        "details": "What would you like adjusted?",
+                        "name": "Landscaping",
+                        "label": "",
+                        "required": true,
+                        "type": "radio",
+                        "options": [
+                            "Trees",
+                            "Shrubs",
+                            "Flowers",
+                            "Privacy Plantings",
+                            "Don't Change"
+                        ]
+                    },
+                    {
+                        "id": "material_changes",
+                        "name": "Materials",
+                        "details": "What would you like adjusted?",
+                        "label": "",
+                        "type": "radio",
+                        "required": true,
+                        "options": [
+                            "Colors",
+                            "Stone",
+                            "Wood",
+                            "Don't Change"
+                        ]
+                    },
+                    {
+                        "id": "other_revision_notes",
+                        "name": "Design Priorities",
+                        "details": "Any additional design preferences, special requests, or must-have features?",
+                        "label": "",
+                        "type": "textarea"
+                    },
+                    {
+                        "id": "revision_design_summary",
+                        "name": "Revision Design Summary",
+                        "details": "Based on your answers, Luna will create a revised design featuring:"
+                    }
+                ]
             },
-            {
-              "required": true,
-              "id": "softscape_planting_preferences",
-              "type": "files_with_description",
-              "max_files": 4,
-              "name": "Softscape / Planting Preferences",
-              "label": "",
-              "details": "Are there any plant styles, colors, or types you'd like us to keep in mind?!"
-            },
-            {
-              "required": true,
-              "id": "budget",
-              "name": "Budget",
-              "label": "",
-              "details": "What investment range feels most comfortable for this project?",
-              "type": "radio",
-              "options": [
-                "Under $25,000",
-                "$25,000-$50,000",
-                "$50,000-$75,000",
-                "$75,000-$150,000",
-                "$150,000+"
-              ]
-            },
-            {
-              "required": true,
-              "id": "important_proprty_information",
-              "type": "checkbox_with_notes",
-              "name": "Important Property Information",
-              "label": "",
-              "details": "Is there anything else that comes to mind on this property we should know before we wrap up?",
-              "options": [
-                "HOA requirements",
-                "Easements",
-                "Utility lines",
-                "Septic field",
-                "Planned additions",
-                "Accessibility needs",
-                "Other Special considerations"
-              ]
+            "phase_6": {
+                "title": "Revision Design Review",
+                "questions": [
+                    {
+                        "id": "revision_approval",
+                        "name": "Revision Approval",
+                        "is_ai_design": true,
+                        "details": "Would you like another revision?",
+                        "type": "radio",
+                        "required": true,
+                        "options": {
+                            "yes": "Yes",
+                            "approve": "No, Approve Design"
+                        }
+                    }
+                ]
             }
-          ]
         },
-        "phase_2": {
-          "title": "DESIGN SUMMARY",
-          "questions": [
-            {
-              "id": "design_summary",
-              "type": "display",
-              "name": "Design Summary",
-              "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
+        "color-material": {
+            "phase_1": {
+                "title": "PROPERTY VERIFICATION & EXISTING CONDITIONS",
+                "questions": [
+                    {
+                        "id": "property_verified",
+                        "name": "Verify Property",
+                        "details": "Please confirm this is the property you would like redesigned",
+                        "type": "radio",
+                        "is_property_address": true,
+                        "required": true,
+                        "label": "",
+                        "options": {
+                            "yes": "Yes, this is correct",
+                            "no": "No, this is not the correct property"
+                        }
+                    },
+                    {
+                        "id": "current_challenges",
+                        "name": "Current Challenges",
+                        "details": "What would you like to improve?",
+                        "label": "Select all that apply",
+                        "type": "checkbox",
+                        "required": true,
+                        "options": [
+                            "Better Curb Appeal",
+                            "Home Feels Outdated",
+                            "Too Much Brick",
+                            "Too Many Different Materials",
+                            "Colors Feel Dated",
+                            "House Lacks Character",
+                            "Doesn't Match Neighborhood",
+                            "Preparing to Sell",
+                            "Recently Purchased Home",
+                            "No Major Concerns"
+                        ]
+                    },
+                    {
+                        "id": "planned_improvements",
+                        "name": "Planned Improvements",
+                        "details": "Which exterior elements are you planning to update?",
+                        "required": true,
+                        "label": "Select all that apply",
+                        "type": "checkbox",
+                        "options": [
+                            "Paint Only",
+                            "Siding",
+                            "Brick Color",
+                            "Stone",
+                            "Roof",
+                            "Front Door",
+                            "Garage Doors",
+                            "Windows",
+                            "Shutters",
+                            "Columns",
+                            "Trim",
+                            "Gutters",
+                            "Porch",
+                            "Lighting",
+                            "Other",
+                            "Not Sure"
+                        ]
+                    },
+                    {
+                        "id": "existing_materials",
+                        "name": "Existing Materials",
+                        "details": "Which existing materials would you like to KEEP?",
+                        "type": "checkbox",
+                        "required": true,
+                        "label": "Select all that apply",
+                        "options": [
+                            "Brick",
+                            "Stone",
+                            "Siding",
+                            "Stucco",
+                            "Board & Batten",
+                            "Shake Siding",
+                            "Roof",
+                            "Windows",
+                            "Garage Doors",
+                            "Front Door",
+                            "Columns",
+                            "Gutters",
+                            "Shutters",
+                            "None - Open to Everything"
+                        ]
+                    },
+                    {
+                        "id": "most_important_goal",
+                        "name": "Most Important Goal",
+                        "details": "If we could accomplish ONE thing with this design, what would make you happiest?",
+                        "type": "radio",
+                        "required": true,
+                        "label": "",
+                        "options": [
+                            "Modernize the home",
+                            "Make it timeless",
+                            "Increase curb appeal",
+                            "Brighten the exterior",
+                            "Add warmth",
+                            "Make it look more luxurious",
+                            "Preserve its traditional character"
+                        ]
+                    },
+                    {
+                        "id": "ai_home_assessment",
+                        "name": "AI Home Assessment",
+                        "details": "Luna automatically analyzes:",
+                        "type": "multi_questions",
+                        "required": true,
+                        "label": "",
+                        "multi_questions": [
+                            {
+                                "id": "existing_architecture",
+                                "name": "Existing Architecture",
+                                "type": "checkbox",
+                                "required": true,
+                                "label": "Existing Architecture",
+                                "options": [
+                                    "Architectural style",
+                                    "Roof shape",
+                                    "Material proportions",
+                                    "Window style",
+                                    "Trim details",
+                                    "Existing color palette"
+                                ]
+                            },
+                            {
+                                "id": "opportunities",
+                                "name": "Opportunities",
+                                "type": "checkbox",
+                                "required": true,
+                                "label": "Opportunities",
+                                "options": [
+                                    "Improve contrast",
+                                    "Simplify materials",
+                                    "Modernize finishes",
+                                    "Enhance focal points",
+                                    "Improve architectural balance"
+                                ]
+                            },
+                            {
+                                "id": "design_constraints",
+                                "name": "Design Constraints",
+                                "type": "checkbox",
+                                "required": true,
+                                "label": "Design Constraints",
+                                "options": [
+                                    "Existing materials that should remain",
+                                    "Architectural features",
+                                    "Material transitions",
+                                    "Roof compatibility"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "id": "assessment_confirmation",
+                        "name": "Assessment Confirmation",
+                        "details": "Does this assessment look accurate?",
+                        "type": "radio",
+                        "required": true,
+                        "options": {
+                            "yes_continue": "Yes, Continue",
+                            "correction": "I'd Like to Make Corrections"
+                        }
+                    }
+                ]
             },
-            {
-              "required": true,
-              "id": "design_direction_approval",
-              "type": "radio",
-              "name": "Design Direction Approval",
-              "details": "Does this design direction accurately reflect your vision?",
-              "options": {
-                "generate_design": "Yes, Generate My Design",
-                "make_changes": "I'd Like To Make Changes"
-              }
-            }
-          ]
-        },
-        "phase_3": {
-          "title": "RENDERING REVIEW",
-          "questions": [
-            {
-              "id": "render_satisfaction",
-              "name": "Initial Reaction",
-              "details": "Overall, how satisfied are you with this concept?",
-              "label": "",
-              "is_ai_design": true,
-              "type": "display"
-            }
-          ]
-        },
-        "phase_4": {
-          "title": "Revision Requests",
-          "questions": [
-            {
-              "id": "revision_comments",
-              "name": "Revision Comments",
-              "details": "Please share your revision requests, I will incorporate them into the design.",
-              "label": "",
-              "type": "files_with_description",
-              "required": true,
-              "max_files": 4,
-              "placeholder": "Enter your revision comments here..."
+            "phase_2": {
+                "title": "DESIGN DISCOVERY",
+                "questions": [
+                    {
+                        "id": "architectural_style",
+                        "name": "Architectural Style",
+                        "details": "Which overall design style do you prefer?",
+                        "type": "radio",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "Traditional",
+                            "Transitional",
+                            "Modern Farmhouse",
+                            "Contemporary",
+                            "Craftsman",
+                            "Colonial",
+                            "Tudor",
+                            "Cape Cod",
+                            "Mediterranean",
+                            "Modern",
+                            "Scandinavian",
+                            "Not Sure"
+                        ]
+                    },
+                    {
+                        "id": "color_direction",
+                        "name": "Color Direction",
+                        "details": "Which color palette do you naturally gravitate toward?",
+                        "type": "radio",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "Warm Whites",
+                            "Cool Whites",
+                            "Soft Grays",
+                            "Earth Tones",
+                            "Charcoal & Black",
+                            "Natural Wood Accents",
+                            "Deep Green",
+                            "Navy Blue",
+                            "Mixed Neutrals",
+                            "I'm Not Sure"
+                        ]
+                    },
+                    {
+                        "id": "material_preferences",
+                        "name": "Material Preferences",
+                        "details": "Which materials appeal to you?",
+                        "type": "radio",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "Painted Brick",
+                            "Natural Brick",
+                            "Limestone",
+                            "Fieldstone",
+                            "Cedar",
+                            "Wood Siding",
+                            "Vertical Board & Batten",
+                            "Lap Siding",
+                            "Shake Siding",
+                            "Metal Accents",
+                            "Copper",
+                            "Black Windows",
+                            "Bronze Windows",
+                            "Natural Wood Garage Doors"
+                        ]
+                    },
+                    {
+                        "id": "desired_feeling",
+                        "name": "Desired Feeling",
+                        "details": "How would you like your home to feel?",
+                        "type": "checkbox",
+                        "label": "",
+                        "required": true,
+                        "max_selection": 3,
+                        "options": [
+                            "Warm",
+                            "Inviting",
+                            "Elegant",
+                            "Timeless",
+                            "Luxurious",
+                            "Bright",
+                            "Bold",
+                            "Classic",
+                            "Modern",
+                            "Natural",
+                            "Sophisticated",
+                            "Cozy"
+                        ]
+                    },
+                    {
+                        "id": "contrast_level",
+                        "name": "Contrast Level",
+                        "details": "How much contrast would you like?",
+                        "type": "radio",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "Very Soft",
+                            "Moderate",
+                            "High Contrast",
+                            "Dramatic"
+                        ]
+                    },
+                    {
+                        "id": "inspiration",
+                        "name": "Inspiration",
+                        "details": "Upload photos that reflect the style, colors, materials, or overall look you'd like us to incorporate into your project.",
+                        "type": "file",
+                        "label": "",
+                        "required": true,
+                        "max_files": 6
+                    },
+                    {
+                        "id": "design_preferences",
+                        "name": "Design Preferences",
+                        "details": "What would you prefer NOT to see?",
+                        "type": "checkbox",
+                        "label": "Select all that apply:",
+                        "required": true,
+                        "options": [
+                            "Bright White",
+                            "Dark Exteriors",
+                            "Heavy Stone",
+                            "Painted Brick",
+                            "Black Windows",
+                            "Modern Features",
+                            "Rustic Materials",
+                            "Multiple Materials",
+                            "High Contrast",
+                            "Bold Colors"
+                        ]
+                    }
+                ]
             },
-            {
-              "id": "revision_design_summary",
-              "name": "Revision Design Summary",
-              "details": "Based on your answers, Luna will create a revised design featuring:",
-              "type": "display"
+            "phase_3": {
+                "title": "PRODUCT & MATERIAL RECOMMENDATIONS",
+                "questions": [
+                    {
+                        "id": "budget",
+                        "name": "Budget",
+                        "details": "What investment range feels comfortable?",
+                        "type": "radio",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "Under $25,000",
+                            "$25,000–$50,000",
+                            "$50,000–$75,000",
+                            "$75,000–$150,000",
+                            "$150,000+"
+                        ]
+                    },
+                    {
+                        "id": "brand_preference",
+                        "name": "Brand Preference",
+                        "details": "Which paint brands do you prefer?",
+                        "type": "radio",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "Sherwin-Williams",
+                            "Benjamin Moore",
+                            "Behr",
+                            "PPG",
+                            "No Preference"
+                        ]
+                    },
+                    {
+                        "id": "material_brands",
+                        "name": "Material Brands",
+                        "details": "Would you like to use specific products?",
+                        "type": "checkbox",
+                        "label": "",
+                        "required": true,
+                        "options": [
+                            "James Hardie",
+                            "LP SmartSide",
+                            "Nichiha",
+                            "CertainTeed",
+                            "Versetta Stone",
+                            "Boral",
+                            "No Preference"
+                        ]
+                    }
+                ]
+            },
+            "phase_4": {
+                "title": "MOOD BOARD APPROVAL",
+                "questions": [
+                    {
+                        "id": "design_summary",
+                        "name": "Design Summary",
+                        "type": "display",
+                        "example": "<ul><li>Architectural Style</li><li>Color Direction</li><li>Primary Exterior Materials</li><li>Accent Materials</li><li>Window & Trim Strategy</li><li>Front Door Direction</li><li>Garage Door Direction</li><li>Roof Coordination</li></ul>"
+                    },
+                    {
+                        "id": "design_direction_approval",
+                        "name": "Approval",
+                        "details": "Does this design direction accurately reflect your vision?",
+                        "type": "radio",
+                        "required": true,
+                        "options": {
+                            "generate_design": "Yes, Generate My Design",
+                            "make_changes": "I'd Like To Make Changes"
+                        }
+                    }
+                ]
+            },
+            "phase_5": {
+                "title": "RENDERING REVIEW",
+                "questions": [
+                    {
+                        "id": "render_satisfaction",
+                        "name": "Initial Reaction",
+                        "details": "How satisfied are you with this design?",
+                        "label": "",
+                        "is_ai_design": true,
+                        "type": "radio",
+                        "required": true,
+                        "options": [
+                            "Love It",
+                            "Mostly Like It",
+                            "Needs Changes"
+                        ]
+                    }
+                ]
+            },
+            "phase_6": {
+                "title": "Revision Requests",
+                "questions": [
+                    {
+                        "id": "colors",
+                        "name": "Colors",
+                        "details": "What would you like adjusted?",
+                        "label": "Colors",
+                        "required": true,
+                        "type": "checkbox",
+                        "options": [
+                            "Main Color",
+                            "Accent Color",
+                            "Trim Color",
+                            "Front Door Color"
+                        ]
+                    },
+                    {
+                        "id": "materials",
+                        "name": "Materials",
+                        "details": "What would you like adjusted?",
+                        "label": "Materials",
+                        "type": "checkbox",
+                        "required": true,
+                        "options": [
+                            "Brick",
+                            "Stone",
+                            "Siding",
+                            "Roof",
+                            "Garage Doors",
+                            "Windows"
+                        ]
+                    },
+                    {
+                        "id": "architectural_details",
+                        "name": "Architectural Details",
+                        "details": "What would you like adjusted?",
+                        "label": "Architectural Details",
+                        "required": true,
+                        "type": "checkbox",
+                        "options": [
+                            "Columns",
+                            "Shutters",
+                            "Porch Details",
+                            "Decorative Trim"
+                        ]
+                    },
+                    {
+                        "id": "other_revision_notes",
+                        "name": "Design Priorities",
+                        "details": "Any additional design preferences, special requests, or must-have features?",
+                        "label": "",
+                        "type": "textarea"
+                    },
+                    {
+                        "id": "revision_design_summary",
+                        "name": "Revision Design Summary",
+                        "details": "Based on your answers, Luna will create a revised design featuring:"
+                    }
+                ]
+            },
+            "phase_7": {
+                "title": "Revision Design Review",
+                "questions": [
+                    {
+                        "id": "revision_approval",
+                        "name": "Revision Approval",
+                        "is_ai_design": true,
+                        "details": "Would you like another revision?",
+                        "type": "radio",
+                        "required": true,
+                        "options": {
+                            "yes": "Yes",
+                            "approve": "No, Approve Design"
+                        }
+                    }
+                ]
+            },
+            "phase_8": {
+                "title": "PRODUCT & MATERIAL RECOMMENDATIONS",
+                "questions": [
+                    {
+                        "id": "budget",
+                        "name": "Budget",
+                        "details": "What investment range feels comfortable?",
+                        "type": "radio",
+                        "required": true,
+                        "label": "",
+                        "options": [
+                            "Budget Friendly",
+                            "Mid-Range",
+                            "Premium",
+                            "Luxury"
+                        ]
+                    },
+                    {
+                        "id": "paint_brand_preference",
+                        "name": "Brand Preference",
+                        "details": "Which paint brands do you prefer?",
+                        "type": "checkbox",
+                        "required": true,
+                        "label": "",
+                        "options": [
+                            "Sherwin-Williams",
+                            "Benjamin Moore",
+                            "Behr",
+                            "PPG",
+                            "No Preference"
+                        ]
+                    },
+                    {
+                        "id": "material_brand_preference",
+                        "name": "Material Brands",
+                        "details": "Would you like Luna to recommend specific products?",
+                        "type": "checkbox",
+                        "required": true,
+                        "label": "",
+                        "options": [
+                            "James Hardie",
+                            "LP SmartSide",
+                            "Nichiha",
+                            "CertainTeed",
+                            "Versetta Stone",
+                            "Boral",
+                            "No Preference"
+                        ]
+                    },
+                    {
+                        "id": "final_deliverables",
+                        "name": "Final Deliverables",
+                        "type": "display",
+                        "required": true,
+                        "example": "<ul><li>Photorealistic Exterior Rendering</li><li>Complete Color Palette</li><li>Paint Brand Recommendations</li><li>Paint Color Codes</li><li>Material Recommendations</li><li>Product Quantities (when applicable)</li><li>Roof Color Suggestions</li><li>Front Door Recommendations</li><li>Garage Door Recommendations</li><li>Exterior Lighting Suggestions</li><li>Material Shopping List</li><li>Estimated Budget</li><li>Contractor Recommendations</li></ul>"
+                    }
+                ]
+            },
+            "phase_9": {
+                "title": "IMPLEMENTATION GUIDE",
+                "questions": [
+                    {
+                        "id": "project_scope",
+                        "name": "Project Scope",
+                        "details": "Who will complete your project?",
+                        "type": "radio",
+                        "options": [
+                            "DIY",
+                            "Painting Contractor",
+                            "General Contractor",
+                            "Full Exterior Remodel"
+                        ]
+                    },
+                    {
+                        "id": "contractor_priorities",
+                        "name": "Contractor Priorities",
+                        "details": "What matters most?",
+                        "type": "checkbox",
+                        "options": [
+                            "Price",
+                            "Craftsmanship",
+                            "Communication",
+                            "Speed",
+                            "Design Quality"
+                        ]
+                    }
+                ]
             }
-          ]
         }
-      },
-      "rear_yard": {
-        "phase_1": {
-          "title": "Rear Yard Design",
-          "questions": [
-            {
-              "required": false,
-              "id": "additional_images_upload",
-              "type": "file",
-              "max_files": 4,
-              "name": "Additional House Photos",
-              "label": "",
-              "details": "<p class='mb-3'>First, do you have any additional photo angles of the <b>rear yard</b> that you think are helpful for us to see?</p>"
-            },
-            {
-              "required": false,
-              "id": "supporting_files_upload",
-              "type": "file",
-              "max_files": 4,
-              "name": "Supporting Files Upload",
-              "label": "",
-              "details": "<p class='mb-3'>Do you have any other files that would be helpful like a survey, site plan, inspiration images...?</p> <p class='mb-3'>If so, please upload them.  If not, no worries at all, you can always add them later</p>"
-            },
-            {
-              "required": true,
-              "id": "project_goals_or_brief_description",
-              "type": "textarea",
-              "name": "Project Goals/Brief Description",
-              "label": "",
-              "details": "In a few sentences, tell me what you'd love to accomplish with this project. Especially required features such as pool, covered space, fire pit area."
-            },
-            {
-              "required": true,
-              "id": "landscape_design_style_preference",
-              "type": "files_with_description",
-              "max_files": 4,
-              "name": "Landscape Design Style Preference",
-              "label": "",
-              "details": "Do you have a preferred landscape style or overall look for your backyard? For example, you might love something clean and modern, classic and timeless, natural and relaxed, or something completely unique to you?"
-            },
-            {
-              "required": true,
-              "id": "hardscape_material_preferences",
-              "max_files": 4,
-              "type": "files_with_description",
-              "name": "Hardscape / Material Preferences",
-              "label": "",
-              "details": "Are there any specific hardscape materials or styles you'd like us to keep in mind for this design?"
-            },
-            {
-              "required": true,
-              "id": "softscape_planting_preferences",
-              "type": "files_with_description",
-              "max_files": 4,
-              "name": "Softscape / Planting Preferences",
-              "label": "",
-              "details": "Are there any plant styles, colors, or types you'd like us to keep in mind?"
-            },
-            {
-              "required": true,
-              "id": "budget",
-              "name": "Budget",
-              "label": "",
-              "details": "What investment range feels most comfortable for this project?",
-              "type": "radio",
-              "options": [
-                "Under $25,000",
-                "$25,000-$50,000",
-                "$50,000-$75,000",
-                "$75,000-$150,000",
-                "$150,000+"
-              ]
-            },
-            {
-              "required": true,
-              "id": "important_proprty_information",
-              "type": "checkbox_with_notes",
-              "name": "Important Property Information",
-              "label": "",
-              "details": "Is there anything else that comes to mind on this property we should know before we wrap up?",
-              "options": [
-                "HOA requirements",
-                "Easements",
-                "Utility lines",
-                "Septic field",
-                "Planned additions",
-                "Accessibility needs",
-                "Other Special considerations"
-              ]
-            }
-          ]
-        },
-        "phase_2": {
-          "title": "DESIGN SUMMARY",
-          "questions": [
-            {
-              "id": "design_summary",
-              "type": "display",
-              "name": "Design Summary",
-              "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
-            },
-            {
-              "required": true,
-              "id": "design_direction_approval",
-              "type": "radio",
-              "name": "Design Direction Approval",
-              "details": "Does this design direction accurately reflect your vision?",
-              "options": {
-                "generate_design": "Yes, Generate My Design",
-                "make_changes": "I'd Like To Make Changes"
-              }
-            }
-          ]
-        },
-        "phase_3": {
-          "title": "RENDERING REVIEW",
-          "questions": [
-            {
-              "id": "render_satisfaction",
-              "name": "Initial Reaction",
-              "details": "Overall, how satisfied are you with this concept?",
-              "label": "",
-              "is_ai_design": true,
-              "type": "display"
-            }
-          ]
-        },
-        "phase_4": {
-          "title": "Revision Requests",
-          "questions": [
-            {
-              "id": "revision_comments",
-              "name": "Revision Comments",
-              "details": "Please share your revision requests, I will incorporate them into the design.",
-              "label": "",
-              "type": "files_with_description",
-              "required": true,
-              "max_files": 4,
-              "placeholder": "Enter your revision comments here..."
-            },
-            {
-              "id": "revision_design_summary",
-              "name": "Revision Design Summary",
-              "details": "Based on your answers, Luna will create a revised design featuring:",
-              "type": "display"
-            }
-          ]
-        }
-      },
-      "whole_property": {
-        "phase_1": {
-          "title": "Whole Property Design",
-          "questions": [
-            {
-              "required": false,
-              "id": "additional_images_upload",
-              "type": "file",
-              "max_files": 4,
-              "name": "Additional House Photos",
-              "label": "",
-              "details": "<p class='mb-3'>First, do you have any additional photo angles of the house that you think are helpful for us to see? If so, please upload them here.</p>"
-            },
-            {
-              "required": false,
-              "id": "supporting_files_upload",
-              "type": "file",
-              "max_files": 4,
-              "name": "Supporting Files Upload",
-              "label": "",
-              "details": "<p class='mb-3'>Do you have any other files that would be helpful like a survey, site plan, inspiration images...?</p> <p class='mb-3'>If so, please upload them.  If not, no worries at all, you can always add them later</p>"
-            },
-            {
-              "required": true,
-              "id": "project_goals_or__brief_description",
-              "type": "textarea",
-              "name": "Project Goals/Brief Description",
-              "label": "",
-              "details": "In a few sentences, tell me what you’d love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind."
-            },
-            {
-              "required": true,
-              "id": "landscape_design_style_preference",
-              "type": "files_with_description",
-              "max_files": 4,
-              "name": "Landscape Design Style Preference",
-              "label": "",
-              "details": "Does your client have a preferred style they are drawn to? For example clean and modern, classic and timeless, natural and relaxed and so on."
-            },
-            {
-              "required": true,
-              "id": "hardscape_material_preferences",
-              "type": "files_with_description",
-              "name": "Hardscape / Material Preferences",
-              "label": "",
-              "max_files": 4,
-              "details": "Are there any specific hardscape materials or styles you'd like us to keep in mind for this design?"
-            },
-            {
-              "required": true,
-              "id": "softscape_planting_preferences",
-              "type": "files_with_description",
-              "name": "Softscape / Planting Preferences",
-              "label": "",
-              "max_files": 4,
-              "details": "Are there any plant styles, colors, or types you'd like us to keep in mind?"
-            },
-            {
-              "required": true,
-              "id": "budget",
-              "name": "Budget",
-              "label": "",
-              "details": "What investment range feels most comfortable for this project?",
-              "type": "radio",
-              "options": [
-                "Under $25,000",
-                "$25,000-$50,000",
-                "$50,000-$75,000",
-                "$75,000-$150,000",
-                "$150,000+"
-              ]
-            },
-            {
-              "required": true,
-              "id": "important_proprty_information",
-              "type": "checkbox_with_notes",
-              "name": "Important Property Information",
-              "label": "",
-              "details": "Is there anything else that comes to mind on this property we should know before we wrap up?",
-              "options": [
-                "HOA requirements",
-                "Easements",
-                "Utility lines",
-                "Septic field",
-                "Planned additions",
-                "Accessibility needs",
-                "Other Special considerations"
-              ]
-            }
-          ]
-        },
-        "phase_2": {
-          "title": "DESIGN SUMMARY",
-          "questions": [
-            {
-              "id": "design_summary",
-              "type": "display",
-              "name": "Design Summary",
-              "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
-            },
-            {
-              "required": true,
-              "id": "design_direction_approval",
-              "type": "radio",
-              "name": "Design Direction Approval",
-              "details": "Does this design direction accurately reflect your vision?",
-              "options": {
-                "generate_design": "Yes, Generate My Design",
-                "make_changes": "I'd Like To Make Changes"
-              }
-            }
-          ]
-        },
-        "phase_3": {
-          "title": "RENDERING REVIEW",
-          "questions": [
-            {
-              "id": "render_satisfaction",
-              "name": "Initial Reaction",
-              "details": "Overall, how satisfied are you with this concept?",
-              "label": "",
-              "is_ai_design": true,
-              "type": "display"
-            }
-          ]
-        },
-        "phase_4": {
-          "title": "Revision Requests",
-          "questions": [
-            {
-              "id": "revision_comments",
-              "name": "Revision Comments",
-              "details": "Please share your revision requests, I will incorporate them into the design.",
-              "label": "",
-              "type": "files_with_description",
-              "required": true,
-              "max_files": 4,
-              "placeholder": "Enter your revision comments here..."
-            },
-            {
-              "id": "revision_design_summary",
-              "name": "Revision Design Summary",
-              "details": "Based on your answers, Luna will create a revised design featuring:",
-              "type": "display"
-            }
-          ]
-        }
-      },
-      "custom": {
-        "phase_1": {
-          "title": "Custom Request",
-          "questions": [
-            {
-              "required": true,
-              "id": "project_goals_or_brief_description",
-              "type": "textarea",
-              "name": "Project Goals/Brief Description",
-              "label": "",
-              "details": "Give me a brief overview of what you are looking to do?"
-            },
-            {
-              "required": false,
-              "id": "additional_images_upload",
-              "type": "file",
-              "max_files": 4,
-              "name": "Inspirational Photos",
-              "label": "",
-              "details": "<p class='mb-3'>Do you have any inspirational photos you would like me to analyze that portray the look or feel you are trying to achieve?.</p>"
-            }
-          ]
-        },
-        "phase_2": {
-          "title": "DESIGN SUMMARY",
-          "questions": [
-            {
-              "id": "design_summary",
-              "type": "display",
-              "name": "Design Summary",
-              "details": "I let me generate an initial rendering based on my understanding of what you are looking for."
-            },
-            {
-              "required": true,
-              "id": "design_direction_approval",
-              "type": "radio",
-              "name": "Design Direction Approval",
-              "details": "Does this design direction accurately reflect your vision?",
-              "options": {
-                "generate_design": "Yes, Generate My Design",
-                "make_changes": "I'd Like To Make Changes"
-              }
-            }
-          ]
-        },
-        "phase_3": {
-          "title": "RENDERING REVIEW",
-          "questions": [
-            {
-              "id": "render_satisfaction",
-              "name": "Initial Reaction",
-              "details": "Does this rendering capture what you are looking for?  If not, please describe the issues you are seeing.",
-              "label": "",
-              "is_ai_design": true,
-              "type": "display"
-            }
-          ]
-        },
-        "phase_4": {
-          "title": "Revision Requests",
-          "questions": [
-            {
-              "id": "revision_comments",
-              "name": "Feedback",
-              "details": "Let me know incorporate this feedback and re-render now.",
-              "label": "",
-              "type": "files_with_description",
-              "required": true,
-              "max_files": 4,
-              "placeholder": "Enter your feedback here..."
-            },
-            {
-              "id": "revision_design_summary",
-              "name": "Design Summary",
-              "details": "Based on your answers, Luna will create a revised design featuring:",
-              "type": "display"
-            }
-          ]
-        }
-      },
-      "value_added_services": {
-        "phase_1": {
-          "title": "Value Added Services",
-          "questions": [
-            {
-              "required": true,
-              "id": "Service Selection",
-              "type": "radio",
-              "name": "service_selection",
-              "label": "",
-              "details": "What updates or changes would you like to make to your existing design?",
-              "options": [
-                "New Plantings/Materials",
-                "New area",
-                "Custom Request"
-              ]
-            },
-            {
-              "required": false,
-              "id": "supporting_files_upload",
-              "type": "files_with_description",
-              "max_files": 4,
-              "name": "Supporting Files Upload (Optional)",
-              "label": "",
-              "details": "<p class='mb-3'>Have any project files you'd like to share? Feel free to upload them here!</p> <p class='mb-3'>This could include <b>surveys, site plans, PDFs, SketchUp models (.SKP), architectural drawings, inspiration images, or any other documents</b> that will help us better understand your project.</p> <p>If you don't have any supporting files, simply continue to the next step, you can always add them later!</p>"
-            },
-            {
-              "required": true,
-              "id": "project_goals_or_brief_description",
-              "type": "textarea",
-              "name": "Project Goals/Brief Description",
-              "label": "",
-              "details": "In a few sentences, tell me what you’d love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind; I’d love to hear them."
-            }
-          ]
-        },
-        "phase_2": {
-          "title": "DESIGN SUMMARY",
-          "questions": [
-            {
-              "id": "design_summary",
-              "type": "display",
-              "name": "Design Summary",
-              "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?"
-            },
-            {
-              "required": true,
-              "id": "design_direction_approval",
-              "type": "radio",
-              "name": "Design Direction Approval",
-              "details": "Does this design direction accurately reflect your vision?",
-              "options": {
-                "generate_design": "Yes, Generate My Design",
-                "make_changes": "I'd Like To Make Changes"
-              }
-            }
-          ]
-        },
-        "phase_3": {
-          "title": "RENDERING REVIEW",
-          "questions": [
-            {
-              "id": "render_satisfaction",
-              "name": "Initial Reaction",
-              "details": "Overall, how satisfied are you with this concept?",
-              "label": "",
-              "is_ai_design": true,
-              "type": "display"
-            }
-          ]
-        },
-        "phase_4": {
-          "title": "Revision Requests",
-          "questions": [
-            {
-              "id": "revision_comments",
-              "name": "Revision Comments",
-              "details": "Please share your revision requests, I will incorporate them into the design.",
-              "label": "",
-              "type": "files_with_description",
-              "required": true,
-              "max_files": 4,
-              "placeholder": "Enter your revision comments here..."
-            },
-            {
-              "id": "revision_design_summary",
-              "name": "Revision Design Summary",
-              "details": "Based on your answers, Luna will create a revised design featuring:",
-              "type": "display"
-            }
-          ]
-        }
-      }
     }
-  },
-  "enterprise-client": {
-    "landscape-design": {
-      "phase_1": {
-        "title": "PROPERTY VERIFICATION & SITE ASSESSMENT",
-        "questions": [
-          {
-            "id": "property_verified",
-            "name": "Verify Property",
-            "details": "Please confirm this is the property you would like redesigned",
-            "type": "radio",
-            "is_property_address": true,
-            "required": true,
-            "label": "",
-            "options": {
-              "yes": "Yes, this is correct",
-              "no": "No, this is not the correct property"
-            }
-          },
-          {
-            "id": "most_important_improvement",
-            "name": "Most Important Improvement",
-            "details": "What is the single most important thing you would like to improve about your property?",
-            "type": "checkbox",
-            "label": "",
-            "required": true,
-            "options": [
-              "Better curb appeal",
-              "More entertaining space",
-              "Increased privacy",
-              "Improved functionality",
-              "Better landscaping",
-              "Better curb appeal",
-              "Improved outdoor dining ",
-              "Family gathering space",
-              "Low-maintenance design "
-            ]
-          },
-          {
-            "id": "site_concerns",
-            "name": "Site Concerns",
-            "details": "Are there any issues you would like the new design to help solve?",
-            "type": "checkbox",
-            "label": "Select all that apply:",
-            "required": true,
-            "options": [
-              "Drainage Issues",
-              "Lack of Privacy",
-              "Difficult Maintenance",
-              "Outdated Appearance",
-              "Lack of Outdoor Living Space",
-              "Poor Functionality",
-              "Too Much Shade",
-              "Too Much Sun",
-              "Standing Water",
-              "No Major Concerns"
-            ]
-          },
-          {
-            "id": "existing_features",
-            "name": "Existing Features",
-            "details": "Which existing features would you like to preserve in the new design?",
-            "label": "Select all that apply:",
-            "type": "checkbox",
-            "required": true,
-            "options": [
-              "Existing Patio",
-              "Covered Patio",
-              "Deck",
-              "Pool",
-              "Hot Tub",
-              "Mature Trees",
-              "Lawn Areas",
-              "Fencing",
-              "Existing Garden Beds",
-              "Existing Landscape Features",
-              "Other"
-            ]
-          },
-          {
-            "id": "important_property_notes",
-            "name": "Important Property Notes",
-            "details": "Is there anything about your property that Luna should know before creating your design?",
-            "type": "checkbox",
-            "label": "",
-            "required": true,
-            "options": [
-              "HOA requirements",
-              "Utility lines",
-              "Easements",
-              "Septic field",
-              "Planned additions",
-              "Accessibility needs",
-              "Other"
-            ]
-          },
-          {
-            "id": "ai_site_assessment",
-            "name": "AI Site Assessment",
-            "details": "Luna automatically analyzes: ",
-            "type": "multi_questions",
-            "required": true,
-            "label": "",
-            "multi_questions": [
-              {
-                "id": "ai_site_assessment_existing_conditions",
-                "name": "Existing Conditions",
-                "type": "checkbox",
-                "required": true,
-                "label": "Existing Conditions",
-                "options": [
-                  "Existing structures",
-                  "Existing landscape features",
-                  "Architectural style ",
-                  "Sun/shade observations",
-                  "Privacy observations"
-                ]
-              },
-              {
-                "id": "ai_site_assessment_opportunities",
-                "name": "Opportunities",
-                "type": "checkbox",
-                "required": true,
-                "label": "Opportunities",
-                "options": [
-                  "Privacy enhancement opportunities ",
-                  "Landscape enhancement opportunities ",
-                  "Outdoor living opportunities ",
-                  "Circulation improvements ",
-                  "Lighting opportunities "
-                ]
-              },
-              {
-                "id": "ai_site_assessment_potential_constraints",
-                "name": "Potential Constraints ",
-                "type": "checkbox",
-                "required": true,
-                "label": "Potential Constraints",
-                "options": [
-                  "Drainage concerns ",
-                  "Grade changes ",
-                  "Existing structures ",
-                  "Space limitations "
-                ]
-              }
-            ]
-          },
-          {
-            "id": "assessment_confirmation",
-            "name": "Assessment Confirmation",
-            "details": "Does this assessment look accurate?",
-            "type": "radio",
-            "required": true,
-            "label": "",
-            "options": {
-              "yes_continue": "Yes, Continue",
-              "correction": "I&apos;d Like to Make Corrections"
-            }
-          }
-        ]
-      },
-      "phase_2": {
-        "title": "DESIGN DISCOVERY",
-        "questions": [
-          {
-            "id": "primary_uses",
-            "name": "Primary Uses",
-            "details": "How do you plan to use this space most often?",
-            "type": "checkbox",
-            "label": "Select all that apply:",
-            "required": true,
-            "options": [
-              "Relaxation",
-              "Entertaining Guests",
-              "Outdoor Dining",
-              "Family Activities",
-              "Pets",
-              "Gardening",
-              "Cooking & Grilling",
-              "Fire Feature",
-              "Pool Activities",
-              "Hot Tub",
-              "Watching TV Outdoors"
-            ]
-          },
-          {
-            "id": "must_have_features",
-            "name": "Must-Have Features",
-            "details": "What features would you most like to include?",
-            "type": "checkbox",
-            "label": "",
-            "required": true,
-            "max_selection": 5,
-            "options": [
-              "Fire Pit",
-              "Outdoor Fireplace",
-              "Outdoor Kitchen",
-              "Dining Area",
-              "Pergola",
-              "Covered Structure",
-              "Hot Tub",
-              "Pool",
-              "Water Feature",
-              "Landscape Lighting",
-              "Privacy Screening",
-              "Garden Beds",
-              "Seating Area",
-              "Bar Area"
-            ]
-          },
-          {
-            "id": "design_style",
-            "name": "Design Style",
-            "details": "Which design style best reflects your vision?",
-            "type": "radio",
-            "label": "",
-            "required": true,
-            "options": [
-              "Transitional",
-              "Traditional",
-              "Modern",
-              "Contemporary",
-              "Farmhouse",
-              "Cottage Garden",
-              "Mediterranean",
-              "Resort Style",
-              "Rustic",
-              "Not Sure"
-            ]
-          },
-          {
-            "id": "desired_feeling",
-            "name": "Desired Feeling",
-            "details": "How would you like the space to feel?",
-            "type": "checkbox",
-            "label": "",
-            "required": true,
-            "max_selection": 3,
-            "options": [
-              "Relaxing",
-              "Cozy",
-              "Elegant",
-              "Luxurious",
-              "Family-Friendly",
-              "Natural",
-              "Private",
-              "Resort-Like",
-              "Timeless",
-              "Entertaining Focused",
-              "Modern",
-              "Romantic"
-            ]
-          },
-          {
-            "id": "design_preferences",
-            "name": "Design Preferences",
-            "details": "What would you prefer NOT to see in your design?",
-            "label": "Select all that apply:",
-            "required": true,
-            "type": "checkbox",
-            "options": [
-              "High Maintenance Landscaping",
-              "Bright Flower Colors",
-              "Large Patio Areas",
-              "Modern Architecture",
-              "Formal Landscaping",
-              "Artificial Turf",
-              "Water Features",
-              "Dense Planting",
-              "Large Trees Near House",
-              "Other"
-            ]
-          },
-          {
-            "id": "material_preferences_material",
-            "name": "Material Preferences (Materials)",
-            "details": "Which materials do you prefer?",
-            "type": "checkbox",
-            "label": "",
-            "required": true,
-            "options": [
-              "Natural Stone",
-              "Brick",
-              "Porcelain Pavers",
-              "Concrete",
-              "Cedar",
-              "Teak",
-              "Composite Materials"
-            ]
-          },
-          {
-            "id": "material_preferences_accent_colors",
-            "name": "Material Preferences (Accent Colors)",
-            "details": "Which accent colors do you prefer?",
-            "type": "checkbox",
-            "label": "",
-            "required": true,
-            "options": [
-              "Black",
-              "Bronze",
-              "White",
-              "Natural Wood",
-              "Gray",
-              "Earth Tones"
-            ]
-          },
-          {
-            "id": "evening_use_lighting",
-            "name": "Evening Use & Lighting",
-            "details": "How important is evening use and outdoor lighting?",
-            "type": "radio",
-            "required": true,
-            "options": [
-              "Not Important",
-              "Somewhat Important",
-              "Very Important"
-            ]
-          },
-          {
-            "id": "privacy_importance",
-            "name": "Privacy Importance",
-            "details": "How important is privacy?",
-            "type": "radio",
-            "required": true,
-            "options": [
-              "Not Important",
-              "Somewhat Important",
-              "Very Important"
-            ]
-          },
-          {
-            "id": "maintenance_preference",
-            "name": "Maintenance Preference",
-            "details": "How much ongoing maintenance are you comfortable with?",
-            "type": "radio",
-            "required": true,
-            "options": [
-              "Low",
-              "Medium",
-              "High"
-            ]
-          },
-          {
-            "id": "budget_range",
-            "name": "Budget Range",
-            "details": "What investment range feels comfortable for this project?",
-            "type": "radio",
-            "required": true,
-            "options": [
-              "Under $25,000",
-              "$25,000-$50,000",
-              "$50,000-$75,000",
-              "$75,000-$150,000",
-              "$150,000+"
-            ]
-          },
-          {
-            "id": "defining_success",
-            "name": "Defining Success",
-            "details": "If we could only accomplish ONE thing with this design, what would make you happiest?",
-            "type": "textarea"
-          }
-        ]
-      },
-      "phase_3": {
-        "title": "DESIGN BRIEF APPROVAL",
-        "questions": [
-          {
-            "id": "design_summary",
-            "name": "Design Summary",
-            "details": "Based on your answers, Luna will create a design featuring:",
-            "example": "<ul><li>Style Direction</li><li>Desired Feelings</li><li>Primary Activities</li><li>Must-Have Features</li><li>Material Preferences</li><li>Landscape Strategy</li><li>Privacy Strategy</li><li>Lighting Strategy</li></ul>"
-          },
-          {
-            "id": "design_direction_approval",
-            "name": "Design Direction Approval",
-            "details": "Does this design direction accurately reflect your vision?",
-            "type": "radio",
-            "required": true,
-            "options": {
-              "generate_design": "Yes, Generate My Design",
-              "make_changes": "I'd Like To Make Changes"
-            }
-          }
-        ]
-      },
-      "phase_4": {
-        "title": "RENDERING REVIEW",
-        "questions": [
-          {
-            "id": "render_satisfaction",
-            "name": "Initial Reaction",
-            "details": "Overall, how satisfied are you with this concept?",
-            "label": "",
-            "is_ai_design": true,
-            "type": "radio",
-            "required": true,
-            "options": [
-              "Love It",
-              "Mostly Like It",
-              "Needs Changes"
-            ]
-          }
-        ]
-      },
-      "phase_5": {
-        "title": "Revision Requests",
-        "questions": [
-          {
-            "id": "architecture_changes",
-            "name": "Architecture",
-            "details": "What would you like adjusted?",
-            "label": "",
-            "type": "radio",
-            "required": true,
-            "options": [
-              "Roof",
-              "Porch",
-              "Windows",
-              "Doors",
-              "Don't Change"
-            ]
-          },
-          {
-            "id": "hardscape_changes",
-            "name": "Hardscape",
-            "details": "What would you like adjusted?",
-            "label": "",
-            "required": true,
-            "type": "radio",
-            "options": [
-              "Patio",
-              "Walkways",
-              "Fire Pit",
-              "Seating Areas",
-              "Don't Change"
-            ]
-          },
-          {
-            "id": "landscape_changes",
-            "details": "What would you like adjusted?",
-            "name": "Landscaping",
-            "label": "",
-            "required": true,
-            "type": "radio",
-            "options": [
-              "Trees",
-              "Shrubs",
-              "Flowers",
-              "Privacy Plantings",
-              "Don't Change"
-            ]
-          },
-          {
-            "id": "material_changes",
-            "name": "Materials",
-            "details": "What would you like adjusted?",
-            "label": "",
-            "type": "radio",
-            "required": true,
-            "options": [
-              "Colors",
-              "Stone",
-              "Wood",
-              "Don't Change"
-            ]
-          },
-          {
-            "id": "other_revision_notes",
-            "name": "Design Priorities",
-            "details": "Any additional design preferences, special requests, or must-have features?",
-            "label": "",
-            "type": "textarea"
-          },
-          {
-            "id": "revision_design_summary",
-            "name": "Revision Design Summary",
-            "details": "Based on your answers, Luna will create a revised design featuring:"
-          }
-        ]
-      },
-      "phase_6": {
-        "title": "Revision Design Review",
-        "questions": [
-          {
-            "id": "revision_approval",
-            "name": "Revision Approval",
-            "is_ai_design": true,
-            "details": "Would you like another revision?",
-            "type": "radio",
-            "required": true,
-            "options": {
-              "yes": "Yes",
-              "approve": "No, Approve Design"
-            }
-          }
-        ]
-      }
-    },
-    "color-material": {
-      "phase_1": {
-        "title": "PROPERTY VERIFICATION & EXISTING CONDITIONS",
-        "questions": [
-          {
-            "id": "property_verified",
-            "name": "Verify Property",
-            "details": "Please confirm this is the property you would like redesigned",
-            "type": "radio",
-            "is_property_address": true,
-            "required": true,
-            "label": "",
-            "options": {
-              "yes": "Yes, this is correct",
-              "no": "No, this is not the correct property"
-            }
-          },
-          {
-            "id": "current_challenges",
-            "name": "Current Challenges",
-            "details": "What would you like to improve?",
-            "label": "Select all that apply",
-            "type": "checkbox",
-            "required": true,
-            "options": [
-              "Better Curb Appeal",
-              "Home Feels Outdated",
-              "Too Much Brick",
-              "Too Many Different Materials",
-              "Colors Feel Dated",
-              "House Lacks Character",
-              "Doesn't Match Neighborhood",
-              "Preparing to Sell",
-              "Recently Purchased Home",
-              "No Major Concerns"
-            ]
-          },
-          {
-            "id": "planned_improvements",
-            "name": "Planned Improvements",
-            "details": "Which exterior elements are you planning to update?",
-            "required": true,
-            "label": "Select all that apply",
-            "type": "checkbox",
-            "options": [
-              "Paint Only",
-              "Siding",
-              "Brick Color",
-              "Stone",
-              "Roof",
-              "Front Door",
-              "Garage Doors",
-              "Windows",
-              "Shutters",
-              "Columns",
-              "Trim",
-              "Gutters",
-              "Porch",
-              "Lighting",
-              "Other",
-              "Not Sure"
-            ]
-          },
-          {
-            "id": "existing_materials",
-            "name": "Existing Materials",
-            "details": "Which existing materials would you like to KEEP?",
-            "type": "checkbox",
-            "required": true,
-            "label": "Select all that apply",
-            "options": [
-              "Brick",
-              "Stone",
-              "Siding",
-              "Stucco",
-              "Board & Batten",
-              "Shake Siding",
-              "Roof",
-              "Windows",
-              "Garage Doors",
-              "Front Door",
-              "Columns",
-              "Gutters",
-              "Shutters",
-              "None - Open to Everything"
-            ]
-          },
-          {
-            "id": "most_important_goal",
-            "name": "Most Important Goal",
-            "details": "If we could accomplish ONE thing with this design, what would make you happiest?",
-            "type": "radio",
-            "required": true,
-            "label": "",
-            "options": [
-              "Modernize the home",
-              "Make it timeless",
-              "Increase curb appeal",
-              "Brighten the exterior",
-              "Add warmth",
-              "Make it look more luxurious",
-              "Preserve its traditional character"
-            ]
-          },
-          {
-            "id": "ai_home_assessment",
-            "name": "AI Home Assessment",
-            "details": "Luna automatically analyzes:",
-            "type": "multi_questions",
-            "required": true,
-            "label": "",
-            "multi_questions": [
-              {
-                "id": "existing_architecture",
-                "name": "Existing Architecture",
-                "type": "checkbox",
-                "required": true,
-                "label": "Existing Architecture",
-                "options": [
-                  "Architectural style",
-                  "Roof shape",
-                  "Material proportions",
-                  "Window style",
-                  "Trim details",
-                  "Existing color palette"
-                ]
-              },
-              {
-                "id": "opportunities",
-                "name": "Opportunities",
-                "type": "checkbox",
-                "required": true,
-                "label": "Opportunities",
-                "options": [
-                  "Improve contrast",
-                  "Simplify materials",
-                  "Modernize finishes",
-                  "Enhance focal points",
-                  "Improve architectural balance"
-                ]
-              },
-              {
-                "id": "design_constraints",
-                "name": "Design Constraints",
-                "type": "checkbox",
-                "required": true,
-                "label": "Design Constraints",
-                "options": [
-                  "Existing materials that should remain",
-                  "Architectural features",
-                  "Material transitions",
-                  "Roof compatibility"
-                ]
-              }
-            ]
-          },
-          {
-            "id": "assessment_confirmation",
-            "name": "Assessment Confirmation",
-            "details": "Does this assessment look accurate?",
-            "type": "radio",
-            "required": true,
-            "options": {
-              "yes_continue": "Yes, Continue",
-              "correction": "I'd Like to Make Corrections"
-            }
-          }
-        ]
-      },
-      "phase_2": {
-        "title": "DESIGN DISCOVERY",
-        "questions": [
-          {
-            "id": "architectural_style",
-            "name": "Architectural Style",
-            "details": "Which overall design style do you prefer?",
-            "type": "radio",
-            "label": "",
-            "required": true,
-            "options": [
-              "Traditional",
-              "Transitional",
-              "Modern Farmhouse",
-              "Contemporary",
-              "Craftsman",
-              "Colonial",
-              "Tudor",
-              "Cape Cod",
-              "Mediterranean",
-              "Modern",
-              "Scandinavian",
-              "Not Sure"
-            ]
-          },
-          {
-            "id": "color_direction",
-            "name": "Color Direction",
-            "details": "Which color palette do you naturally gravitate toward?",
-            "type": "radio",
-            "label": "",
-            "required": true,
-            "options": [
-              "Warm Whites",
-              "Cool Whites",
-              "Soft Grays",
-              "Earth Tones",
-              "Charcoal & Black",
-              "Natural Wood Accents",
-              "Deep Green",
-              "Navy Blue",
-              "Mixed Neutrals",
-              "I'm Not Sure"
-            ]
-          },
-          {
-            "id": "material_preferences",
-            "name": "Material Preferences",
-            "details": "Which materials appeal to you?",
-            "type": "radio",
-            "label": "",
-            "required": true,
-            "options": [
-              "Painted Brick",
-              "Natural Brick",
-              "Limestone",
-              "Fieldstone",
-              "Cedar",
-              "Wood Siding",
-              "Vertical Board & Batten",
-              "Lap Siding",
-              "Shake Siding",
-              "Metal Accents",
-              "Copper",
-              "Black Windows",
-              "Bronze Windows",
-              "Natural Wood Garage Doors"
-            ]
-          },
-          {
-            "id": "desired_feeling",
-            "name": "Desired Feeling",
-            "details": "How would you like your home to feel?",
-            "type": "checkbox",
-            "label": "",
-            "required": true,
-            "max_selection": 3,
-            "options": [
-              "Warm",
-              "Inviting",
-              "Elegant",
-              "Timeless",
-              "Luxurious",
-              "Bright",
-              "Bold",
-              "Classic",
-              "Modern",
-              "Natural",
-              "Sophisticated",
-              "Cozy"
-            ]
-          },
-          {
-            "id": "contrast_level",
-            "name": "Contrast Level",
-            "details": "How much contrast would you like?",
-            "type": "radio",
-            "label": "",
-            "required": true,
-            "options": [
-              "Very Soft",
-              "Moderate",
-              "High Contrast",
-              "Dramatic"
-            ]
-          },
-          {
-            "id": "inspiration",
-            "name": "Inspiration",
-            "details": "Upload photos that reflect the style, colors, materials, or overall look you'd like us to incorporate into your project.",
-            "type": "file",
-            "label": "",
-            "required": true,
-            "max_files": 6
-          },
-          {
-            "id": "design_preferences",
-            "name": "Design Preferences",
-            "details": "What would you prefer NOT to see?",
-            "type": "checkbox",
-            "label": "Select all that apply:",
-            "required": true,
-            "options": [
-              "Bright White",
-              "Dark Exteriors",
-              "Heavy Stone",
-              "Painted Brick",
-              "Black Windows",
-              "Modern Features",
-              "Rustic Materials",
-              "Multiple Materials",
-              "High Contrast",
-              "Bold Colors"
-            ]
-          }
-        ]
-      },
-      "phase_3": {
-        "title": "PRODUCT & MATERIAL RECOMMENDATIONS",
-        "questions": [
-          {
-            "id": "budget",
-            "name": "Budget",
-            "details": "What investment range feels comfortable?",
-            "type": "radio",
-            "label": "",
-            "required": true,
-            "options": [
-              "Under $25,000",
-              "$25,000–$50,000",
-              "$50,000–$75,000",
-              "$75,000–$150,000",
-              "$150,000+"
-            ]
-          },
-          {
-            "id": "brand_preference",
-            "name": "Brand Preference",
-            "details": "Which paint brands do you prefer?",
-            "type": "radio",
-            "label": "",
-            "required": true,
-            "options": [
-              "Sherwin-Williams",
-              "Benjamin Moore",
-              "Behr",
-              "PPG",
-              "No Preference"
-            ]
-          },
-          {
-            "id": "material_brands",
-            "name": "Material Brands",
-            "details": "Would you like to use specific products?",
-            "type": "checkbox",
-            "label": "",
-            "required": true,
-            "options": [
-              "James Hardie",
-              "LP SmartSide",
-              "Nichiha",
-              "CertainTeed",
-              "Versetta Stone",
-              "Boral",
-              "No Preference"
-            ]
-          }
-        ]
-      },
-      "phase_4": {
-        "title": "MOOD BOARD APPROVAL",
-        "questions": [
-          {
-            "id": "design_summary",
-            "name": "Design Summary",
-            "type": "display",
-            "example": "<ul><li>Architectural Style</li><li>Color Direction</li><li>Primary Exterior Materials</li><li>Accent Materials</li><li>Window & Trim Strategy</li><li>Front Door Direction</li><li>Garage Door Direction</li><li>Roof Coordination</li></ul>"
-          },
-          {
-            "id": "design_direction_approval",
-            "name": "Approval",
-            "details": "Does this design direction accurately reflect your vision?",
-            "type": "radio",
-            "required": true,
-            "options": {
-              "generate_design": "Yes, Generate My Design",
-              "make_changes": "I'd Like To Make Changes"
-            }
-          }
-        ]
-      },
-      "phase_5": {
-        "title": "RENDERING REVIEW",
-        "questions": [
-          {
-            "id": "render_satisfaction",
-            "name": "Initial Reaction",
-            "details": "How satisfied are you with this design?",
-            "label": "",
-            "is_ai_design": true,
-            "type": "radio",
-            "required": true,
-            "options": [
-              "Love It",
-              "Mostly Like It",
-              "Needs Changes"
-            ]
-          }
-        ]
-      },
-      "phase_6": {
-        "title": "Revision Requests",
-        "questions": [
-          {
-            "id": "colors",
-            "name": "Colors",
-            "details": "What would you like adjusted?",
-            "label": "Colors",
-            "required": true,
-            "type": "checkbox",
-            "options": [
-              "Main Color",
-              "Accent Color",
-              "Trim Color",
-              "Front Door Color"
-            ]
-          },
-          {
-            "id": "materials",
-            "name": "Materials",
-            "details": "What would you like adjusted?",
-            "label": "Materials",
-            "type": "checkbox",
-            "required": true,
-            "options": [
-              "Brick",
-              "Stone",
-              "Siding",
-              "Roof",
-              "Garage Doors",
-              "Windows"
-            ]
-          },
-          {
-            "id": "architectural_details",
-            "name": "Architectural Details",
-            "details": "What would you like adjusted?",
-            "label": "Architectural Details",
-            "required": true,
-            "type": "checkbox",
-            "options": [
-              "Columns",
-              "Shutters",
-              "Porch Details",
-              "Decorative Trim"
-            ]
-          },
-          {
-            "id": "other_revision_notes",
-            "name": "Design Priorities",
-            "details": "Any additional design preferences, special requests, or must-have features?",
-            "label": "",
-            "type": "textarea"
-          },
-          {
-            "id": "revision_design_summary",
-            "name": "Revision Design Summary",
-            "details": "Based on your answers, Luna will create a revised design featuring:"
-          }
-        ]
-      },
-      "phase_7": {
-        "title": "Revision Design Review",
-        "questions": [
-          {
-            "id": "revision_approval",
-            "name": "Revision Approval",
-            "is_ai_design": true,
-            "details": "Would you like another revision?",
-            "type": "radio",
-            "required": true,
-            "options": {
-              "yes": "Yes",
-              "approve": "No, Approve Design"
-            }
-          }
-        ]
-      },
-      "phase_8": {
-        "title": "PRODUCT & MATERIAL RECOMMENDATIONS",
-        "questions": [
-          {
-            "id": "budget",
-            "name": "Budget",
-            "details": "What investment range feels comfortable?",
-            "type": "radio",
-            "required": true,
-            "label": "",
-            "options": [
-              "Budget Friendly",
-              "Mid-Range",
-              "Premium",
-              "Luxury"
-            ]
-          },
-          {
-            "id": "paint_brand_preference",
-            "name": "Brand Preference",
-            "details": "Which paint brands do you prefer?",
-            "type": "checkbox",
-            "required": true,
-            "label": "",
-            "options": [
-              "Sherwin-Williams",
-              "Benjamin Moore",
-              "Behr",
-              "PPG",
-              "No Preference"
-            ]
-          },
-          {
-            "id": "material_brand_preference",
-            "name": "Material Brands",
-            "details": "Would you like Luna to recommend specific products?",
-            "type": "checkbox",
-            "required": true,
-            "label": "",
-            "options": [
-              "James Hardie",
-              "LP SmartSide",
-              "Nichiha",
-              "CertainTeed",
-              "Versetta Stone",
-              "Boral",
-              "No Preference"
-            ]
-          },
-          {
-            "id": "final_deliverables",
-            "name": "Final Deliverables",
-            "type": "display",
-            "required": true,
-            "example": "<ul><li>Photorealistic Exterior Rendering</li><li>Complete Color Palette</li><li>Paint Brand Recommendations</li><li>Paint Color Codes</li><li>Material Recommendations</li><li>Product Quantities (when applicable)</li><li>Roof Color Suggestions</li><li>Front Door Recommendations</li><li>Garage Door Recommendations</li><li>Exterior Lighting Suggestions</li><li>Material Shopping List</li><li>Estimated Budget</li><li>Contractor Recommendations</li></ul>"
-          }
-        ]
-      },
-      "phase_9": {
-        "title": "IMPLEMENTATION GUIDE",
-        "questions": [
-          {
-            "id": "project_scope",
-            "name": "Project Scope",
-            "details": "Who will complete your project?",
-            "type": "radio",
-            "options": [
-              "DIY",
-              "Painting Contractor",
-              "General Contractor",
-              "Full Exterior Remodel"
-            ]
-          },
-          {
-            "id": "contractor_priorities",
-            "name": "Contractor Priorities",
-            "details": "What matters most?",
-            "type": "checkbox",
-            "options": [
-              "Price",
-              "Craftsmanship",
-              "Communication",
-              "Speed",
-              "Design Quality"
-            ]
-          }
-        ]
-      }
-    }
-  }
 }

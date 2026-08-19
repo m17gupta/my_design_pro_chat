@@ -826,6 +826,33 @@ describe("buildEpisodesFromContext (AllQuestion.json)", () => {
     question_sets: { original: ["phase_1"], revision: ["phase_4"] },
   };
 
+  it("uses dynamic API questionnaires when provided", () => {
+    const dynamicData = {
+      enterprise: {
+        "color-material": {
+          color_material: {
+            p1: {
+              title: "API Dynamic Phase",
+              questions: [
+                { id: "api_q1", name: "Dynamic API Question", type: "radio", options: ["A", "B"] },
+              ],
+            },
+          },
+        },
+      },
+    };
+    const eps = buildEpisodesFromContext(
+      {
+        role: "enterprise",
+        user_type: "color-material",
+        work_type: "color_material",
+        question_sets: { original: ["p1"], revision: [] },
+      },
+      dynamicData
+    );
+    expect(eps.map((e) => e.apiKey)).toEqual(["overview", "api_q1", "summary", "api_q1"]);
+  });
+
   it("falls back to the legacy flow when the role has no AllQuestion.json path", () => {
     expect(buildEpisodesFromContext({ role: "homeowner", work_type: "front_yard" })).toEqual(
       buildEpisodes("front_yard")

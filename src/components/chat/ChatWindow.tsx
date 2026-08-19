@@ -53,10 +53,9 @@ import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { buildApiPayload } from "@/lib/apiBrief";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
-import { hydrateProject } from "../../store/persistence/persistenceThunk";
-import { hydrationSkipped } from "../../store/persistence/persistenceSlice";
 
 import GetAllProjectData from "./GetAllProjectData";
+import { selectQuestionnairesData } from "../../store/questionnaires/questionnaireSlice";
 
 let idCounter = 0;
 const nextId = () => `m-${Date.now()}-${idCounter++}`;
@@ -121,6 +120,8 @@ export default function ChatWindow() {
   const busyRef = useRef(false);
   const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>({});
 
+  const questionnaires = useAppSelector(selectQuestionnairesData);
+
   // Build the flow from the full brief context: enterprise / enterprise-client
   // roles resolve their phases from AllQuestion.json via question_sets;
   // everything else falls back to the legacy per-work-type flow.
@@ -135,16 +136,19 @@ export default function ChatWindow() {
     }),
     [work_type, user_type, role, question_sets, custom_engage_designer, dc_name]
   );
-  const episodes = useMemo(() => buildEpisodesFromContext(flowContext), [flowContext]);
+  const episodes = useMemo(
+    () => buildEpisodesFromContext(flowContext, questionnaires),
+    [flowContext, questionnaires]
+  );
   // The revision loop's card apiKey ("revision" for legacy / most flows).
   const revisionKey = useMemo(() => revisionApiKey(episodes), [episodes]);
   // Checklist labels follow the flow: phases for AllQuestion flows, the
   // work-type-specific static list for the legacy flows.
   const checklist = useMemo(
     () =>
-      checklistFromFlowContext(flowContext) ??
+      checklistFromFlowContext(flowContext, questionnaires) ??
       checklistForWorkType(work_type ?? undefined),
-    [flowContext, work_type]
+    [flowContext, questionnaires, work_type]
   );
 
   const briefPayloadRef = useRef(briefPayload);
@@ -275,9 +279,9 @@ export default function ChatWindow() {
         original: briefPayloadRef.current.original,
         design: entriesRef.current,
         rating,
-        action,
+        action:"custom",
       };
-      console.log("hit action cutsom")
+      console.log("hit action cutsom", data)
       postToHost({ action: HOST_ACTION_CUSTOM_PROJECT, data });
       setSubmittedAction(action);
     },
@@ -320,7 +324,7 @@ export default function ChatWindow() {
         setCompleted((prev) => new Set(prev).add(checklistId));
       }
       if (ep.api && structuredAnswer !== undefined) {
-        dispatch(answerQuestion({ apiKey: ep.apiKey, answer: structuredAnswer }));
+        dispatch(answerQuestion({ apiKey: ep.apiKey, answer: structuredAnswer, questionnaires }));
       }
       if (filesByField) {
         // Revision rounds are keyed by their round-specific message id so each
@@ -434,7 +438,7 @@ export default function ChatWindow() {
             answer = prevItem?.answer;
           }
           if (answer !== undefined) {
-            dispatch(answerQuestion({ apiKey, answer }));
+            dispatch(answerQuestion({ apiKey, answer, questionnaires }));
           }
         }
       }
@@ -542,7 +546,7 @@ export default function ChatWindow() {
         }
         if (ep.api) {
           const apiKey = ep.apiKey;
-          dispatch(answerQuestion({ apiKey, answer: result.answer }));
+          dispatch(answerQuestion({ apiKey, answer: result.answer, questionnaires }));
         }
         if (baseEpId === revisionKey) {
           const ans = result.answer;
