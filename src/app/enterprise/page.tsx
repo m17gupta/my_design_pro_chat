@@ -1,4 +1,5 @@
 import ChatWindow from "@/components/chat/ChatWindow";
+import GetAllProjectData from "@/components/chat/GetAllProjectData";
 import UpdateProjectData from "@/components/chat/UpdateProjectData";
 import { Suspense } from "react";
 
@@ -11,6 +12,7 @@ const page = () => {
         </div>
       }
     >
+      <GetAllProjectData />
       <UpdateProjectData />
       <ChatWindow />
     </Suspense>

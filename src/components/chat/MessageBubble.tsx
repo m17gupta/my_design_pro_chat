@@ -177,7 +177,7 @@ export const MessageBubble = ({
         originalEntry.status === "processing" ||
         originalEntry.status === "pending")
   )
- 
+  // console.log("MessageBubbleProps")
   const summaryActionsHidden =
     originalEntry !== undefined && originalEntry.status !== "failed"
 
@@ -204,10 +204,14 @@ export const MessageBubble = ({
   )
   const done = isUser || typed === displayText
   const checklistAnimated = done && message.showChecklist && !message.isRestored
-  const { visibleItems: bubbleVisibleChecklist } = useLineByLineTypewriter(
+  const { visibleItems: bubbleVisibleChecklist, isFinished: checklistFinished } = useLineByLineTypewriter(
     checklist,
-    { enabled: checklistAnimated, speedMs: 25, lineDelayMs: 900 }
+    { enabled: checklistAnimated, speedMs: 100, lineDelayMs: 900 }
   )
+
+  const optionsVisible =
+    done &&
+    (!message.showChecklist || (checklist && checklist.length > 0 && checklistFinished))
 
   return (
     <div className='w-full'>
@@ -308,8 +312,8 @@ export const MessageBubble = ({
                   )}
                 </div>
 
-                {/* ── OptionButtons: hidden once answered; reappear during edit ── */}
-                {done && message.options && (!selectedValue || editingNextMessage) && (
+                {/* ── OptionButtons: hidden until checklist finishes typing; hidden once answered ── */}
+                {optionsVisible && message.options && (!selectedValue || editingNextMessage) && (
                   <OptionButtons
                     options={message.options}
                     disabled={editingNextMessage ? false : disabled}
@@ -395,22 +399,22 @@ export const MessageBubble = ({
             />
           ) : (
             <>
-              <DesignSummaryCard
-                answers={answers}
-                uploadTotal={uploadTotal}
-                generating={generating}
-                disabled={summaryDisabled}
-                showActions={!summaryActionsHidden}
-                summaryTitle={message.title}
-                summaryText={message.content}
-                onGenerate={onSummaryGenerate ?? (() => {})}
-                onChanges={onSummaryChanges ?? (() => {})}
-              />
-              {(
-                <div className='mt-3'>
-                  <DesignGeneratingCard status={designStatus} />
-                </div>
+              {!originalEntry?.url && (
+                <DesignSummaryCard
+                  answers={answers}
+                  uploadTotal={uploadTotal}
+                  generating={generating}
+                  disabled={summaryDisabled}
+                  showActions={!summaryActionsHidden}
+                  summaryTitle={message.title}
+                  summaryText={message.content}
+                  onGenerate={onSummaryGenerate ?? (() => {})}
+                  onChanges={onSummaryChanges ?? (() => {})}
+                />
               )}
+              <div className='mt-3'>
+                <DesignGeneratingCard status={designStatus} />
+              </div>
               {originalEntry?.url && (
                 <div className='mt-3'>
                   <DesignResultCard

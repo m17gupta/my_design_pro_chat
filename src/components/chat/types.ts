@@ -256,10 +256,10 @@ export function summaryCopyForWorkType(
         >;
         const phaseKey =phaseMap["phase_2"] ;
         // const phase = phaseKey ? phaseMap[phaseKey] : undefined;
-        console.log("phaseKey--",phaseKey)
+        // console.log("phaseKey--",phaseKey)
         if (phaseKey && Array.isArray(phaseKey.questions) && phaseKey.questions.length > 0) {
           const details = phaseKey.questions[0]?.details;
-          console.log("details---",details)
+          // console.log("details---",details)
           if (details) {
             return {
               title: fallback.title,

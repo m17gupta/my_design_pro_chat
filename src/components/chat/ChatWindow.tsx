@@ -54,7 +54,6 @@ import { buildApiPayload } from "@/lib/apiBrief";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
-import GetAllProjectData from "./GetAllProjectData";
 import {
   selectQuestionnairesData,
   selectQuestionnairesState,
@@ -150,7 +149,7 @@ export default function ChatWindow() {
     () => buildEpisodesFromContext(flowContext, questionnaires),
     [flowContext, questionnaires]
   );
-  console.log("episodes---",episodes)
+   console.log("episodes---",episodes)
 
   // The revision loop's card apiKey ("revision" for legacy / most flows).
   const revisionKey = useMemo(() => revisionApiKey(episodes), [episodes]);
@@ -1001,9 +1000,19 @@ export default function ChatWindow() {
   const lastRevisionSummaryId =
     revisionSummaries[revisionSummaries.length - 1]?.id;
 
+  if (!hydrated || isQuestionnairesLoading) {
+    return (
+      <div className="flex h-dvh items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-500 dark:border-zinc-800 dark:border-t-emerald-400" />
+          <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">Loading project...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <GetAllProjectData />
       <span aria-live="polite" className="sr-only">
         {announcement}
       </span>

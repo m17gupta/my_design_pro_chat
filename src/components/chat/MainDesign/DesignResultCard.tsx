@@ -92,7 +92,8 @@ export default function DesignResultCard({
               whileHover={interactive ? { scale: 1.03 } : undefined}
               whileTap={interactive ? { scale: 0.95 } : undefined}
               className={BUTTON_CLASS}
-              disabled={!interactive}
+              // disabled={!interactive}
+              disabled={hasRevisionComment|| !interactive}
             >
               <svg
                 width="14"
@@ -141,7 +142,7 @@ export default function DesignResultCard({
               whileHover={interactive ? { scale: 1.03 } : undefined}
               whileTap={interactive ? { scale: 0.95 } : undefined}
               className={BUTTON_CLASS}
-              disabled={!interactive}
+             disabled={hasRevisionComment|| !interactive}
             >
               <svg
                 width="14"

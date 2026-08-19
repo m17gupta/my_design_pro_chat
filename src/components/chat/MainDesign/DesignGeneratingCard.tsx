@@ -49,7 +49,7 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
       setMessageIndex((prev) =>
         prev < GENERATING_MESSAGES.length - 1 ? prev + 1 : prev
       );
-    }, 3500);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [isGenerating]);
