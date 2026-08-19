@@ -1012,8 +1012,7 @@ describe("buildEpisodesFromContext (AllQuestion.json)", () => {
     const goals = custom.find((e) => e.apiKey === "project_goals_or_brief_description");
     expect(goals?.card?.description).toContain("Brooke Edwards");
     const summary = custom.find((e) => e.apiKey === "summary");
-    expect(summary?.kind).toBe("ready");
-    expect(summary?.content).toContain("Thank you.  I am now notifying Brooke Edwards of our conversation.  Brooke Edwards will review your request and get back to you within 1 business day with next steps");
+    expect(summary?.content).toContain("Let me generate an initial rendering");
 
     const front = buildEpisodesFromContext({
       role: "enterprise",

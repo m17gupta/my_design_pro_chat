@@ -1,24 +1,4 @@
-/**
- * Host bridge — the message protocol between this chat (embedded as an iframe)
- * and its embedding page (PHP).
- *
- *   chat → host  { action: "submitLunaProject", data }
- *     Posted when the user approves the project; the host page is expected to
- *     listen on its own `window` for this action, persist the design, and — when
- *     the user cancels — re-enable the chat by sending the reverse command:
- *
- *   host → chat  { action: "cancelAllNeed" }
- *     Sent by the host via `iframe.contentWindow.postMessage(...)` to undo a
- *     submission and unlock the result UI.
- *
- * Security model:
- *   - Incoming commands are only accepted when `event.source` is the window
- *     that directly embeds this chat (`window.parent`) — never an arbitrary
- *     frame that happens to be able to reach us.
- *   - The host's origin is learned from the first message it sends us, so
- *     outgoing posts stop using "*" as soon as the host has talked to us.
- *     Until then the origin is unknowable cross-origin, so "*" is the fallback.
- */
+
 
 export const HOST_ACTION_SUBMIT_PROJECT = "submitLunaProject" as const;
 export const HOST_ACTION_CANCEL_ALL_NEED = "cancelAllNeed" as const;

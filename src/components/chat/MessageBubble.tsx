@@ -395,7 +395,7 @@ export const MessageBubble = ({
                     onAllINeed={onDesignAllINeed ?? (() => {})}
                     onRegenerate={onDesignRegenerate ?? (() => {})}
                     onEngageDesigner={onDesignEngage ?? (() => {})}
-                  />
+                  />submittedAction
                 </div>
               )}
             </>
