@@ -382,8 +382,14 @@ describe("buildEpisodes", () => {
     // Layout/answer shape untouched.
     expect(photos?.card?.title).toBe("Inspirational Photos");
     expect(photos?.api?.answerShape).toBe("urls");
-    // apiKey order and kinds are identical to the plain custom flow.
-    expect(eps.map((e) => e.apiKey)).toEqual(buildEpisodes("custom").map((e) => e.apiKey));
+    // custom engage designer flow maps summary -> custom_engage_continue.
+    expect(eps.map((e) => e.apiKey)).toEqual([
+      "project_goals_or_brief_description",
+      "additional_images_upload",
+      "custom_engage_continue",
+      "revision",
+      "revision-summary",
+    ]);
   });
 
   it("never applies engage-designer copy to non-custom work types", () => {
@@ -634,6 +640,32 @@ describe("buildRestoredTranscript", () => {
     expect(ids).toContain("ep-summary");
     expect(ids).not.toContain("ep-photos");
     expect(ids).not.toContain("ep-files");
+  });
+
+  it("pushes the continue button episode when restoring a custom engage designer session", () => {
+    const eps = buildEpisodes("custom", { engageDesigner: true });
+    expect(nextEpisodeId("additional_images_upload", undefined, eps)).toBe("custom_engage_continue");
+
+    const t = buildRestoredTranscript(
+      {
+        project_goals_or_brief_description: item("a custom remodel"),
+        additional_images_upload: item(["https://cdn/img1.jpg"]),
+      },
+      [],
+      eps,
+      { files: [], notes: "" },
+      { engageDesigner: true, work_type: "custom" }
+    );
+    expect(t.currentId).toBe("custom_engage_continue");
+    const ids = t.messages.map((m) => m.id);
+    expect(ids).not.toContain("ep-summary");
+    expect(ids).toContain("ep-custom_engage_continue");
+
+    const continueMsg = t.messages.find((m) => m.id === "ep-custom_engage_continue");
+    expect(continueMsg?.content).toBe(
+      "Thank you for providing the project information. Please review the details and submit your project to proceed."
+    );
+    expect(continueMsg?.options).toEqual(["Proceed"]);
   });
 
   it("restores a color-material transcript with its own topic keys", () => {
@@ -1011,8 +1043,8 @@ describe("buildEpisodesFromContext (AllQuestion.json)", () => {
     });
     const goals = custom.find((e) => e.apiKey === "project_goals_or_brief_description");
     expect(goals?.card?.description).toContain("Brooke Edwards");
-    const summary = custom.find((e) => e.apiKey === "summary");
-    expect(summary?.content).toContain("Let me generate an initial rendering");
+    const continueEp = custom.find((e) => e.apiKey === "custom_engage_continue");
+    expect(continueEp?.content).toContain("Thank you for providing the project information");
 
     const front = buildEpisodesFromContext({
       role: "enterprise",

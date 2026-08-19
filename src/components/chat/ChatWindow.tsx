@@ -147,9 +147,23 @@ export default function ChatWindow() {
     [flowContext, work_type]
   );
 
+  const briefPayloadRef = useRef(briefPayload);
+  useEffect(() => {
+    briefPayloadRef.current = briefPayload;
+  }, [briefPayload]);
+
+  const entriesRef = useRef(entries);
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
+
   const restoredTranscript = useMemo(
-    () => buildRestoredTranscript(restoredItems, entries, episodes, revisionComment),
-    [restoredItems, entries, episodes, revisionComment]
+    () =>
+      buildRestoredTranscript(restoredItems, entries, episodes, revisionComment, {
+        engageDesigner: Boolean(custom_engage_designer),
+        work_type: work_type ?? undefined,
+      }),
+    [restoredItems, entries, episodes, revisionComment, custom_engage_designer, work_type]
   );
   
   // The project id is the single session identifier: the host sends a fresh id
@@ -257,17 +271,23 @@ export default function ChatWindow() {
   const submitCustomProject = useCallback(
     (action: SubmitAction, rating: number) => {
       const data = {
-        id,
-        original: chat_original,
-        design: entries,
+        id: briefPayloadRef.current.projectId,
+        original: briefPayloadRef.current.original,
+        design: entriesRef.current,
         rating,
         action,
       };
+      console.log("hit action cutsom")
       postToHost({ action: HOST_ACTION_CUSTOM_PROJECT, data });
       setSubmittedAction(action);
     },
-    [id, chat_original, entries]
+    []
   );
+
+  const submitCustomProjectRef = useRef(submitCustomProject);
+  useEffect(() => {
+    submitCustomProjectRef.current = submitCustomProject;
+  }, [submitCustomProject]);
 
   const commit = useCallback(
     (
@@ -331,27 +351,25 @@ export default function ChatWindow() {
         timeoutRef.current = null;
         busyRef.current = false;
         setTyping(false);
-        setMessages((prev) => {
-          const nextMsg = buildMessage(episodeById(nextEpisode, episodes));
-          // One summary per revision round — suffix by the round's comment-card
-          // count so round N always lands on `ep-revision-summary[-N]`.
-          const id =
-            nextEpisode === "revision-summary"
-              ? episodeMessageId("revision-summary", countRevisionRounds(prev))
-              : (() => {
-                  const count = prev.filter(
-                    (m) => m.id === nextMsg.id || m.id.startsWith(`${nextMsg.id}-`)
-                  ).length;
-                  return count === 0 ? nextMsg.id : `${nextMsg.id}-${count + 1}`;
-                })();
-          return [...prev, { ...nextMsg, id }];
-        });
-        setCurrentId(nextEpisode);
-        if (
-          isCustomEngage &&
-          (ep.apiKey === "additional_images_upload" || nextEpisode === "summary")
-        ) {
-          submitCustomProject("engage_designer", 0);
+        if (isCustomEngage && ep.apiKey === "custom_engage_continue") {
+          submitCustomProjectRef.current("engage_designer", 0);
+        } else {
+          setMessages((prev) => {
+            const nextMsg = buildMessage(episodeById(nextEpisode, episodes));
+            // One summary per revision round — suffix by the round's comment-card
+            // count so round N always lands on `ep-revision-summary[-N]`.
+            const id =
+              nextEpisode === "revision-summary"
+                ? episodeMessageId("revision-summary", countRevisionRounds(prev))
+                : (() => {
+                    const count = prev.filter(
+                      (m) => m.id === nextMsg.id || m.id.startsWith(`${nextMsg.id}-`)
+                    ).length;
+                    return count === 0 ? nextMsg.id : `${nextMsg.id}-${count + 1}`;
+                  })();
+            return [...prev, { ...nextMsg, id }];
+          });
+          setCurrentId(nextEpisode);
         }
       }, TYPING_MS);
     },
@@ -365,7 +383,6 @@ export default function ChatWindow() {
       clearTypingTimeout,
       custom_engage_designer,
       work_type,
-      submitCustomProject,
     ]
   );
 
@@ -558,12 +575,11 @@ export default function ChatWindow() {
     try {
        const payload = buildApiPayload(getApiQuestions(episodes), chat_original, {
         projectId: id,
-        role: role,
         watermark: watermark,
         work_type: work_type,
         image_url: image_url,
         revision: revisionComment,
-        question_sets: question_sets,
+  
         });
       await dispatch(generateEnterpriseDesign({ payload })).unwrap();
       toast.success("Your design brief has been sent to Brooke Edwards for review!");
@@ -833,19 +849,18 @@ export default function ChatWindow() {
       if (pendingRevisionGenerate !== null) return;
       setPendingRevisionGenerate(round);
       const revisions = entries.filter((entry) => entry.type === "revision");
-      // Use the entry for this specific round if it already exists (retry case),
-      // otherwise fall back to the current revision_comment in the Redux store
-      // (which was just set when the user submitted the revision card).
+  
       const entry = revisions[round - 1];
       const hasActiveFallback = revisionComment.notes !== "" || (revisionComment.files && revisionComment.files.length > 0);
       const notes = hasActiveFallback ? revisionComment.notes : (entry?.questions[0]?.answer?.notes ?? revisionComment.notes);
       const files = hasActiveFallback ? (revisionComment.files ?? []) : (entry?.questions[0]?.answer?.files ?? revisionComment.files ?? []);
       const payload = buildApiPayload(getApiQuestions(episodes), chat_original, {
+        projectId:id,
         watermark: watermark ?? "",
         work_type: work_type ?? "",
         image_url: entries[entries.length - 1]?.url ?? "",
         revision: { files, notes },
-        question_sets: question_sets,
+        
       });
       try {
         await dispatch(generateEnterpriseDesign({ payload, round })).unwrap();

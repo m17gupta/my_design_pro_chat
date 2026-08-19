@@ -649,6 +649,14 @@ function collectOverridesFromRoot(
  *                  `dcName`, falling back to "your designer" when blank),
  *                  only applied when `workType === "custom"`.
  */
+export const CUSTOM_ENGAGE_CONTINUE_EPISODE: Episode = {
+  apiKey: "custom_engage_continue",
+  kind: "ready",
+  content:
+    "Thank you for providing the project information. Please review the details and submit your project to proceed.",
+  options: ["Proceed"],
+};
+
 export function buildEpisodes(
   workType: string | undefined,
   options?: { engageDesigner?: boolean; dcName?: string }
@@ -668,6 +676,9 @@ export function buildEpisodes(
     if (options?.engageDesigner) {
       const designer = options.dcName?.trim() || "your designer";
       return customEpisodes.map((ep) => {
+        if (ep.apiKey === "summary") {
+          return CUSTOM_ENGAGE_CONTINUE_EPISODE;
+        }
         const variant = ep.engageDesigner;
         if (!variant) return ep;
         const description = variant.description.replaceAll("{designer}", designer);
@@ -677,8 +688,6 @@ export function buildEpisodes(
         );
         return {
           ...ep,
-          kind: ep.apiKey === "summary" ? "ready" : ep.kind,
-          content: ep.apiKey === "summary" ? description : ep.content,
           ...(ep.card ? { card: { ...ep.card, description } } : {}),
           ...(ep.api ? { api: { ...ep.api, question } } : {}),
         };
@@ -1121,12 +1130,20 @@ export function buildEpisodesFromContext(ctx: FlowContext): Episode[] {
     insertUploadGates(episodes);
   }
 
-  episodes.push({
-    apiKey: "summary",
-    kind: "summary",
-    title: "Design Summary",
-    content: summaryParts.filter(Boolean).join("\n\n") || DEFAULT_SUMMARY_TEXT,
-  });
+  const isCustomEngage =
+    Boolean(ctx.engageDesigner) &&
+    normalizeWorkType(ctx.work_type ?? "") === "custom";
+
+  if (isCustomEngage) {
+    episodes.push(CUSTOM_ENGAGE_CONTINUE_EPISODE);
+  } else {
+    episodes.push({
+      apiKey: "summary",
+      kind: "summary",
+      title: "Design Summary",
+      content: summaryParts.filter(Boolean).join("\n\n") || DEFAULT_SUMMARY_TEXT,
+    });
+  }
 
   for (const phaseKey of revisionPhases) {
     const phase = phases[phaseKey];
@@ -1262,6 +1279,9 @@ export { EPISODES };
  * Falls back to the static BY_ID map when no list is provided.
  */
 export function episodeById(apiKey: string, episodes?: Episode[]): Episode {
+  if (apiKey === "custom_engage_continue") {
+    return CUSTOM_ENGAGE_CONTINUE_EPISODE;
+  }
   if (episodes) {
     const ep = episodes.find((e) => e.apiKey === apiKey);
     if (!ep) throw new Error(`Unknown episode: ${apiKey}`);
@@ -1369,7 +1389,8 @@ export function buildRestoredTranscript(
   original: Record<string, ApiBriefItem>,
   entries: EnterpriseEntry[] = [],
   episodes?: Episode[],
-  revisionComment: { files: string[]; notes: string } = { files: [], notes: "" }
+  revisionComment: { files: string[]; notes: string } = { files: [], notes: "" },
+  options?: { engageDesigner?: boolean; work_type?: string }
 ): RestoredTranscript {
   const isEmpty = (apiKey: string): boolean => {
     const item = original[apiKey];
@@ -1565,11 +1586,22 @@ export function buildRestoredTranscript(
 
     currentId = "revision-summary";
   } else {
-    const resumeMsg = currentId === "summary"
-      ? buildMessage(episodeById("summary", episodes))
-      : buildMessage(episodeById(currentId, episodes));
-    resumeMsg.isRestored = true;
-    messages.push(resumeMsg);
+    const isCustomEngage =
+      Boolean(options?.engageDesigner) &&
+      normalizeWorkType(options?.work_type) === "custom";
+
+    if (isCustomEngage && (currentId === "summary" || currentId === "custom_engage_continue")) {
+      const resumeMsg = buildMessage(CUSTOM_ENGAGE_CONTINUE_EPISODE);
+      resumeMsg.isRestored = true;
+      messages.push(resumeMsg);
+      currentId = "custom_engage_continue";
+    } else {
+      const resumeMsg = currentId === "summary"
+        ? buildMessage(episodeById("summary", episodes))
+        : buildMessage(episodeById(currentId, episodes));
+      resumeMsg.isRestored = true;
+      messages.push(resumeMsg);
+    }
   }
 
   return { messages, messageEpisodes, answers, currentId, completed };
