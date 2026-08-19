@@ -1155,7 +1155,13 @@ export function buildEpisodesFromContext(
   if (isCustomEngage) {
     episodes.push(CUSTOM_ENGAGE_CONTINUE_EPISODE);
   } else {
-    const fallback = summaryCopyForWorkType(ctx.work_type ?? undefined);
+    const fallback = summaryCopyForWorkType(
+      ctx.work_type ?? undefined,
+      ctx.role ?? undefined,
+      questionnaires ?? undefined,
+      ctx.user_type ?? undefined,
+      ctx.question_sets ?? undefined
+    );
     episodes.push({
       apiKey: "summary",
       kind: "summary",
@@ -1173,7 +1179,13 @@ export function buildEpisodesFromContext(
       // the summary marker (revision_design_summary), so treat missing types
       // as display too.
       if (q.type === "display" || !q.type) {
-        const fallback = summaryCopyForWorkType(ctx.work_type ?? undefined);
+        const fallback = summaryCopyForWorkType(
+          ctx.work_type ?? undefined,
+          ctx.role ?? undefined,
+          questionnaires ?? undefined,
+          ctx.user_type ?? undefined,
+          ctx.question_sets ?? undefined
+        );
         const content =
           [q.details, q.example]
             .filter((s): s is string => Boolean(s))

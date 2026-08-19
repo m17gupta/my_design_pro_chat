@@ -41,11 +41,18 @@ export default function DesignSummaryCard({
   onChanges,
 }: DesignSummaryCardProps) {
 
-  const { original, work_type } = useSelector((state: RootState) => state.chat)
+  const { original, work_type, role, user_type, question_sets } = useSelector((state: RootState) => state.chat);
+  const { data: questionnaire } = useSelector((state: RootState) => state.questionnaires);
 
-  // const fallback = summaryCopyForWorkType(work_type ?? undefined)
-  // const title = fallback?.title??""
-  const description = "Let me generate an initial rendering based on my understanding of what you are looking for."
+  // const fallback = summaryCopyForWorkType(
+  //   work_type ?? undefined,
+  //   role ?? undefined,
+  //   questionnaire ?? undefined,
+  //   user_type ?? undefined,
+  //   question_sets ?? undefined
+  // );
+  const title ="Design Summary";
+  const description =  "Let me generate an initial rendering based on my understanding of what you are looking for.";
 
   return (
     <motion.div
@@ -55,7 +62,7 @@ export default function DesignSummaryCard({
       className="w-full rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
     >
       <h3 className="text-base font-semibold tracking-tight text-emerald-700 dark:text-emerald-400">
-        Design Summary
+        {title}
       </h3>
       <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
         {description}
@@ -66,6 +73,7 @@ export default function DesignSummaryCard({
         { original && Object.keys(original).length > 0 &&
           Object.keys(original).map((key, i) => {
             const item = original[key];
+            console.log("itetemmm",item)
             if (!item) return null;
             const { answer, name } = item;
             

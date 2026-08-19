@@ -227,13 +227,51 @@ export const SUMMARY_COPY: Record<string, SummaryCopy> = {
   },
 };
 
-/** Resolve summary title/description copy for a work type. */
-export function summaryCopyForWorkType(workType?: string): SummaryCopy {
+/** Resolve summary title/description copy for a work type and optional questionnaire context. */
+export function summaryCopyForWorkType(
+  workType?: string,
+  role?: string,
+  questionnaire?: Record<string, unknown> | null,
+  userType?: string,
+  questionSets?: { original?: string[]; revision?: string[] } | null
+): SummaryCopy {
   const normalized = (workType ?? "")
     .trim()
     .toLowerCase()
     .replace(/-/g, "_");
-  return SUMMARY_COPY[normalized] ?? SUMMARY_COPY.front_yard;
+  const fallback = SUMMARY_COPY[normalized] ?? SUMMARY_COPY.front_yard;
+
+  if (role && (role === "enterprise" || role === "enterprise-client") && questionnaire && userType && workType) {
+    const roleBase = questionnaire[role];
+    if (roleBase && typeof roleBase === "object") {
+      const roleMap = roleBase as Record<string, unknown>;
+      const phases =
+        role === "enterprise-client"
+          ? roleMap[userType]
+          : (roleMap[userType] as Record<string, unknown> | undefined)?.[workType];
+      if (phases && typeof phases === "object") {
+        const phaseMap = phases as Record<
+          string,
+          { title?: string; questions?: { details?: string }[] }
+        >;
+        const phaseKey =phaseMap["phase_2"] ;
+        // const phase = phaseKey ? phaseMap[phaseKey] : undefined;
+        console.log("phaseKey--",phaseKey)
+        if (phaseKey && Array.isArray(phaseKey.questions) && phaseKey.questions.length > 0) {
+          const details = phaseKey.questions[0]?.details;
+          console.log("details---",details)
+          if (details) {
+            return {
+              title: fallback.title,
+              description: details,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return fallback;
 }
 
 /**
