@@ -43,10 +43,9 @@ export default function DesignSummaryCard({
 
   const { original, work_type } = useSelector((state: RootState) => state.chat)
 
-  const fallback = summaryCopyForWorkType(work_type ?? undefined)
-  const title = fallback?.title??""
-  const description = fallback?.description??""
-
+  // const fallback = summaryCopyForWorkType(work_type ?? undefined)
+  // const title = fallback?.title??""
+  const description = "Let me generate an initial rendering based on my understanding of what you are looking for."
 
   return (
     <motion.div
@@ -56,7 +55,7 @@ export default function DesignSummaryCard({
       className="w-full rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
     >
       <h3 className="text-base font-semibold tracking-tight text-emerald-700 dark:text-emerald-400">
-        {title}
+        Design Summary
       </h3>
       <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
         {description}

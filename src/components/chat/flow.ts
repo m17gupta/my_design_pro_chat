@@ -901,7 +901,7 @@ function normalizeOptions(options: unknown): string[] {
 
 /** Default summary text when the JSON has no design_summary display question. */
 const DEFAULT_SUMMARY_TEXT =
-  "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you've shared with me! Can you please confirm?";
+  "manish";
 
 /**
  * Convert one AllQuestion.json question into one or more episodes. The card

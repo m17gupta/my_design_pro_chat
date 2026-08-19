@@ -1,7 +1,9 @@
 'use client'
 
 import { RootState } from '@/store'
+import { useAppSelector } from '@/store/hooks'
 import { motion } from 'framer-motion'
+import { useMemo } from 'react'
 import { useSelector } from 'react-redux'
 
 interface RevisionSummaryCardProps {
@@ -40,6 +42,29 @@ export default function RevisionSummaryCard ({
   onChanges
 }: RevisionSummaryCardProps) {
   const { lifecycle } = useSelector((state: RootState) => state.enterprise)
+  const { user_type, role, work_type, question_sets } = useAppSelector(state => state.chat);
+  const { data: questionaire } = useAppSelector(state => state.questionnaires)
+
+  const revisionnSummaryDescription = useMemo(() => {
+    if (!questionaire || !user_type || !role || !work_type) return ''
+    const roleBase = questionaire[role]
+    if (!roleBase || typeof roleBase !== 'object') return ''
+    const roleMap = roleBase as Record<string, unknown>
+    const phases =
+      role === 'enterprise-client'
+        ? roleMap[user_type]
+        : (roleMap[user_type] as Record<string, unknown> | undefined)?.[work_type]
+    if (!phases || typeof phases !== 'object') return ''
+    const phaseMap = phases as Record<string, { title?: string; questions?: { details?: string }[] }>
+    const phaseKey =
+      question_sets?.revision?.[0] ??
+      (phaseMap['phase_4'] ? 'phase_4' : Object.keys(phaseMap).at(-1))
+    const phase = phaseKey ? phaseMap[phaseKey] : undefined
+    if (!phase || !Array.isArray(phase.questions) || phase.questions.length === 0) return ''
+    return phase.questions[1]?.details ?? phase.questions[0]?.details ?? ''
+  }, [questionaire, user_type, role, work_type, question_sets])
+
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -58,9 +83,13 @@ export default function RevisionSummaryCard ({
         )}
       </div>
       <p className='mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300'>
-        Got it! I’ll take your new request into consideration and update the
-        design while keeping your original preferences in mind. Here’s what I’ll
-        be adding to your revised design
+        {revisionnSummaryDescription || (
+          <>
+            Got it! I’ll take your new request into consideration and update the
+            design while keeping your original preferences in mind. Here’s what
+            I’ll be adding to your revised design
+          </>
+        )}
       </p>
 
       <div className='mt-4 overflow-hidden rounded-xl border border-zinc-200/80 dark:border-zinc-800'>
