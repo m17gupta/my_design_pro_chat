@@ -25,10 +25,10 @@ export function useLineByLineTypewriter(
 ) {
   const options: LineTypewriterOptions =
     typeof enabledOrOptions === "boolean"
-      ? { enabled: enabledOrOptions, speedMs: legacySpeedMs ?? 40, lineDelayMs: 150 }
-      : { enabled: true, speedMs: 40, lineDelayMs: 150, ...enabledOrOptions };
+      ? { enabled: enabledOrOptions, speedMs: legacySpeedMs ?? 25, lineDelayMs: 900 }
+      : { enabled: true, speedMs: 25, lineDelayMs: 900, ...enabledOrOptions };
 
-  const { enabled = true, speedMs = 40, lineDelayMs = 150 } = options;
+  const { enabled = true, speedMs = 25, lineDelayMs = 900 } = options;
 
   const reduceMotion = useReducedMotion() ?? false;
   const shouldAnimate = enabled && !reduceMotion && Boolean(items && items.length > 0);

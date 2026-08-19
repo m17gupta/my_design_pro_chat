@@ -206,7 +206,7 @@ export const MessageBubble = ({
   const checklistAnimated = done && message.showChecklist && !message.isRestored
   const { visibleItems: bubbleVisibleChecklist } = useLineByLineTypewriter(
     checklist,
-    { enabled: checklistAnimated, speedMs: 40, lineDelayMs: 150 }
+    { enabled: checklistAnimated, speedMs: 25, lineDelayMs: 900 }
   )
 
   return (

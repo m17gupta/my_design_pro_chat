@@ -150,6 +150,7 @@ export default function ChatWindow() {
     () => buildEpisodesFromContext(flowContext, questionnaires),
     [flowContext, questionnaires]
   );
+  console.log("episodes---",episodes)
 
   // The revision loop's card apiKey ("revision" for legacy / most flows).
   const revisionKey = useMemo(() => revisionApiKey(episodes), [episodes]);
@@ -836,6 +837,7 @@ export default function ChatWindow() {
     setTyping(false);
     setEditingId(null);
     announcedIdRef.current = null;
+    hasUserInteractedRef.current = true;
     const hasRevisionConfigured =
       episodes.some((e) => e.apiKey === revisionKey) ||
       revisionKey === "revision";
@@ -863,6 +865,7 @@ export default function ChatWindow() {
    */
   const handleRevisionGenerate = useCallback(
     async (round: number) => {
+      hasUserInteractedRef.current = true;
       if (pendingRevisionGenerate !== null) return;
       setPendingRevisionGenerate(round);
       const revisions = entries.filter((entry) => entry.type === "revision");
@@ -907,6 +910,7 @@ export default function ChatWindow() {
       setTyping(false);
       setEditingId(null);
       announcedIdRef.current = null;
+      hasUserInteractedRef.current = true;
 
       const commentId = episodeMessageId(revisionKey, round);
       const revisions = entries.filter((entry) => entry.type === "revision");

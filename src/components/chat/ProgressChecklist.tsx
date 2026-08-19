@@ -24,8 +24,8 @@ export default function ProgressChecklist({
   episodes,
   checklist,
   animate = true,
-  speedMs = 40,
-  lineDelayMs = 1000,
+  speedMs = 25,
+  lineDelayMs = 900,
 }: ProgressChecklistProps) {
   const { visibleItems } = useLineByLineTypewriter(checklist, {
     enabled: animate,

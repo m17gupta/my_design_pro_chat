@@ -254,7 +254,7 @@ const EPISODES: Episode[] = [
     kind: "card",
     revisionStep: true,
     card: {
-      title: "",
+      title: "Revsion Comment",
       description:
         "Please share your revision requests, I will incorporate them into the design.",
       fields: [
@@ -1192,6 +1192,7 @@ export function buildEpisodesFromContext(
           apiKey: ep.apiKey === "revision_comments" ? "revision" : ep.apiKey,
           revisionStep: true,
           api: undefined,
+          ...(ep.card ? { card: { ...ep.card, title: "" } } : {}),
         });
       }
     }
