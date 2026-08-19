@@ -207,6 +207,10 @@ const briefSlice = createSlice({
     /** Replace the whole brief state (used when restoring a project from the DB). */
     setBriefState (_state, action: PayloadAction<BriefState>) {
       return action.payload
+    },
+    /** Set/update original answered items (e.g. when restoring project data from DB). */
+    setOriginal (state, action: PayloadAction<Record<string, ApiBriefItem>>) {
+      state.original = action.payload
     }
   }
 })
@@ -216,7 +220,8 @@ export const {
   setContext,
   setRevision,
   resetBrief,
-  setBriefState
+  setBriefState,
+  setOriginal
 } = briefSlice.actions
 export default briefSlice.reducer
 

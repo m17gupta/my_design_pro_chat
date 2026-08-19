@@ -360,7 +360,7 @@
               "id": "design_summary",
               "type": "display",
               "name": "Design Summary",
-              "details": "Let me generate an initial rendering based on my understanding of what you are looking for."
+              "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you've shared with me! Can you please confirm?"
             },
             {
               "required": true,
@@ -979,7 +979,7 @@
               "id": "design_summary",
               "type": "display",
               "name": "Design Summary",
-              "details": "Let me generate an initial rendering based on my understanding of what you are looking for."
+              "details": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you've shared with me! Can you please confirm?"
             },
             {
               "required": true,

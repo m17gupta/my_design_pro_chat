@@ -16,6 +16,7 @@ import { RootState } from '@/store'
 import DesignSummaryCard from './MainDesign/DesignSummaryCard'
 import DesignGeneratingCard from './MainDesign/DesignGeneratingCard'
 import DesignResultCard from './MainDesign/DesignResultCard'
+import { useLineByLineTypewriter } from './useLineByLineTypewriter'
 
 interface MessageBubbleProps {
   message: Message
@@ -30,7 +31,7 @@ interface MessageBubbleProps {
   /** Recorded answers for the design-summary rows. */
   answers?: Record<string, string>
   /** Checklist rows shown in the design summary — work-type aware (default landscape). */
-  checklist?: ChecklistItem[]
+  checklist?: ChecklistItem[] | null
   /** True while the brief POST to the design API is in flight. */
   generating?: boolean
   uploadTotal?: number
@@ -132,7 +133,7 @@ export const MessageBubble = ({
   onCardSubmit,
   onCardCancel,
   answers = {},
-  checklist = CHECKLIST,
+  checklist = null,
   generating = false,
   uploadTotal = 0,
   onSummaryGenerate,
@@ -183,9 +184,13 @@ export const MessageBubble = ({
   const summaryDisabled =
     originalEntry !== undefined && originalEntry.status !== "failed"
  
+  const cardTitleText = message.card?.title?.trim() ?? ""
+  const cardDescText = message.card?.description ?? ""
   const displayText =
     message.kind === 'card' && message.card
-      ? `${message.card.title}\n\n${message.card.description}`
+      ? cardTitleText
+        ? `${cardTitleText}\n\n${cardDescText}`
+        : cardDescText
       : message.content
 
   // The revision summary renders as a card instead of a typed bubble, so the
@@ -198,6 +203,11 @@ export const MessageBubble = ({
     reduceMotion
   )
   const done = isUser || typed === displayText
+  const checklistAnimated = done && message.showChecklist && !message.isRestored
+  const { visibleItems: bubbleVisibleChecklist } = useLineByLineTypewriter(
+    checklist,
+    { enabled: checklistAnimated, speedMs: 40, lineDelayMs: 150 }
+  )
 
   return (
     <div className='w-full'>
@@ -267,19 +277,34 @@ export const MessageBubble = ({
                   </p>
 
                   {done && message.showChecklist && (
-                    <ol className='mt-3 space-y-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-800'>
-                      {checklist.map(item => (
-                        <li
-                          key={item.id}
-                          className='flex items-baseline gap-2 text-[13.5px] text-zinc-600 dark:text-zinc-300'
-                        >
-                          <span className='font-semibold text-emerald-600 dark:text-emerald-400'>
-                            {item.number}.
-                          </span>
-                          <span>{item.label}</span>
-                        </li>
-                      ))}
-                    </ol>
+                    checklist && checklist.length > 0 ? (
+                      <ol className='mt-3 space-y-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-800'>
+                        {bubbleVisibleChecklist.map(({ item, displayText, isTyping }) => (
+                          <li
+                            key={item.id}
+                            className='flex items-baseline gap-2 text-[13.5px] text-zinc-600 dark:text-zinc-300'
+                          >
+                            <span className='font-semibold text-emerald-600 dark:text-emerald-400'>
+                              {item.number}.
+                            </span>
+                            <span>
+                              {displayText}
+                              {isTyping && (
+                                <span
+                                  aria-hidden='true'
+                                  className='ml-0.5 inline-block h-[1em] w-[2px] animate-pulse rounded-sm bg-emerald-500 align-middle dark:bg-emerald-400'
+                                />
+                              )}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <div className='mt-3 flex items-center gap-2 border-t border-zinc-100 pt-3 text-[13px] text-zinc-400 dark:border-zinc-800 dark:text-zinc-500 animate-pulse'>
+                        <div className='h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent' />
+                        <span>Loading checklist items...</span>
+                      </div>
+                    )
                   )}
                 </div>
 
@@ -395,7 +420,7 @@ export const MessageBubble = ({
                     onAllINeed={onDesignAllINeed ?? (() => {})}
                     onRegenerate={onDesignRegenerate ?? (() => {})}
                     onEngageDesigner={onDesignEngage ?? (() => {})}
-                  />submittedAction
+                  />
                 </div>
               )}
             </>

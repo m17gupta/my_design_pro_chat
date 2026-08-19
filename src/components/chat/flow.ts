@@ -1,17 +1,17 @@
 import type { ApiBriefItem } from "../../lib/apiBrief";
 import { answerToText, isAnswerEmpty } from "../../lib/briefDisplay";
-import type {
-  AnswerValue,
-  ApiQuestionMeta,
-  ChecklistItem,
-  EpisodeKind,
-  Message,
-  QuestionCardSpec,
+import {
+  summaryCopyForWorkType,
+  type AnswerValue,
+  type ApiQuestionMeta,
+  type ChecklistItem,
+  type EpisodeKind,
+  type Message,
+  type QuestionCardSpec,
 } from "./types";
 import type { EnterpriseEntry } from "../../store/enterprise/enterpriseType";
 import questionsJson from "../../docs/Questions.json";
 import customQuestionsJson from "../../docs/CustomQuestions.json";
-import allQuestionsJson from "../../docs/AllQuestion.json";
 
 export interface Episode {
 
@@ -252,8 +252,9 @@ const EPISODES: Episode[] = [
   {
     apiKey: "revision",
     kind: "card",
+    revisionStep: true,
     card: {
-      title: "Revision Comments",
+      title: "",
       description:
         "Please share your revision requests, I will incorporate them into the design.",
       fields: [
@@ -775,9 +776,6 @@ export interface FlowContext {
   dcName?: string | null;
 }
 
-/** AllQuestion.json root — role → (user_type → (work_type →) phase → questions). */
- const allQuestionsRoot = allQuestionsJson as Record<string, unknown>;
-
 function normalizeRole(role: string | null | undefined): string {
   return (role ?? "").trim().toLowerCase();
 }
@@ -799,23 +797,15 @@ interface ResolvedAllQuestionFlow {
   revisionPhases: string[];
 }
 
-/**
- * Locate the phase map for the given role / user_type / work_type in
- * AllQuestion.json and decide which phases drive the intake (`original`) and
- * which drive the revision loop. Returns null when the path doesn't exist —
- * callers then fall back to the legacy Questions.json flow.
- */
 function resolveAllQuestionFlow(
   ctx: FlowContext,
   questionnaires?: Record<string, unknown> | null
 ): ResolvedAllQuestionFlow | null {
   const role = normalizeRole(ctx.role);
-  if (!role) return null;
-  const root =
-    questionnaires && typeof questionnaires === "object" && Object.keys(questionnaires).length > 0
-      ? questionnaires
-      : allQuestionsRoot;
-  const roleSection = root[role];
+  if (!role || !questionnaires || typeof questionnaires !== "object" || Object.keys(questionnaires).length === 0) {
+    return null;
+  }
+  const roleSection = questionnaires[role];
   if (!roleSection || typeof roleSection !== "object") return null;
   const roleMap = roleSection as Record<string, unknown>;
 
@@ -911,7 +901,7 @@ function normalizeOptions(options: unknown): string[] {
 
 /** Default summary text when the JSON has no design_summary display question. */
 const DEFAULT_SUMMARY_TEXT =
-  "Let me generate an initial rendering based on my understanding of what you are looking for.";
+  "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you've shared with me! Can you please confirm?";
 
 /**
  * Convert one AllQuestion.json question into one or more episodes. The card
@@ -919,14 +909,15 @@ const DEFAULT_SUMMARY_TEXT =
  * exact HTML the backend expects.
  */
 function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
-  const title = q.name?.trim() || q.id;
+  const cardTitle = q.name?.trim() || "";
+  const apiName = q.name?.trim() || formatQuestionIdAsName(q.id);
   const details = q.details ?? "";
   const displayDetails = htmlToDisplay(details);
   // Default checklistId to the question's own id so each question maps to
   // its own checklist entry (per-question granularity).
   const cid = checklistId ?? q.id;
   const api = (answerShape: ApiQuestionMeta["answerShape"]): Episode["api"] => ({
-    name: title,
+    name: apiName,
     question: details || displayDetails,
     answerShape,
     checklistId: cid,
@@ -939,7 +930,7 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
-            title,
+            title: cardTitle,
             description: displayDetails,
             fields: [
               { kind: "upload-grid", count: q.max_files ?? 4, accept: "image/*" },
@@ -953,7 +944,7 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
-            title,
+            title: cardTitle,
             description: displayDetails,
             fields: [
               {
@@ -972,7 +963,7 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
-            title,
+            title: cardTitle,
             description: displayDetails,
             fields: [
               {
@@ -990,7 +981,7 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
-            title,
+            title: cardTitle,
             description: displayDetails,
             fields: [{ kind: "checkbox", options: normalizeOptions(q.options) }],
           },
@@ -1002,7 +993,7 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
-            title,
+            title: cardTitle,
             description: displayDetails,
             fields: [
               {
@@ -1020,7 +1011,7 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
-            title,
+            title: cardTitle,
             description: displayDetails,
             fields: [
               {
@@ -1047,7 +1038,7 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
-            title,
+            title: cardTitle,
             description: displayDetails,
             fields: [{ kind: "textarea", placeholder: "Share your thoughts", rows: 4 }],
           },
@@ -1098,6 +1089,23 @@ export function buildEpisodesFromContext(
   const resolved = resolveAllQuestionFlow(ctx, questionnaires);
   
   if (!resolved) {
+    const role = normalizeRole(ctx.role);
+    const isAllQuestionCtx =
+      role === "enterprise" ||
+      role === "enterprise-client" ||
+      Boolean(ctx.question_sets?.original?.length);
+
+    if (isAllQuestionCtx) {
+      return [{
+        apiKey: "overview",
+        kind: "ready",
+        content:
+          "To give you an overview of what information I will be gathering so you know what to expect, I will be touching on the following:",
+        showChecklist: true,
+        options: ["I am ready to proceed  →"],
+        editable: false,
+      }];
+    }
     return buildEpisodes(ctx.work_type ?? undefined, {
       engageDesigner: ctx.engageDesigner ?? undefined,
       dcName: ctx.dcName ?? undefined,
@@ -1147,11 +1155,12 @@ export function buildEpisodesFromContext(
   if (isCustomEngage) {
     episodes.push(CUSTOM_ENGAGE_CONTINUE_EPISODE);
   } else {
+    const fallback = summaryCopyForWorkType(ctx.work_type ?? undefined);
     episodes.push({
       apiKey: "summary",
       kind: "summary",
-      title: "Design Summary",
-      content: summaryParts.filter(Boolean).join("\n\n") || DEFAULT_SUMMARY_TEXT,
+      title: fallback.title || "Design Summary",
+      content: summaryParts.filter(Boolean).join("\n\n") || fallback.description || DEFAULT_SUMMARY_TEXT,
     });
   }
 
@@ -1164,12 +1173,13 @@ export function buildEpisodesFromContext(
       // the summary marker (revision_design_summary), so treat missing types
       // as display too.
       if (q.type === "display" || !q.type) {
+        const fallback = summaryCopyForWorkType(ctx.work_type ?? undefined);
         const content =
           [q.details, q.example]
             .filter((s): s is string => Boolean(s))
             .map(htmlToDisplay)
-            .join("\n\n") || DEFAULT_SUMMARY_TEXT;
-        episodes.push({ apiKey: "revision-summary", kind: "summary", content });
+            .join("\n\n") || fallback.description || DEFAULT_SUMMARY_TEXT;
+        episodes.push({ apiKey: "revision-summary", kind: "summary", title: fallback.title || "Design Summary", content });
         continue;
       }
       for (const ep of questionToEpisodes(q)) {
@@ -1254,6 +1264,17 @@ function insertUploadGates(episodes: Episode[]): void {
 }
 
 /**
+ * Convert a question id (e.g. `additional_images_upload`) into a human-readable
+ * label (e.g. "Additional images upload") when `name` is missing.
+ */
+export function formatQuestionIdAsName(id: string): string {
+  if (!id) return "";
+  const cleaned = id.replace(/[_-]+/g, " ").trim();
+  if (!cleaned) return id;
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
+/**
  * Question-level intake checklist for AllQuestion.json-driven flows; null when
  * the context resolves to the legacy flow (callers fall back to the static
  * lists). Each non-display question in the selected original phases becomes
@@ -1278,7 +1299,8 @@ export function checklistFromFlowContext(
       if (q.type === "display" || q.id === "design_direction_approval") continue;
       if (seen.has(q.id)) continue;
       seen.add(q.id);
-      items.push({ id: q.id, number: items.length + 1, label: q.name || q.id });
+      const label = q.name?.trim() || formatQuestionIdAsName(q.id);
+      items.push({ id: q.id, number: items.length + 1, label });
     }
   }
   return items.length > 0 ? items : null;
@@ -1297,8 +1319,7 @@ export function episodeById(apiKey: string, episodes?: Episode[]): Episode {
   }
   if (episodes) {
     const ep = episodes.find((e) => e.apiKey === apiKey);
-    if (!ep) throw new Error(`Unknown episode: ${apiKey}`);
-    return ep;
+    if (ep) return ep;
   }
   const ep = BY_ID.get(apiKey);
   if (!ep) throw new Error(`Unknown episode: ${apiKey}`);
@@ -1339,12 +1360,14 @@ export function nextEpisodeId(
 
 /** Build the assistant Message for an episode. */
 export function buildMessage(episode: Episode): Message {
+  const cardTitle = episode.card?.title?.trim() ?? "";
+  const cardDesc = episode.card?.description ?? "";
   return {
     id: `ep-${episode.apiKey}`,
     role: "assistant",
     content:
       episode.kind === "card" && episode.card
-        ? episode.card.title
+        ? cardTitle || cardDesc
         : episode.content ?? "",
     kind: episode.kind,
     options: episode.options,
@@ -1437,13 +1460,18 @@ export function buildRestoredTranscript(
   const list = episodes ?? EPISODES;
   const hasEpisode = (key: string) => list.some((e) => e.apiKey === key);
 
-  // Nothing restored → show the flow's opening episode: the overview screen
-  // for shared flows, or the first intake card for the overview-less custom
-  // flow (which starts directly at its first question).
+  // Nothing restored → show the flow's opening episode: the overview
+  // screen for shared flows, or the first intake card for the
+  // overview-less custom flow (which starts directly at its first question).
+  const hasEntries = Array.isArray(entries) && entries.length > 0;
+  const hasPendingComment =
+    Boolean(revisionComment?.notes) ||
+    (Array.isArray(revisionComment?.files) && revisionComment.files.length > 0);
   const anyAnswered = Object.values(original).some(
     (item) => item !== undefined && !isAnswerEmpty(item.answer)
   );
-  if (!anyAnswered) {
+
+  if (!anyAnswered && !hasEntries && !hasPendingComment) {
     const first = list[0];
     return {
       messages: [buildMessage(first)],
@@ -1535,9 +1563,7 @@ export function buildRestoredTranscript(
   // entry yet (refresh mid-revision, before the design was regenerated). In
   // that case the revision summary must still be restored, or the user's
   // comments would silently vanish from the transcript.
-  const hasPendingComment =
-    revisionComment.notes !== "" ||
-    (revisionComment.files && revisionComment.files.length > 0);
+  // (hasPendingComment was declared above)
 
   if (currentId === "summary" && (revisionEntries.length > 0 || hasPendingComment)) {
     const summaryMsg = buildMessage(episodeById("summary", episodes));

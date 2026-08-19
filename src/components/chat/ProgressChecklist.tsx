@@ -2,6 +2,7 @@
 
 import { CHECKLIST, type ChecklistItem } from "./types";
 import type { Episode } from "./flow";
+import { useLineByLineTypewriter } from "./useLineByLineTypewriter";
 
 interface ProgressChecklistProps {
   completed: ReadonlySet<string>;
@@ -9,15 +10,44 @@ interface ProgressChecklistProps {
   /** Active episodes for the current work type (falls back to static EPISODES). */
   episodes?: Episode[];
   /** Checklist items for the current work type (falls back to landscape CHECKLIST). */
-  checklist?: ChecklistItem[];
+  checklist?: ChecklistItem[] | null;
+  animate?: boolean;
+  /** Typing speed per word token in ms (default: 40ms). */
+  speedMs?: number;
+  /** Time gap / pause between lines in ms (default: 150ms). */
+  lineDelayMs?: number;
 }
 
 export default function ProgressChecklist({
   completed,
   currentId,
   episodes,
-  checklist = CHECKLIST,
+  checklist,
+  animate = true,
+  speedMs = 40,
+  lineDelayMs = 1000,
 }: ProgressChecklistProps) {
+  const { visibleItems } = useLineByLineTypewriter(checklist, {
+    enabled: animate,
+    speedMs,
+    lineDelayMs,
+  });
+
+  if (!checklist || checklist.length === 0) {
+    return (
+      <div>
+        <div className="mb-3 flex items-center justify-between px-1">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+            Intake checklist
+          </h2>
+        </div>
+        <div className="flex items-center gap-2 rounded-xl px-2.5 py-3 text-[13px] text-zinc-400 dark:text-zinc-500 animate-pulse">
+          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+          <span>Loading checklist...</span>
+        </div>
+      </div>
+    );
+  }
   const doneCount = checklist.filter((c) => completed.has(c.id)).length;
 
   // currentId is an episode apiKey — highlight via its checklist item.
@@ -39,7 +69,7 @@ export default function ProgressChecklist({
       </div>
 
       <ol className="space-y-1">
-        {checklist.map((item) => {
+        {visibleItems.map(({ item, displayText, isTyping }) => {
           const isDone = completed.has(item.id);
           const isActive = activeChecklistId === item.id && !isDone;
           return (
@@ -88,7 +118,13 @@ export default function ProgressChecklist({
                         : "text-zinc-600 dark:text-zinc-400"
                   }`}
                 >
-                  {item.label}
+                  {displayText}
+                  {isTyping && (
+                    <span
+                      aria-hidden="true"
+                      className="ml-0.5 inline-block h-[1em] w-[2px] animate-pulse rounded-sm bg-emerald-500 align-middle dark:bg-emerald-400"
+                    />
+                  )}
                 </span>
             </li>
           );

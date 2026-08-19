@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { payloadFromState } from "./index";
-import { stateFromPayload } from "./briefSlice";
+import briefReducer, { setOriginal, stateFromPayload } from "./briefSlice";
 import type { ApiBriefPayload } from "../lib/apiBrief";
 
 /** The exact shape the persistence middleware saves / hydrate restores. */
@@ -52,5 +52,30 @@ describe("persistence round-trip", () => {
     // Context still restored.
     expect(state.id).toBe(42);
     expect(state.work_type).toBe("front_yard");
+  });
+
+  it("setOriginal updates original answered items without modifying context", () => {
+    const initialState = {
+      id: 406,
+      work_type: "front_yard" as const,
+      watermark: "https://mydesigns.pro/img/luna-logo.png",
+      image_url: "https://www.mydesigns.pro/tmp/jenny.png",
+      value: "color-material",
+      user_type: "landscape-design",
+      dc_name: "Brooke Edwards",
+      role: "enterprise",
+      custom_engage_designer: false,
+      original: {},
+      revision_comment: { files: [], notes: "" },
+      question_sets: null,
+    };
+
+    const newOriginal = SAVED.original;
+    const newState = briefReducer(initialState, setOriginal(newOriginal));
+
+    expect(newState.original).toEqual(newOriginal);
+    expect(newState.work_type).toBe("front_yard");
+    expect(newState.dc_name).toBe("Brooke Edwards");
+    expect(newState.id).toBe(406);
   });
 });

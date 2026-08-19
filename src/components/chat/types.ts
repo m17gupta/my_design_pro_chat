@@ -191,17 +191,17 @@ export interface SummaryCopy {
 
 export const SUMMARY_COPY: Record<string, SummaryCopy> = {
   front_yard: {
-    title: "Front Yard Design Summary",
+    title: "Design Summary",
     description:
-      "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?",
+      "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you've shared with me! Can you please confirm?",
   },
   rear_yard: {
-    title: "Rear Yard Design Summary",
+    title: "Design Summary",
     description:
       "Amazing, I have logged our discussion for your rear yard based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?",
   },
   whole_property: {
-    title: "Whole Property Design Summary",
+    title: "Design Summary",
     description:
       "Amazing, I have logged our discussion for your entire property based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?",
   },
@@ -221,9 +221,9 @@ export const SUMMARY_COPY: Record<string, SummaryCopy> = {
       "Amazing, I have logged our discussion about the value added services based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?",
   },
   custom: {
-    title: "Custom Design Summary",
+    title: "Design Summary",
     description:
-      "Let me generate an initial rendering based on my understanding of what you are looking for.",
+      "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you’ve shared with me! Can you please confirm?",
   },
 };
 

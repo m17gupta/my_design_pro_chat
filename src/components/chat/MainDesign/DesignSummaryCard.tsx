@@ -44,8 +44,8 @@ export default function DesignSummaryCard({
   const { original, work_type } = useSelector((state: RootState) => state.chat)
 
   const fallback = summaryCopyForWorkType(work_type ?? undefined)
-  const title = summaryTitle ?? fallback.title
-  const description = summaryText?.trim() ? summaryText.trim() : fallback.description
+  const title = fallback?.title??""
+  const description = fallback?.description??""
 
 
   return (
@@ -257,7 +257,7 @@ export default function DesignSummaryCard({
                 <path d="M22 4L12 14.01l-3-3" />
               </svg>
             )}
-            {generating ? "Generating…" : "Yes, Generate My Design"}
+            {generating ? "Generating…" : "Proceed"}
           </motion.button>
           {/* <motion.button
             type="button"

@@ -275,10 +275,12 @@ function QuestionCard({
     >
       {showHeader && (
         <div className="w-full">
-          <h3 className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {spec.title}
-          </h3>
-          <div className="question-details mt-2 space-y-2">
+          {spec.title!=="" && (
+            <h3 className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 mb-2">
+              {spec.title}
+            </h3>
+          )}
+          <div className="question-details space-y-2">
             {spec.description.split("\n\n").map((para, i) => (
               <p
                 key={i}

@@ -48,8 +48,26 @@ const GetAllProjectData = () => {
 
     dispatch(fetchQuestionnaires());
 
-    const params = decodeClientParams(searchParams.get("params"));
-    // console.log("params",params)
+    const rawParams = searchParams.get("params");
+    let params = decodeClientParams(rawParams);
+
+    if (rawParams) {
+      try {
+        sessionStorage.setItem("dzinly_chat_params", rawParams);
+      } catch {
+        // ignore
+      }
+    } else if (!params) {
+      try {
+        const cached = sessionStorage.getItem("dzinly_chat_params");
+        if (cached) {
+          params = decodeClientParams(cached);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     if (params) {
       dispatch(
         setContext({
@@ -58,10 +76,10 @@ const GetAllProjectData = () => {
           image_url: params.image_url,
           watermark: params.watermark,
           value: params.value,
-          user_type:params?.user_type??"",
-          dc_name:params.dc_name,
-          role:params.role,
-          custom_engage_designer:params.custom_engage_designer,
+          user_type: params?.user_type ?? "",
+          dc_name: params.dc_name,
+          role: params.role,
+          custom_engage_designer: params.custom_engage_designer,
           question_sets: params.question_sets
         })
       );

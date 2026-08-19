@@ -55,7 +55,11 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
 import GetAllProjectData from "./GetAllProjectData";
-import { selectQuestionnairesData } from "../../store/questionnaires/questionnaireSlice";
+import {
+  selectQuestionnairesData,
+  selectQuestionnairesState,
+} from "../../store/questionnaires/questionnaireSlice";
+import { fetchQuestionnaires } from "../../store/questionnaires/questionnaireThunk";
 
 let idCounter = 0;
 const nextId = () => `m-${Date.now()}-${idCounter++}`;
@@ -121,6 +125,11 @@ export default function ChatWindow() {
   const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>({});
 
   const questionnaires = useAppSelector(selectQuestionnairesData);
+  const questionnairesState = useAppSelector(selectQuestionnairesState);
+
+  const isQuestionnairesLoading =
+    questionnairesState?.lifecycle === "loading" ||
+    (questionnairesState?.lifecycle === "idle" && questionnaires === null);
 
   // Build the flow from the full brief context: enterprise / enterprise-client
   // roles resolve their phases from AllQuestion.json via question_sets;
@@ -136,21 +145,24 @@ export default function ChatWindow() {
     }),
     [work_type, user_type, role, question_sets, custom_engage_designer, dc_name]
   );
+
   const episodes = useMemo(
     () => buildEpisodesFromContext(flowContext, questionnaires),
     [flowContext, questionnaires]
   );
+
   // The revision loop's card apiKey ("revision" for legacy / most flows).
   const revisionKey = useMemo(() => revisionApiKey(episodes), [episodes]);
   // Checklist labels follow the flow: phases for AllQuestion flows, the
   // work-type-specific static list for the legacy flows.
-  const checklist = useMemo(
-    () =>
-      checklistFromFlowContext(flowContext, questionnaires) ??
-      checklistForWorkType(work_type ?? undefined),
-    [flowContext, questionnaires, work_type]
-  );
-
+  const checklist = useMemo(() => {
+    const fromContext = checklistFromFlowContext(flowContext, questionnaires);
+    if (fromContext) return fromContext;
+    if (isQuestionnairesLoading && (flowContext.role || flowContext.question_sets)) {
+      return null;
+    }
+    return checklistForWorkType(work_type ?? undefined);
+  }, [flowContext, questionnaires, isQuestionnairesLoading, work_type]);
   const briefPayloadRef = useRef(briefPayload);
   useEffect(() => {
     briefPayloadRef.current = briefPayload;
@@ -176,32 +188,21 @@ export default function ChatWindow() {
   // `persistence.hydrated` below — never before the row has been loaded.
   const hydrated = useAppSelector((s) => s.persistence.hydrated);
   const didInitializeRef = useRef(false);
+  const hasUserInteractedRef = useRef(false);
 
   // Once hydration completes (row restored or confirmed absent), rebuild the
-  // transcript or start fresh. Same restore logic as before, now DB-backed.
+  // transcript or start fresh. Uses restoredTranscript computed from Redux.
   useEffect(() => {
-    if (didInitializeRef.current || !hydrated) return;
+    if (!hydrated) return;
+    if (didInitializeRef.current && hasUserInteractedRef.current) return;
     didInitializeRef.current = true;
 
-    const anyAnswered = Object.values(restoredItems).some(
-      (item) => item !== undefined
-    );
-    if (anyAnswered) {
-      setMessages(restoredTranscript.messages);
-      setCurrentId(restoredTranscript.currentId);
-      setAnswers(restoredTranscript.answers);
-      setCompleted(restoredTranscript.completed);
-      setMessageEpisodes(restoredTranscript.messageEpisodes);
-    } else {
-      // Fresh session — start at the flow's opening episode: the overview
-      // screen for shared flows, or the first intake card for the
-      // overview-less custom flow (which starts directly at its first question).
-      const firstEp = episodes[0];
-      setMessages([buildMessage(firstEp)]);
-      setCurrentId(firstEp.apiKey);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated]);
+    setMessages(restoredTranscript.messages);
+    setCurrentId(restoredTranscript.currentId);
+    setAnswers(restoredTranscript.answers);
+    setCompleted(restoredTranscript.completed);
+    setMessageEpisodes(restoredTranscript.messageEpisodes);
+  }, [hydrated, restoredTranscript]);
 
   const clearTypingTimeout = useCallback(() => {
     if (timeoutRef.current !== null) {
@@ -302,6 +303,7 @@ export default function ChatWindow() {
     ) => {
       if (typing || busyRef.current) return;
       busyRef.current = true;
+      hasUserInteractedRef.current = true;
       const ep = episodeById(currentId, episodes);
 
       if (currentId === "overview") {
@@ -724,13 +726,17 @@ export default function ChatWindow() {
     setPendingRevisionGenerate(null);
     announcedIdRef.current = null;
 
-    // The first question is the photos Yes/No step for shared flows; for the
-    // custom flow the first episode IS the first question.
+    // The first question is the photos Yes/No step for shared flows; for other
+    // flows, find the next question episode after overview.
+    const nextEp = episodes.find((e) => e.apiKey === "photos") ?? episodes.find((e) => e.apiKey !== "overview");
     const firstQuestion =
-      firstEpId === "overview"
-        ? episodes.find((e) => e.apiKey === "photos") ?? firstEp
+      firstEpId === "overview" && nextEp
+        ? nextEp
         : firstEp;
-    const needsAppend = firstEpId === "overview" || startIdx < 0;
+    const needsAppend =
+      firstEpId === "overview" &&
+      firstQuestion.apiKey !== "overview" &&
+      !messages.some((m) => m.id === `ep-${firstQuestion.apiKey}`);
 
     setTyping(true);
     clearTypingTimeout();
@@ -739,7 +745,11 @@ export default function ChatWindow() {
       busyRef.current = false;
       setTyping(false);
       if (needsAppend) {
-        setMessages((prev) => [...prev, buildMessage(firstQuestion)]);
+        setMessages((prev) =>
+          prev.some((m) => m.id === `ep-${firstQuestion.apiKey}`)
+            ? prev
+            : [...prev, buildMessage(firstQuestion)]
+        );
       }
       setCurrentId(firstQuestion.apiKey);
     }, TYPING_MS);
@@ -826,7 +836,10 @@ export default function ChatWindow() {
     setTyping(false);
     setEditingId(null);
     announcedIdRef.current = null;
-    if (!episodes.some((e) => e.apiKey === revisionKey)) {
+    const hasRevisionConfigured =
+      episodes.some((e) => e.apiKey === revisionKey) ||
+      revisionKey === "revision";
+    if (!hasRevisionConfigured) {
       toast("No revision questions are configured for this project.");
       return;
     }
@@ -1084,8 +1097,8 @@ export default function ChatWindow() {
                   // Key by initialAnswer too, so "I'd Like To Make Changes"
                   // re-mounts the comments card with its pre-filled fields.
                   const bubbleKey = m.initialAnswer
-                    ? `${m.id}-prefilled`
-                    : m.id;
+                    ? `${m.id}-prefilled-${i}`
+                    : `${m.id}-${i}`;
 
                   // Hide revision question card once the user has submitted it
                   // (i.e. it is no longer the current active card).

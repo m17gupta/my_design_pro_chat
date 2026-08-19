@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { ApiBriefPayload } from "../../lib/apiBrief";
 import type { EnterpriseEntry } from "../enterprise/enterpriseType";
-import { setBriefState, stateFromPayload } from "../briefSlice";
+import { setBriefState, setContext, setOriginal, setRevision, stateFromPayload } from "../briefSlice";
 import { setEntries } from "../enterprise/enterpriseSlice";
 import type { LunaMyDesignProject } from "./persistenceType";
 
@@ -52,14 +52,34 @@ export const hydrateProject = createAsyncThunk<
     });
 
     const project = (data as { project?: LunaMyDesignProject } | null)?.project;
-
     if (project) {
-      // Restore the brief payload (context + answered questions) and the
-      // design history exactly as they were saved.
+      // Restore answered questions (original) and design history (design_data)
+      // without overwriting top-level brief context.
       if (project.chats && typeof project.chats === "object") {
         const rootState = getState() as { questionnaires?: { data?: Record<string, unknown> | null } };
         const questionnaires = rootState.questionnaires?.data ?? null;
-        dispatch(setBriefState(stateFromPayload(project.chats, questionnaires)));
+        const restored = stateFromPayload(project.chats, questionnaires);
+        const originalData =
+          restored.original && Object.keys(restored.original).length > 0
+            ? restored.original
+            : project.chats.original || {};
+        dispatch(setOriginal(originalData));
+        dispatch(setRevision(restored?.revision_comment));
+
+        dispatch(
+          setContext({
+            id: project.chats.projectId,
+            work_type: project.chats.work_type,
+            user_type: project.chats.user_type,
+            dc_name: project.chats.dc_name,
+            role: project.chats.role,
+            custom_engage_designer: project.chats.custom_engage_designer,
+            watermark: project.chats.watermark,
+            image_url: project.chats.image_url,
+            value: project.chats.value,
+            question_sets: project.chats.question_sets,
+          })
+        );
       }
       if (Array.isArray(project.design_data)) {
         dispatch(setEntries(project.design_data));

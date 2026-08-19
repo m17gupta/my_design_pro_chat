@@ -1,8 +1,8 @@
 "use client";
 
 import { RootState } from "@/store";
-import { motion, useReducedMotion } from "framer-motion";
-import { useMemo } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 
 interface DesignGeneratingCardProps {
@@ -10,6 +10,16 @@ interface DesignGeneratingCardProps {
   status?: string;
 }
 
+
+const GENERATING_MESSAGES = [
+  "Thanks! I'm putting everything together...",
+  "Logging our conversation...",
+  "Organizing your ideas...",
+  "Making sure I didn't miss a thing...",
+  "One last pass before we're done...",
+  "Don't leave; I'm finishing up.",
+  "Almost there! Just a few more seconds.",
+];
 
 export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCardProps) {
   const reduceMotion = useReducedMotion() ?? false;
@@ -26,9 +36,25 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
 
   const rendering = currentStatus === "processing";
   const title = rendering ? "Rendering your design…" : "Preparing your design…";
-  const subtitle = rendering
-    ? "Your initial render is being created — this usually takes a minute or two."
-    : "Your request is in the queue — the render will appear right here as soon as it's ready.";
+
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setMessageIndex(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setMessageIndex((prev) =>
+        prev < GENERATING_MESSAGES.length - 1 ? prev + 1 : prev
+      );
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [isGenerating]);
+
+  const subtitle = GENERATING_MESSAGES[messageIndex];
 
   if (!isGenerating) {
     return null;
@@ -56,9 +82,18 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{title}</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-              {subtitle}
-            </p>
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={messageIndex}
+                initial={{ opacity: 0, y: 3 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -3 }}
+                transition={{ duration: 0.25 }}
+                className="mt-0.5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400"
+              >
+                {subtitle}
+              </motion.p>
+            </AnimatePresence>
           </div>
         </div>
 
