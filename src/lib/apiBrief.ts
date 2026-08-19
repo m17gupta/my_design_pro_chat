@@ -4,6 +4,7 @@ import type {
   AnswerValue
 } from '../components/chat/types'
 
+
 /**
  * Top-level context for the brief payload. These come from the host app / API
  * (the chat itself never collects them); defaults are used until wired up.
