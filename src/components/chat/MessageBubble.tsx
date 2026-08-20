@@ -399,22 +399,18 @@ export const MessageBubble = ({
             />
           ) : (
             <>
-              {!originalEntry?.url && (
-                <DesignSummaryCard
-                  answers={answers}
-                  uploadTotal={uploadTotal}
-                  generating={generating}
-                  disabled={summaryDisabled}
-                  showActions={!summaryActionsHidden}
-                  summaryTitle={message.title}
-                  summaryText={message.content}
-                  onGenerate={onSummaryGenerate ?? (() => {})}
-                  onChanges={onSummaryChanges ?? (() => {})}
-                />
-              )}
-              <div className='mt-3'>
-                <DesignGeneratingCard status={designStatus} />
-              </div>
+              <DesignSummaryCard
+                answers={answers}
+                uploadTotal={uploadTotal}
+                generating={generating}
+                disabled={summaryDisabled}
+                showActions={!summaryActionsHidden}
+                summaryTitle={message.title}
+                summaryText={message.content}
+                onGenerate={onSummaryGenerate ?? (() => {})}
+                onChanges={onSummaryChanges ?? (() => {})}
+              />
+              <DesignGeneratingCard status={designStatus} />
               {originalEntry?.url && (
                 <div className='mt-3'>
                   <DesignResultCard

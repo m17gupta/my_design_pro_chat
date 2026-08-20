@@ -65,7 +65,7 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 380, damping: 30 }}
-      className="w-full overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+      className="mt-3 w-full overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
     >
       <div role="status" aria-live="polite" className="p-4 sm:p-5">
         {/* Status row */}
