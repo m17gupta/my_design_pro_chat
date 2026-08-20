@@ -149,7 +149,7 @@ export default function ChatWindow() {
     () => buildEpisodesFromContext(flowContext, questionnaires),
     [flowContext, questionnaires]
   );
-   console.log("episodes---",episodes)
+ 
 
   // The revision loop's card apiKey ("revision" for legacy / most flows).
   const revisionKey = useMemo(() => revisionApiKey(episodes), [episodes]);
@@ -598,7 +598,7 @@ export default function ChatWindow() {
   
         });
       await dispatch(generateEnterpriseDesign({ payload })).unwrap();
-      toast.success("Your design brief has been sent to Brooke Edwards for review!");
+      // toast.success("Your design brief has been sent to Brooke Edwards for review!");
     } catch (error) {
       toast.error(
         typeof error === "string"
@@ -893,7 +893,7 @@ export default function ChatWindow() {
       });
       try {
         await dispatch(generateEnterpriseDesign({ payload, round })).unwrap();
-        toast.success("Your design brief has been sent to Brooke Edwards for review!");
+        // toast.success("Your design brief has been sent to Brooke Edwards for review!");
       } catch (error) {
         setPendingRevisionGenerate(null);
         toast.error(

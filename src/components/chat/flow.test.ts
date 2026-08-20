@@ -3,7 +3,6 @@ import type { ApiBriefItem } from "../../lib/apiBrief";
 import type { EnterpriseEntry } from "../../store/enterprise/enterpriseType";
 import {
   EPISODES,
-  WORK_TYPE_API_KEYS,
   buildColorMaterialEpisodes,
   buildEpisodes,
   buildEpisodesFromContext,
@@ -404,48 +403,46 @@ describe("buildEpisodes", () => {
   });
 });
 
-describe("WORK_TYPE_API_KEYS registry", () => {
-  it("defines an apiKey array for every supported work type", () => {
-    for (const wt of [
-      "front_yard",
-      "rear_yard",
-      "whole_property",
-      "color_material",
-      "arc_addition",
-      "custom",
-      "value_added_services",
-    ]) {
-      expect(WORK_TYPE_API_KEYS[wt]).toBeDefined();
-      expect(WORK_TYPE_API_KEYS[wt].length).toBeGreaterThan(0);
+describe("Work type episode resolution", () => {
+  const WORK_TYPES = [
+    "front_yard",
+    "rear_yard",
+    "whole_property",
+    "color_material",
+    "arc_addition",
+    "custom",
+    "value_added_services",
+  ];
+
+  it("builds valid episodes for every supported work type", () => {
+    for (const wt of WORK_TYPES) {
+      const eps = buildEpisodes(wt);
+      expect(eps).toBeDefined();
+      expect(eps.length).toBeGreaterThan(0);
     }
   });
 
-  it("resolves every key in every family array to a real episode", () => {
-    for (const [wt, keys] of Object.entries(WORK_TYPE_API_KEYS)) {
+  it("resolves every episode in every family to a valid catalog episode", () => {
+    for (const wt of WORK_TYPES) {
       const eps = buildEpisodes(wt);
-      expect(eps.map((e) => e.apiKey)).toEqual(keys);
-      for (const key of keys) {
-        // BY_ID covers the full catalog, so a bare lookup resolves any family's key.
-        expect(episodeById(key).apiKey).toBe(key);
+      for (const ep of eps) {
+        expect(episodeById(ep.apiKey).apiKey).toBe(ep.apiKey);
       }
     }
   });
 
-  it("keeps landscape variants on the base apiKey array", () => {
+  it("keeps landscape variants on the base episode list structure", () => {
     const base = EPISODES.map((e) => e.apiKey);
     for (const wt of ["front_yard", "rear_yard", "whole_property", "value_added_services"]) {
-      expect(WORK_TYPE_API_KEYS[wt]).toEqual(base);
+      expect(buildEpisodes(wt).map((e) => e.apiKey)).toEqual(base);
     }
   });
 
   it("keeps every family array identical except the three topic slots", () => {
     const base = EPISODES.map((e) => e.apiKey);
-    // All 7 arrays share the same pre/post structure; only the three topic
-    // slots differ, and each family swaps in exactly its own three keys.
-    // (Custom defines its own self-contained flow in CustomQuestions.json.)
-    for (const wt of Object.keys(WORK_TYPE_API_KEYS) as (keyof typeof WORK_TYPE_API_KEYS)[]) {
+    for (const wt of WORK_TYPES) {
       if (wt === "custom") continue;
-      const keys = WORK_TYPE_API_KEYS[wt];
+      const keys = buildEpisodes(wt).map((e) => e.apiKey);
       expect(keys.length).toBe(base.length);
       const nonTopic = keys.filter((k) => !ALL_TOPIC_KEYS.includes(k));
       const baseNonTopic = base.filter((k) => !ALL_TOPIC_KEYS.includes(k));
@@ -455,7 +452,6 @@ describe("WORK_TYPE_API_KEYS registry", () => {
 
   it("sources the custom flow's apiKeys from CustomQuestions.json", () => {
     const custom = buildEpisodes("custom");
-    expect(custom.map((e) => e.apiKey)).toEqual(WORK_TYPE_API_KEYS.custom);
     // Self-contained 5-step flow — no overview/photos/files/budget steps.
     expect(custom.map((e) => e.apiKey)).toEqual([
       "project_goals_or_brief_description",
@@ -467,15 +463,21 @@ describe("WORK_TYPE_API_KEYS registry", () => {
   });
 
   it("has exactly one topic set per family (landscape / color-material / arc)", () => {
-    expect(WORK_TYPE_API_KEYS.front_yard.filter((k) => ALL_TOPIC_KEYS.includes(k))).toEqual(
-      LANDSCAPE_TOPIC_KEYS
-    );
-    expect(WORK_TYPE_API_KEYS.color_material.filter((k) => ALL_TOPIC_KEYS.includes(k))).toEqual(
-      COLOR_MATERIAL_TOPIC_KEYS
-    );
-    expect(WORK_TYPE_API_KEYS.arc_addition.filter((k) => ALL_TOPIC_KEYS.includes(k))).toEqual(
-      ARC_TOPIC_KEYS
-    );
+    expect(
+      buildEpisodes("front_yard")
+        .map((e) => e.apiKey)
+        .filter((k) => ALL_TOPIC_KEYS.includes(k))
+    ).toEqual(LANDSCAPE_TOPIC_KEYS);
+    expect(
+      buildEpisodes("color_material")
+        .map((e) => e.apiKey)
+        .filter((k) => ALL_TOPIC_KEYS.includes(k))
+    ).toEqual(COLOR_MATERIAL_TOPIC_KEYS);
+    expect(
+      buildEpisodes("arc_addition")
+        .map((e) => e.apiKey)
+        .filter((k) => ALL_TOPIC_KEYS.includes(k))
+    ).toEqual(ARC_TOPIC_KEYS);
   });
 });
 
@@ -1033,6 +1035,7 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
     const eps = buildEpisodesFromContext(ENTERPRISE_CM, MOCK_QUESTIONNAIRES);
     expect(eps.map((e) => e.apiKey)).toEqual([
       "overview",
+      "photos",
       "additional_images_upload",
       "project_goals_or_brief_description",
       "exterior_color_and_material_style",
@@ -1150,10 +1153,27 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
     );
   });
 
-  it("does not gate uploads on non-yard enterprise flows", () => {
+  it("gates uploads on any flow containing the upload questions", () => {
     const cm = buildEpisodesFromContext(ENTERPRISE_CM, MOCK_QUESTIONNAIRES);
-    expect(cm.map((e) => e.apiKey)).not.toContain("photos");
-    expect(cm.map((e) => e.apiKey)).not.toContain("files");
+    const keys = cm.map((e) => e.apiKey);
+    const photos = keys.indexOf("photos");
+    expect(photos).toBeGreaterThanOrEqual(0);
+    expect(keys[photos + 1]).toBe("additional_images_upload");
+    // This questionnaire has no supporting_files_upload → no files gate.
+    expect(keys).not.toContain("files");
+  });
+
+  it("does not gate uploads when the questionnaire lacks the upload questions", () => {
+    const eps = buildEpisodesFromContext(
+      {
+        role: "enterprise-client",
+        user_type: "landscape-design",
+        question_sets: { original: ["phase_1", "phase_2"], revision: ["phase_5"] },
+      },
+      MOCK_QUESTIONNAIRES
+    );
+    expect(eps.map((e) => e.apiKey)).not.toContain("photos");
+    expect(eps.map((e) => e.apiKey)).not.toContain("files");
   });
 
   it("restores a gated yard flow with the photo branch", () => {

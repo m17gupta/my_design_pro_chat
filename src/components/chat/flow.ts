@@ -297,40 +297,25 @@ const ARC_TOPIC_KEYS = [
 /** The base intake order — the landscape (front-yard) family. */
 const BASE_KEYS = EPISODES.map((e) => e.apiKey);
 
-/** The custom work type's episode apiKeys, sourced from CustomQuestions.json. */
-const CUSTOM_KEYS = (customQuestionsJson as Episode[]).map((e) => e.apiKey);
-
-/** Swap the three landscape topic slots for another family's topic keys. */
-function withTopicFamily(
-  keys: readonly string[],
-  topics: readonly string[]
-): string[] {
-  return keys.map((k) => {
-    const slot = (LANDSCAPE_TOPIC_KEYS as readonly string[]).indexOf(k);
-    return slot >= 0 ? topics[slot] : k;
-  });
-}
-
-/**
- * The intake question set per work type, as ordered apiKey arrays — the single
- * source of truth for which cards each work type shows. Wording is layered on
- * later from Questions.json via `buildEpisodes`; the `custom` work type reads
- * its keys straight from CustomQuestions.json.
- */
-export const WORK_TYPE_API_KEYS: Record<string, string[]> = {
-  front_yard: BASE_KEYS,
-  rear_yard: BASE_KEYS,
-  whole_property: BASE_KEYS,
-  custom: CUSTOM_KEYS,
-  value_added_services: BASE_KEYS,
-  color_material: withTopicFamily(BASE_KEYS, COLOR_MATERIAL_TOPIC_KEYS),
-  arc_addition: withTopicFamily(BASE_KEYS, ARC_TOPIC_KEYS),
-};
-
-/** Resolve a work type's apiKey array to its episode objects. */
+/** Resolve a work type to its fallback episode objects. */
 function resolveWorkTypeEpisodes(workType: string | undefined): Episode[] {
-  const keys = WORK_TYPE_API_KEYS[normalizeWorkType(workType)] ?? BASE_KEYS;
-  return keys.map((k) => CATALOG[k]);
+  const normalized = normalizeWorkType(workType);
+  if (normalized === "custom") {
+    return customQuestionsJson as Episode[];
+  }
+  if (normalized === "color_material") {
+    return BASE_KEYS.map((k) => {
+      const idx = (LANDSCAPE_TOPIC_KEYS as readonly string[]).indexOf(k);
+      return idx >= 0 ? CATALOG[COLOR_MATERIAL_TOPIC_KEYS[idx]] : CATALOG[k];
+    });
+  }
+  if (normalized === "arc_addition") {
+    return BASE_KEYS.map((k) => {
+      const idx = (LANDSCAPE_TOPIC_KEYS as readonly string[]).indexOf(k);
+      return idx >= 0 ? CATALOG[ARC_TOPIC_KEYS[idx]] : CATALOG[k];
+    });
+  }
+  return BASE_KEYS.map((k) => CATALOG[k]);
 }
 
 /**
@@ -511,8 +496,7 @@ const ARC_EXTERIOR_MATERIALS: Episode = {
 
 /**
  * Every episode the app can render, keyed by apiKey. Built from the base
- * EPISODES plus the topic cards of every family, so the per-work-type apiKey
- * arrays in `WORK_TYPE_API_KEYS` resolve to real episode objects.
+ * EPISODES plus the topic cards of every family.
  */
 const CATALOG: Record<string, Episode> = Object.fromEntries(
   [
@@ -531,7 +515,10 @@ const BY_ID = new Map(Object.entries(CATALOG));
 
 /** The color/material episodes list — same flow, three different topic cards. */
 export function buildColorMaterialEpisodes(): Episode[] {
-  return WORK_TYPE_API_KEYS.color_material.map((k) => CATALOG[k]);
+  return BASE_KEYS.map((k) => {
+    const idx = (LANDSCAPE_TOPIC_KEYS as readonly string[]).indexOf(k);
+    return idx >= 0 ? CATALOG[COLOR_MATERIAL_TOPIC_KEYS[idx]] : CATALOG[k];
+  });
 }
 
 /**
@@ -628,9 +615,9 @@ function collectOverridesFromRoot(
 }
 
 /**
- * Build a work-type-specific episodes list: resolve the work type's apiKey
- * array from `WORK_TYPE_API_KEYS`, then overlay the question wording from
- * Questions.json onto those episode objects.
+ * Build a work-type-specific episodes list: resolve the work type's episode
+ * objects, then overlay the question wording from Questions.json onto those
+ * episode objects.
  *
  * The apiKeys and field layouts come from the catalog (per work type); only
  * description / question text is swapped per work type from the JSON. Falls
@@ -663,7 +650,7 @@ export function buildEpisodes(
   options?: { engageDesigner?: boolean; dcName?: string }
 ): Episode[] {
   const normalized = normalizeWorkType(workType);
-
+    console.log("normalized",normalized)
   if (normalized === "custom") {
     const customEpisodes = (customQuestionsJson as Episode[]).map((ep) =>
       ep.card && ep.card.description
@@ -697,7 +684,9 @@ export function buildEpisodes(
     return customEpisodes;
   }
   const base = resolveWorkTypeEpisodes(workType);
+  console.log("base",base)
   const overrides = collectWorkTypeOverrides(workType);
+  console.log("overrides",overrides)
   if (overrides.length === 0) {
     // No overrides found — return the work type's episodes unchanged.
     return base;
@@ -1142,11 +1131,9 @@ export function buildEpisodesFromContext(
     }
   }
 
-  // Enterprise landscape-design yard flows gate the two upload cards behind
-  // the legacy Yes/No intro questions (photos / files).
-  if (shouldGateUploads(ctx)) {
-    insertUploadGates(episodes);
-  }
+  // Gate the two upload cards behind the legacy Yes/No intro questions
+  // (photos / files) whenever the flow contains them — any work type.
+  insertUploadGates(episodes);
 
   const isCustomEngage =
     Boolean(ctx.engageDesigner) &&
@@ -1226,27 +1213,9 @@ export function revisionApiKey(episodes: Episode[]): string {
 }
 
 /**
- * Enterprise landscape yard flows gate their upload cards behind the legacy
- * Yes/No intro questions. Restricting this to the three yard work types keeps
- * custom / value_added_services flows (which the host drives with their own
- * question_sets) unchanged.
- */
-const GATED_LANDSCAPE_WORK_TYPES = new Set([
-  "front_yard",
-  "rear_yard",
-  "whole_property",
-]);
-
-function shouldGateUploads(ctx: FlowContext): boolean {
-  return (
-    normalizeRole(ctx.role) === "enterprise" &&
-    GATED_LANDSCAPE_WORK_TYPES.has(normalizeWorkType(ctx.work_type ?? ""))
-  );
-}
-
-/**
  * Insert the Yes/No photo & file intro questions (reusing the legacy
- * EPISODES definitions) immediately before their upload cards.
+ * EPISODES definitions) immediately before their upload cards. No-op when
+ * the flow has no upload cards.
  */
 function insertUploadGates(episodes: Episode[]): void {
   const photosGate = EPISODES.find((e) => e.apiKey === "photos");
