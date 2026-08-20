@@ -640,7 +640,7 @@ export default function ChatWindow() {
         stopPolling();
         setPendingRevisionGenerate(null);
         if (res.status === "completed") {
-          toast.success("Your design is ready!");
+          // toast.success("Your design is ready!");
         } else {
           toast.error(res.error ?? "Design generation failed. Please try again.");
         }
