@@ -125,9 +125,9 @@ function UserAnswerBubble({
         <div className="flex max-w-[85%] flex-col items-end gap-1 sm:max-w-[75%]">
           {/* ── Main answer bubble ── */}
           <div
-            className={`rounded-2xl rounded-br-md shadow-md shadow-emerald-500/20 overflow-hidden ${
+            className={`rounded-2xl rounded-br-md shadow-md shadow-emerald-500/20 overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-600 ${
               editing && !isOptionEdit ? "ring-2 ring-emerald-400/70" : ""
-            } ${mode === "text" && !editing ? "bg-gradient-to-r from-emerald-500 to-teal-600" : "bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800"}`}
+            }`}
           >
             {/* ── Edit mode: text textarea ── */}
             {editing && !isOptionEdit && (
@@ -204,10 +204,8 @@ function UserAnswerBubble({
                 {/* Text content */}
                 {hasText && (
                   <p
-                    className={`whitespace-pre-wrap break-words px-4 py-2.5 text-[15px] leading-relaxed ${
-                      mode === "text"
-                        ? "text-white"
-                        : "text-zinc-800 dark:text-zinc-100 border-t border-zinc-100 dark:border-zinc-800"
+                    className={`whitespace-pre-wrap break-words px-4 py-2.5 text-[15px] leading-relaxed text-white ${
+                      hasImages ? "border-t border-white/20" : ""
                     }`}
                   >
                     {finalContent}
@@ -216,7 +214,7 @@ function UserAnswerBubble({
 
                 {/* Image-only fallback label when no text at all */}
                 {!hasText && hasImages && (
-                  <p className="px-3 pb-2 text-xs text-zinc-400 dark:text-zinc-500">
+                  <p className="px-3 pb-2 text-xs text-white/80">
                     {finalImageUrls.length} image{finalImageUrls.length > 1 ? "s" : ""} uploaded
                   </p>
                 )}

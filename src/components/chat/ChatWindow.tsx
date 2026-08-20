@@ -499,6 +499,16 @@ export default function ChatWindow() {
             if (cardIdx >= 0) {
               newMessages = newMessages.filter((m, i) => i !== cardIdx && i !== cardIdx + 1);
             }
+            const userMsgIdx = newMessages.findIndex((m) => m.id === messageId);
+            if (userMsgIdx >= 0 && userMsgIdx === newMessages.length - 1) {
+              const followUpEpKey = nextEpisodeId(epId, text, episodes);
+              if (followUpEpKey) {
+                const followUpEp = episodeById(followUpEpKey, episodes);
+                const followUpMsg = buildMessage(followUpEp);
+                newMessages = [...newMessages, followUpMsg];
+                setCurrentId(followUpEpKey);
+              }
+            }
           }
         }
       }

@@ -64,6 +64,8 @@ export default function RevisionResultCard({
   // This round's entry is getRevison[round - 1] — while its status is still
   // "pending" (generation in flight) every action button stays disabled.
   const roundPending = getRevison[round - 1]?.status === "pending";
+  const hideButtons =
+    getRevison.length > round && getRevison[round]?.status === "completed";
   const interactive = !locked && !submittedAction && !roundPending;
 
   return (
@@ -155,85 +157,87 @@ export default function RevisionResultCard({
      
 
         {/* Three actions — the only exit points from the revision loop. */}
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <motion.button
-            type="button"
-            onClick={() => onAllINeed(rating)}
-            disabled={!interactive}
-            whileHover={interactive ? { scale: 1.03 } : undefined}
-            whileTap={interactive ? { scale: 0.95 } : undefined}
-            className={BUTTON_CLASS}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+        {!hideButtons && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <motion.button
+              type="button"
+              onClick={() => onAllINeed(rating)}
+              disabled={!interactive}
+              whileHover={interactive ? { scale: 1.03 } : undefined}
+              whileTap={interactive ? { scale: 0.95 } : undefined}
+              className={BUTTON_CLASS}
             >
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
-            This is All I Need
-          </motion.button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+              This is All I Need
+            </motion.button>
 
-          <motion.button
-            type="button"
-            onClick={onRegenerate}
-            disabled={!interactive || regenerateDisabled}
-            whileHover={interactive && !regenerateDisabled ? { scale: 1.03 } : undefined}
-            whileTap={interactive && !regenerateDisabled ? { scale: 0.95 } : undefined}
-            className={BUTTON_CLASS}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+            <motion.button
+              type="button"
+              onClick={onRegenerate}
+              disabled={!interactive || regenerateDisabled}
+              whileHover={interactive && !regenerateDisabled ? { scale: 1.03 } : undefined}
+              whileTap={interactive && !regenerateDisabled ? { scale: 0.95 } : undefined}
+              className={BUTTON_CLASS}
             >
-              <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-              <path d="M21 3v5h-5" />
-            </svg>
-            Regenerate With Comments
-          </motion.button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+              </svg>
+              Regenerate With Comments
+            </motion.button>
 
-          <motion.button
-            type="button"
-            onClick={() => onEngageDesigner(rating)}
-            disabled={!interactive}
-            whileHover={interactive ? { scale: 1.03 } : undefined}
-            whileTap={interactive ? { scale: 0.95 } : undefined}
-            className={BUTTON_CLASS}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+            <motion.button
+              type="button"
+              onClick={() => onEngageDesigner(rating)}
+              disabled={!interactive}
+              whileHover={interactive ? { scale: 1.03 } : undefined}
+              whileTap={interactive ? { scale: 0.95 } : undefined}
+              className={BUTTON_CLASS}
             >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-            Engage Designer
-          </motion.button>
-        </div>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Engage Designer
+            </motion.button>
+          </div>
+        )}
 
-        {regenerateDisabled && interactive && (
+        {!hideButtons && regenerateDisabled && interactive && (
           <p className="mt-2.5 text-xs text-amber-600 dark:text-amber-400">
             You&apos;ve reached the revision limit — engage your designer for
             further changes.

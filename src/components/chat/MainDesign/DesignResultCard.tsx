@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import type { SubmitAction } from "@/components/revisionDesign/RevisionResultCard";
 import { useSelector } from "react-redux";
@@ -34,12 +35,19 @@ export default function DesignResultCard({
   onRegenerate,
   onEngageDesigner,
 }: DesignResultCardProps) {
-  const { entries } = useSelector((state: RootState) => state.enterprise)
-   const {revision_comment}= useSelector((state:RootState)=>state.chat)
-   
-  const revision = entries.filter(item=>item.type=="revision")
-  const hasRevisionComment = revision_comment.notes !== "" || ( revision_comment.files.length > 0);
-  const interactive = !disabled && !submittedAction && (revision.length <= 4 || hasRevisionComment);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const { entries } = useSelector((state: RootState) => state.enterprise);
+  const { revision_comment } = useSelector((state: RootState) => state.chat);
+
+  const revision = entries.filter((item) => item.type == "revision");
+  const hasRevisionComment =
+    revision_comment.notes !== "" || revision_comment.files.length > 0;
+  const interactive =
+    !disabled && !submittedAction && (revision.length <= 4 || hasRevisionComment);
+
+  const isRegenerateDisabled =
+    isRegenerating || hasRevisionComment || !interactive;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -92,8 +100,7 @@ export default function DesignResultCard({
               whileHover={interactive ? { scale: 1.03 } : undefined}
               whileTap={interactive ? { scale: 0.95 } : undefined}
               className={BUTTON_CLASS}
-              // disabled={!interactive}
-              disabled={hasRevisionComment|| !interactive}
+              disabled={hasRevisionComment || !interactive}
             >
               <svg
                 width="14"
@@ -113,11 +120,14 @@ export default function DesignResultCard({
 
             <motion.button
               type="button"
-              onClick={onRegenerate}
-              whileHover={interactive ? { scale: 1.03 } : undefined}
-              whileTap={interactive ? { scale: 0.95 } : undefined}
+              onClick={() => {
+                setIsRegenerating(true);
+                onRegenerate();
+              }}
+              whileHover={!isRegenerateDisabled ? { scale: 1.03 } : undefined}
+              whileTap={!isRegenerateDisabled ? { scale: 0.95 } : undefined}
               className={BUTTON_CLASS}
-              disabled={hasRevisionComment}
+              disabled={isRegenerateDisabled}
             >
               <svg
                 width="14"

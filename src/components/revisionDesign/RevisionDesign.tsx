@@ -117,6 +117,7 @@ export default function RevisionDesign({
         round={round}
         notes={notes}
         filesCount={files.length}
+        files={files}
         generating={generating}
         disabled={disabled}
         showActions={showActions}

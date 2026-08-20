@@ -172,6 +172,11 @@ const briefSlice = createSlice({
           meta,
           action.payload.answer
         )
+      } else if (state.original[action.payload.apiKey]) {
+        state.original[action.payload.apiKey] = {
+          ...state.original[action.payload.apiKey],
+          answer: action.payload.answer as ApiBriefItem['answer']
+        }
       }
     },
 

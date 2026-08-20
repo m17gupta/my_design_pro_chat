@@ -13,6 +13,8 @@ interface RevisionSummaryCardProps {
   notes: string
   /** Number of files uploaded alongside the revision comments. */
   filesCount: number
+  /** List of uploaded file URLs or paths. */
+  files?: string[]
   /** True while the brief POST to the design API is in flight. */
   generating?: boolean
   /** Disabled comes from this round's entry status (never read from Redux). */
@@ -35,6 +37,7 @@ export default function RevisionSummaryCard ({
   round = 1,
   notes,
   filesCount,
+  files = [],
   generating = false,
   disabled = false,
   showActions = true,
@@ -93,7 +96,7 @@ export default function RevisionSummaryCard ({
       </p>
 
       <div className='mt-4 overflow-hidden rounded-xl border border-zinc-200/80 dark:border-zinc-800'>
-        <div className='flex items-start gap-3 px-3.5 py-2.5'>
+        <div className='flex items-start justify-between gap-3 px-3.5 py-2.5'>
           <svg
             width='15'
             height='15'
@@ -110,40 +113,82 @@ export default function RevisionSummaryCard ({
             <path d='M8 9h8' />
             <path d='M8 13h5' />
           </svg>
-          {/* <p className="min-w-0 flex-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-            Revision Comments
-          </p> */}
-          <p className='min-w-0 max-w-[55%] whitespace-pre-wrap break-words text-right text-sm text-zinc-800 dark:text-zinc-100'>
-            {notes || (
-              <span className='italic text-zinc-400 dark:text-zinc-500'>
-                Not provided
-              </span>
-            )}
-          </p>
+          <div className='ml-auto flex min-w-0 max-w-[70%] flex-col items-end gap-2'>
+            <p className='w-full whitespace-pre-wrap break-words text-right text-sm text-zinc-800 dark:text-zinc-100'>
+              {notes || (
+                <span className='italic text-zinc-400 dark:text-zinc-500'>
+                  Not provided
+                </span>
+              )}
+            </p>
+          </div>
         </div>
         {filesCount > 0 && (
-          <div className='flex items-center gap-3 border-t border-zinc-200/80 px-3.5 py-2.5 dark:border-zinc-800'>
-            <svg
-              width='15'
-              height='15'
-              viewBox='0 0 24 24'
-              fill='none'
-              stroke='currentColor'
-              strokeWidth='2'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-              aria-hidden='true'
-              className='shrink-0 text-emerald-500'
-            >
-              <path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' />
-              <path d='M14 2v6h6' />
-            </svg>
-            <p className='flex-1 text-xs font-medium text-zinc-500 dark:text-zinc-400'>
-              Uploaded files
-            </p>
-            <p className='text-sm text-zinc-800 dark:text-zinc-100'>
-              {filesCount} file{filesCount > 1 ? 's' : ''}
-            </p>
+          <div className='flex items-center justify-between gap-3 border-t border-zinc-200/80 px-3.5 py-2.5 dark:border-zinc-800'>
+            <div className='flex items-center gap-3'>
+              <svg
+                width='15'
+                height='15'
+                viewBox='0 0 24 24'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='2'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                aria-hidden='true'
+                className='shrink-0 text-emerald-500'
+              >
+                <path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' />
+                <path d='M14 2v6h6' />
+              </svg>
+              <p className='text-xs font-medium text-zinc-500 dark:text-zinc-400'>
+                Uploaded files
+              </p>
+            </div>
+            <div className='flex flex-wrap items-center justify-end gap-1.5'>
+              {files && files.length > 0 ? (
+                files.map((url, idx) => {
+                  const isImage =
+                    /\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) ||
+                    url.startsWith('data:') ||
+                    url.startsWith('blob:') ||
+                    url.startsWith('http')
+                  if (isImage) {
+                    return (
+                      <a
+                        key={idx}
+                        href={url}
+                        target='_blank'
+                        rel='noreferrer'
+                        className='relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 transition-transform hover:scale-105'
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url}
+                          alt={`Uploaded image ${idx + 1}`}
+                          className='h-full w-full object-cover'
+                        />
+                      </a>
+                    )
+                  }
+                  return (
+                    <a
+                      key={idx}
+                      href={url}
+                      target='_blank'
+                      rel='noreferrer'
+                      className='flex h-8 px-2.5 shrink-0 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100'
+                    >
+                      File {idx + 1}
+                    </a>
+                  )
+                })
+              ) : (
+                <p className='text-sm text-zinc-800 dark:text-zinc-100'>
+                  {filesCount} file{filesCount > 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>

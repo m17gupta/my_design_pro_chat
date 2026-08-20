@@ -157,7 +157,13 @@ function QuestionCard({
       if (field.kind === "upload-grid") {
         Array.from({ length: field.count ?? 4 }).forEach((_, slot) => {
           handlers.set(slot, (map) =>
-            setUrlsByField((prev) => ({ ...prev, [slot]: map }))
+            setUrlsByField((prev) => {
+              const currentSlot = prev[slot] ?? {};
+              const restoredKeys = Object.fromEntries(
+                Object.entries(currentSlot).filter(([k]) => k.startsWith("restored-"))
+              );
+              return { ...prev, [slot]: { ...restoredKeys, ...map } };
+            })
           );
         });
       }
@@ -230,7 +236,7 @@ function QuestionCard({
       }
     });
 
-    let answerText = parts.join(" · ");
+    let answerText = parts.join("\n");
     if (spec.fields.some((f) => f.kind === "upload-grid")) {
       if (!answerText) {
         answerText =
@@ -238,7 +244,7 @@ function QuestionCard({
             ? `${uploadTotal} file${uploadTotal > 1 ? "s" : ""} uploaded`
             : "Skipped for now";
       } else if (uploadTotal > 0) {
-        answerText += ` (+${uploadTotal} file${uploadTotal > 1 ? "s" : ""})`;
+        answerText = `${uploadTotal} file${uploadTotal > 1 ? "s" : ""} uploaded\n${answerText}`;
       }
     }
 

@@ -22,13 +22,13 @@ export function answerToText(item: ApiBriefItem): string {
       : `${a.length} file${a.length > 1 ? "s" : ""} uploaded`;
   }
   const parts: string[] = [];
-  if ("value" in a && a.value.length > 0) parts.push(a.value.join(", "));
   if ("files" in a && a.files.length > 0) {
     parts.push(`${a.files.length} file${a.files.length > 1 ? "s" : ""} uploaded`);
   }
+  if ("value" in a && a.value.length > 0) parts.push(a.value.join(", "));
   const notes = a.notes.trim();
   if (notes) parts.push(notes);
-  return parts.join(" · ") || "No answer";
+  return parts.join("\n") || "No answer";
 }
 
 /** Extract the file URL list from an item's answer (urls or files-notes shapes). */
