@@ -1,10 +1,44 @@
-"use client";
-
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { toast } from "react-hot-toast";
 import { uploadFile, type UploadResult } from "../../lib/upload";
 import { useAppSelector } from "../../store/hooks";
 import type { UploadSpec } from "./types";
+
+const ALLOWED_EXTENSIONS = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".dwg",
+  ".rvt",
+  ".skp",
+  ".pdf",
+  ".doc",
+  ".docx",
+];
+
+const ACCEPT_FORMATS = ALLOWED_EXTENSIONS.join(",") + ",image/*";
+
+function getFileExt(nameOrUrl: string): string {
+  if (!nameOrUrl) return "";
+  const clean = nameOrUrl.split("?")[0].split("#")[0];
+  const parts = clean.split(".");
+  if (parts.length <= 1) return "";
+  return "." + parts.pop()!.toLowerCase();
+}
+
+type FileCategory = "image" | "pdf" | "doc" | "cad" | "other";
+
+function getFileCategory(nameOrUrl: string): FileCategory {
+  const ext = getFileExt(nameOrUrl);
+  if ([".jpg", ".jpeg", ".png", ".gif", ".webp"].includes(ext)) return "image";
+  if (ext === ".pdf") return "pdf";
+  if ([".doc", ".docx"].includes(ext)) return "doc";
+  if ([".dwg", ".rvt", ".skp"].includes(ext)) return "cad";
+  return "other";
+}
 
 interface UploadZoneProps {
   spec: UploadSpec;
@@ -82,6 +116,7 @@ function UploadZone({
 
   const startUpload = useCallback(
     (file: File) => {
+      console.log("hjsds")
       const key = keyOf(file);
       setStatus((prev) => ({ ...prev, [key]: { state: "uploading", percent: 0 } }));
       uploadFile(file, (percent) =>
@@ -108,8 +143,23 @@ function UploadZone({
     (list: FileList | null) => {
       if (!list || disabled) return;
       const incoming = Array.from(list).slice(0, 10);
+
+      const invalidFiles = incoming.filter(
+        (f) => !ALLOWED_EXTENSIONS.includes(getFileExt(f.name))
+      );
+      if (invalidFiles.length > 0) {
+        toast.error(
+          `Invalid file format. Allowed formats: ${ALLOWED_EXTENSIONS.join(", ")}`
+        );
+      }
+
+      const validIncoming = incoming.filter((f) =>
+        ALLOWED_EXTENSIONS.includes(getFileExt(f.name))
+      );
+      if (validIncoming.length === 0) return;
+
       const seen = new Set(files.map(keyOf));
-      const newFiles = incoming.filter((f) => !seen.has(keyOf(f)));
+      const newFiles = validIncoming.filter((f) => !seen.has(keyOf(f)));
       const merged = [...files, ...newFiles].slice(0, 10);
       onChange(merged);
       newFiles.forEach((f) => {
@@ -223,6 +273,9 @@ function UploadZone({
                 // and edit mode should reflect the canonical stored URL.
                 // Files beyond the URL count are still uploading → blob.
                 const s3Url = fileIdx < initialUrls.length ? initialUrls[fileIdx] : undefined;
+                const fileSource = s3Url ?? previewUrls[keyOf(file)] ?? file.name;
+                const category = getFileCategory(file.name || fileSource);
+
                 return (
                   <motion.div
                     key={`${file.name}-${file.size}`}
@@ -231,14 +284,36 @@ function UploadZone({
                     transition={{ type: "spring", stiffness: 380, damping: 26 }}
                     className="relative aspect-square w-full overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"
                   >
-                    {/* Local blob: URLs can't go through next/image's optimizer. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={s3Url ?? previewUrls[keyOf(file)]}
-                      alt={file.name}
-                      draggable={false}
-                      className="h-full w-full object-cover"
-                    />
+                    {category === "image" ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={s3Url ?? previewUrls[keyOf(file)]}
+                        alt={file.name}
+                        draggable={false}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : category === "pdf" ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400">
+                        <i className="bi bi-file-earmark-pdf text-3xl mb-1" />
+                        <span className="w-full truncate text-[10px] font-medium leading-tight text-zinc-700 dark:text-zinc-300 px-1">
+                          {file.name}
+                        </span>
+                      </div>
+                    ) : category === "doc" ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">
+                        <i className="bi bi-file-earmark-word text-3xl mb-1" />
+                        <span className="w-full truncate text-[10px] font-medium leading-tight text-zinc-700 dark:text-zinc-300 px-1">
+                          {file.name}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                        <i className="bi bi-file text-3xl mb-1" />
+                        <span className="w-full truncate text-[10px] font-medium leading-tight text-zinc-700 dark:text-zinc-300 px-1">
+                          {file.name}
+                        </span>
+                      </div>
+                    )}
                     {st?.state === "uploading" && (
                       <div
                         className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/45"
@@ -293,23 +368,50 @@ function UploadZone({
                     </button>
                   </motion.div>
                 );
-              }) : initialUrls.map((url, i) => (
-                <motion.div
-                  key={`url-${i}`}
-                  initial={{ opacity: 0, scale: 0.94 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: "spring", stiffness: 380, damping: 26 }}
-                  className="relative aspect-square w-full overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={url}
-                    alt={`Uploaded file ${i + 1}`}
-                    draggable={false}
-                    className="h-full w-full object-cover"
-                  />
-                </motion.div>
-              ))}
+              }) : initialUrls.map((url, i) => {
+                const category = getFileCategory(url);
+                const fileName = url.split("/").pop() || `File ${i + 1}`;
+                return (
+                  <motion.div
+                    key={`url-${i}`}
+                    initial={{ opacity: 0, scale: 0.94 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 380, damping: 26 }}
+                    className="relative aspect-square w-full overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"
+                  >
+                    {category === "image" ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={url}
+                        alt={`Uploaded file ${i + 1}`}
+                        draggable={false}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : category === "pdf" ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400">
+                        <i className="bi bi-file-earmark-pdf text-3xl mb-1" />
+                        <span className="w-full truncate text-[10px] font-medium leading-tight text-zinc-700 dark:text-zinc-300 px-1">
+                          {fileName}
+                        </span>
+                      </div>
+                    ) : category === "doc" ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">
+                        <i className="bi bi-file-earmark-word text-3xl mb-1" />
+                        <span className="w-full truncate text-[10px] font-medium leading-tight text-zinc-700 dark:text-zinc-300 px-1">
+                          {fileName}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                        <i className="bi bi-file text-3xl mb-1" />
+                        <span className="w-full truncate text-[10px] font-medium leading-tight text-zinc-700 dark:text-zinc-300 px-1">
+                          {fileName}
+                        </span>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
           ) : (
             <p className="text-[11px] font-medium leading-tight text-emerald-900 dark:text-emerald-100">
@@ -333,7 +435,7 @@ function UploadZone({
           ref={inputRef}
           type="file"
           className="sr-only"
-          accept={spec.accept}
+          accept={ACCEPT_FORMATS}
           multiple={spec.multiple}
           onChange={(e) => {
             addFiles(e.target.files);
@@ -346,6 +448,7 @@ function UploadZone({
         <ul className="mt-2 flex flex-col gap-1.5">
           {files.map((file) => {
             const st = status[keyOf(file)];
+            const category = getFileCategory(file.name);
             return (
               <motion.li
                 key={`${file.name}-${file.size}`}
@@ -353,21 +456,15 @@ function UploadZone({
                 animate={{ opacity: 1, x: 0 }}
                 className="group flex items-center gap-2 rounded-lg border border-zinc-200/80 bg-white px-2.5 py-1.5 text-xs shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
               >
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  className="shrink-0 text-emerald-500"
-                >
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <path d="M14 2v6h6" />
-                </svg>
+                {category === "pdf" ? (
+                  <i className="bi bi-file-earmark-pdf text-base text-red-500 shrink-0" />
+                ) : category === "doc" ? (
+                  <i className="bi bi-file-earmark-word text-base text-blue-600 shrink-0" />
+                ) : category === "cad" ? (
+                  <i className="bi bi-file text-base text-zinc-500 shrink-0" />
+                ) : (
+                  <i className="bi bi-file-earmark-image text-base text-emerald-500 shrink-0" />
+                )}
                 <span className="flex-1 truncate text-zinc-700 dark:text-zinc-300">
                   {file.name}
                 </span>

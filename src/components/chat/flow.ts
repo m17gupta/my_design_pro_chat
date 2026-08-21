@@ -916,7 +916,7 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
             title: cardTitle,
             description: displayDetails,
             fields: [
-              { kind: "upload-grid", count: q.max_files ?? 4, accept: "image/*" },
+              { kind: "upload-grid", count: q.max_files ?? 4, accept: ".jpg,.jpeg,.png,.gif,.webp,.dwg,.rvt,.skp,.pdf,.doc,.docx,image/*" },
             ],
           },
           api: api("urls"),
@@ -1005,7 +1005,7 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
                 placeholder: q.placeholder || "Share your thoughts",
                 rows: 3,
               },
-              { kind: "upload-grid", count: q.max_files ?? 4, accept: "image/*" },
+              { kind: "upload-grid", count: q.max_files ?? 4, accept: ".jpg,.jpeg,.png,.gif,.webp,.dwg,.rvt,.skp,.pdf,.doc,.docx,image/*" },
             ],
           },
           api: api("files-notes"),
