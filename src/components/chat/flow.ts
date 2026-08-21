@@ -641,7 +641,7 @@ export function buildEpisodes(
           }
         : ep
     );
-  
+
     if (options?.engageDesigner) {
       const designer = options.dcName?.trim() || "your designer";
       return customEpisodes.map((ep) => {
@@ -756,6 +756,7 @@ export interface FlowContext {
   role?: string | null;
   question_sets?: { original?: string[]; revision?: string[] } | null;
   engageDesigner?: boolean | null;
+  custom_engage_designer?: boolean | null;
   dcName?: string | null;
 }
 
@@ -774,44 +775,76 @@ function userTypeForWorkType(workType: string | undefined): string {
   return "landscape-design";
 }
 
-interface ResolvedAllQuestionFlow {
-  phases: Record<string, AllQPhase>;
+export type Question = {
+  required?: boolean;
+  id: string;
+  type?: string;
+  name?: string;
+  label?: string;
+  details?: string;
+  max_files?: number;
+  placeholder?: string;
+  options?: string[] | Record<string, string>;
+  is_ai_design?: boolean;
+  example?: string;
+  multi_questions?: Question[];
+};
+
+export type QuestionPhase = {
+  title: string;
+  questions: Question[];
+};
+
+export interface ResolvedAllQuestionFlow {
+  phases: Record<string, QuestionPhase>;
   originalPhases: string[];
   revisionPhases: string[];
 }
 
-function resolveAllQuestionFlow(
+export function resolveAllQuestionFlow(
   ctx: FlowContext,
   questionnaires?: Record<string, unknown> | null
 ): ResolvedAllQuestionFlow | null {
   const role = normalizeRole(ctx.role);
-  if (!role || !questionnaires || typeof questionnaires !== "object" || Object.keys(questionnaires).length === 0) {
+  if (
+    !role ||
+    !questionnaires ||
+    typeof questionnaires !== "object" ||
+    Object.keys(questionnaires).length === 0
+  ) {
     return null;
   }
+
   const roleSection = questionnaires[role];
   if (!roleSection || typeof roleSection !== "object") return null;
-  const roleMap = roleSection as Record<string, unknown>;
 
+  const roleMap = roleSection as Record<string, unknown>;
   const userType = normalizeUserType(ctx.user_type);
-  let phases: Record<string, AllQPhase> | undefined;
+  let phases: Record<string, QuestionPhase> | undefined;
 
   if (role === "enterprise-client") {
     // enterprise-client sections are user_type → phase (no work_type level).
     const section = userType ? roleMap[userType] : undefined;
     if (section && typeof section === "object") {
-      phases = section as Record<string, AllQPhase>;
+      phases = section as Record<string, QuestionPhase>;
     }
   } else {
     const userTypeKey = userType || userTypeForWorkType(ctx.work_type ?? undefined);
     const userSection = roleMap[userTypeKey];
     if (userSection && typeof userSection === "object") {
       const workTypeKey = normalizeWorkType(ctx.work_type ?? "front_yard");
-      const workSection = (userSection as Record<string, unknown>)[workTypeKey];
+      let workSection = (userSection as Record<string, unknown>)[workTypeKey];
+      if (!workSection || typeof workSection !== "object") {
+        if (Object.keys(userSection).some((k) => k.startsWith("phase_"))) {
+          workSection = userSection;
+        }
+      }
       if (workSection && typeof workSection === "object") {
-        phases = workSection as Record<string, AllQPhase>;
+        phases = workSection as Record<string, QuestionPhase>;
       }
     }
   }
+
   if (!phases) return null;
 
   const phaseKeys = Object.keys(phases);
@@ -819,7 +852,9 @@ function resolveAllQuestionFlow(
 
   const qs = ctx.question_sets;
   let originalPhases =
-    qs?.original && qs.original.length > 0 ? qs.original : defaultOriginalPhases(phases);
+    qs?.original && qs.original.length > 0
+      ? qs.original
+      : defaultOriginalPhases(phases);
   let revisionPhases =
     qs?.revision && qs.revision.length > 0
       ? qs.revision
@@ -831,7 +866,6 @@ function resolveAllQuestionFlow(
 
   return { phases, originalPhases, revisionPhases };
 }
-
 /**
  * Index of the phase holding the design summary / approval question
  * (design_summary, design_direction_approval); -1 when absent.
@@ -891,7 +925,7 @@ const DEFAULT_SUMMARY_TEXT =
  * description is human-readable (HTML converted); the API question keeps the
  * exact HTML the backend expects.
  */
-function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
+function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
   const cardTitle = q.name?.trim() || "";
   const apiName = q.name?.trim() || formatQuestionIdAsName(q.id);
   const details = q.details ?? "";
@@ -1071,8 +1105,9 @@ export function buildEpisodesFromContext(
   ctx: FlowContext,
   questionnaires?: Record<string, unknown> | null
 ): Episode[] {
+
   const resolved = resolveAllQuestionFlow(ctx, questionnaires);
-  
+    console.log("resolved" , resolved)
   if (!resolved) {
     const role = normalizeRole(ctx.role);
     const isAllQuestionCtx =
@@ -1091,13 +1126,27 @@ export function buildEpisodesFromContext(
         editable: false,
       }];
     }
-    return buildEpisodes(ctx.work_type ?? undefined, {
+
+    const data=buildEpisodes(ctx.work_type ?? undefined, {
       engageDesigner: ctx.engageDesigner ?? undefined,
       dcName: ctx.dcName ?? undefined,
     });
+    console.log("alll data", data)
+    return data
   }
 
-  const { phases, originalPhases, revisionPhases } = resolved;
+  const phases: Record<string, QuestionPhase> =
+    resolved.phases ?? (resolved as unknown as Record<string, QuestionPhase>);
+
+  const originalPhases: string[] =
+    resolved.originalPhases ??
+    ctx.question_sets?.original ??
+    Object.keys(phases).filter((k) => !k.toLowerCase().includes("revision"));
+
+  const revisionPhases: string[] =
+    resolved.revisionPhases ??
+    ctx.question_sets?.revision ??
+    Object.keys(phases).filter((k) => k.toLowerCase().includes("revision"));
 
   // Every AllQuestion flow starts with the overview screen so the user sees
   // the dynamic checklist before answering any questions.
@@ -1262,9 +1311,31 @@ export function checklistFromFlowContext(
   ctx: FlowContext,
   questionnaires?: Record<string, unknown> | null
 ): ChecklistItem[] | null {
+  if (normalizeWorkType(ctx.work_type ?? "") === "custom") {
+    const customEps = buildEpisodes("custom", {
+      engageDesigner: Boolean(ctx.engageDesigner ?? ctx.custom_engage_designer),
+      dcName: ctx.dcName ?? undefined,
+    });
+    const items: ChecklistItem[] = [];
+    const seen = new Set<string>();
+    for (const ep of customEps) {
+      if (!ep.card) continue;
+      const id = ep.checklistId || ep.api?.checklistId || ep.apiKey;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const label = ep.card.title?.trim() || ep.api?.name?.trim() || formatQuestionIdAsName(id);
+      items.push({ id, number: items.length + 1, label });
+    }
+    return items.length > 0 ? items : null;
+  }
   const resolved = resolveAllQuestionFlow(ctx, questionnaires);
   if (!resolved) return null;
-  const { phases, originalPhases } = resolved;
+  const phases: Record<string, QuestionPhase> =
+    resolved.phases ?? (resolved as unknown as Record<string, QuestionPhase>);
+  const originalPhases: string[] =
+    resolved.originalPhases ??
+    ctx.question_sets?.original ??
+    Object.keys(phases).filter((k) => !k.toLowerCase().includes("revision"));
   const items: ChecklistItem[] = [];
   const seen = new Set<string>();
   for (const key of originalPhases) {
@@ -1476,52 +1547,44 @@ export function buildRestoredTranscript(
     advance(ep.apiKey, userText);
   };
 
-  // photos branch: only shared flows have the Yes/No photos step. Reaching a
-  // later card implies the user answered it (the flow is linear).
-  if (hasEpisode("photos")) {
-    const photosEp = episodeById("photos", episodes);
-    const photoUploaded = isAnswered("additional_images_upload");
-    mark(photosEp, photoUploaded ? "Yes I do" : "No I don't");
-    if (photoUploaded) {
-      const upEp = episodeById("additional_images_upload", episodes);
-      const item = original["additional_images_upload"] as ApiBriefItem;
-      pushAssistant(upEp, item?.answer);
-      pushUserAnswer(upEp, answerToText(item));
-      advance(upEp.apiKey);
-    }
-  }
-
-  // files branch: only shared flows have the Yes/No files step, and only if
-  // the user got past photos (any later key answered). Derived from the
-  // episodes list so color-material keys count too.
-  const laterKeys = list
-    .filter((e) => e.api !== undefined && e.apiKey !== "additional_images_upload")
-    .map((e) => e.apiKey);
-  if (hasEpisode("files") && laterKeys.some(isAnswered)) {
-    const filesEp = episodeById("files", episodes);
-    const filesUploaded = isAnswered("supporting_files_upload");
-    mark(filesEp, filesUploaded ? "Yes I do" : "No I don't");
-    if (filesUploaded) {
-      const upEp = episodeById("supporting_files_upload", episodes);
-      const item = original["supporting_files_upload"] as ApiBriefItem;
-      pushAssistant(upEp, item?.answer);
-      pushUserAnswer(upEp, answerToText(item));
-      advance(upEp.apiKey);
-    }
-  }
-
-  // Remaining card episodes, in flow order, only when answered. The upload
-  // cards are pushed by the photos/files branches above; in overview-less
-  // flows (custom) those branches don't exist, so the upload card is an
-  // ordinary flow step and is handled here.
-  const skipUploadCards = hasEpisode("photos") || hasEpisode("files");
+  // Process all episodes in flow order to restore answered steps
   for (const ep of list) {
-    if (!ep.api) continue;
     const key = ep.apiKey;
-    if (skipUploadCards && (key === "additional_images_upload" || key === "supporting_files_upload")) {
+    if (key === "overview") continue;
+
+    if (key === "photos") {
+      const photosIdx = list.findIndex((e) => e.apiKey === "photos");
+      const subSeqKeys = list
+        .slice(photosIdx + 1)
+        .filter((e) => e.api !== undefined && e.apiKey !== "additional_images_upload")
+        .map((e) => e.apiKey);
+
+      const photoUploaded = isAnswered("additional_images_upload");
+      const passedPhotos = photoUploaded || subSeqKeys.some(isAnswered);
+
+      if (passedPhotos) {
+        mark(ep, photoUploaded ? "Yes I do" : "No I don't");
+      }
       continue;
     }
-    if (isAnswered(key)) {
+
+    if (key === "files") {
+      const filesIdx = list.findIndex((e) => e.apiKey === "files");
+      const subSeqKeys = list
+        .slice(filesIdx + 1)
+        .filter((e) => e.api !== undefined && e.apiKey !== "supporting_files_upload")
+        .map((e) => e.apiKey);
+
+      const filesUploaded = isAnswered("supporting_files_upload");
+      const passedFiles = filesUploaded || subSeqKeys.some(isAnswered);
+
+      if (passedFiles) {
+        mark(ep, filesUploaded ? "Yes I do" : "No I don't");
+      }
+      continue;
+    }
+
+    if (ep.api && isAnswered(key)) {
       const item = original[key] as ApiBriefItem;
       pushAssistant(ep, item?.answer);
       pushUserAnswer(ep, answerToText(item));

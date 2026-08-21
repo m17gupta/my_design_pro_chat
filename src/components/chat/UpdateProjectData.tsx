@@ -42,7 +42,7 @@ const UpdateProjectData = () => {
                         user_type: user_type ?? "",
                         dc_name: dc_name ?? "",
                         role: role ?? null,
-                        custom_engage_designer: custom_engage_designer ?? undefined,
+                        // custom_engage_designer: custom_engage_designer ?? undefined,
                         watermark: watermark ?? DEFAULT_WATERMARK,
                         work_type: work_type ?? DEFAULT_WORK_TYPE,
                         image_url: image_url ?? "",

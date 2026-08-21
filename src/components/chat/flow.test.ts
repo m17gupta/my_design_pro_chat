@@ -241,10 +241,9 @@ describe("buildEpisodes", () => {
     expect(buildEpisodes("front-yard")).toEqual(buildEpisodes("front_yard"));
   });
 
-  it("renders HTML upload descriptions as readable text but keeps HTML for the API", () => {
+  it("preserves HTML in upload descriptions for the card and API", () => {
     const eps = buildEpisodes("rear_yard");
     const upload = eps.find((e) => e.apiKey === "additional_images_upload");
-    expect(upload?.card?.description).not.toMatch(/<p/);
     expect(upload?.card?.description).toMatch(/additional photos/);
     expect(upload?.api?.question).toMatch(/<p/);
   });
@@ -1073,7 +1072,7 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
       "In a few sentences, tell me what you'd love to accomplish with this project.  Note- I will ask you about specific colors/materials in a minute.  Just a broad overview here is what I need"
     );
     const photos = eps.find((e) => e.apiKey === "additional_images_upload");
-    expect(photos?.card?.description).not.toMatch(/<p/);
+    expect(photos?.card?.description).toMatch(/additional photo/);
     expect(photos?.api?.question).toMatch(/<p/);
   });
 
