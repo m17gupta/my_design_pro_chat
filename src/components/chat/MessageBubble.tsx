@@ -93,7 +93,7 @@ function useTypewriter (
     // Defer to a timeout so every state update happens asynchronously
     // (keeps the typewriter's interval cleanup safe on dependency changes).
     const id = window.setTimeout(() => {
-      if (!enabled || reduceMotion || /<[a-z][\s\S]*>/i.test(text)) {
+      if (!enabled || reduceMotion) {
         setOut(text)
         return
       }
@@ -189,7 +189,8 @@ export const MessageBubble = ({
     message.kind === 'card' && message.card
       ? cardDescText
       : message.content
-
+   
+   
   // The revision summary renders as a card instead of a typed bubble, so the
   // typewriter is skipped entirely and the card appears immediately.
   // Restored messages (from sessionStorage on refresh) also skip the typewriter
@@ -205,6 +206,17 @@ export const MessageBubble = ({
     checklist,
     { enabled: checklistAnimated, speedMs: 100, lineDelayMs: 900 }
   )
+
+  const cardContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (done && message.kind === 'card' && !message.isRestored) {
+      const timer = setTimeout(() => {
+        cardContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [done, message.kind, message.isRestored])
 
   const optionsVisible =
     done &&
@@ -324,6 +336,7 @@ export const MessageBubble = ({
                 {/* ── QuestionCard: hidden once answered (disabled=true) unless being re-edited ── */}
                 {done && message.kind === 'card' && message.card && (!disabled || onCardCancel) && (
                   <motion.div
+                    ref={cardContainerRef}
                     initial={
                       message.isRestored
                         ? { opacity: 1, y: 0 }

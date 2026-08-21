@@ -549,30 +549,6 @@ function looksLikeHtml(text: string): boolean {
   return /<\/?[a-z][^>]*>/i.test(text);
 }
 
-/**
- * Convert the API-facing HTML question text into readable display text for the
- * card (bold → **, paragraphs → blank lines, tags stripped). Plain text passes
- * through unchanged.
- */
-function htmlToDisplay(html: string): string {
-  if (!looksLikeHtml(html)) return html;
-  return html
-    .replace(/<strong>(.*?)<\/strong>/gi, "**$1**")
-    .replace(/<b>(.*?)<\/b>/gi, "**$1**")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<li[^>]*>/gi, "• ")
-    .replace(/<\/(p|div|li|ul|h[1-6])>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&apos;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
 
 /**
  * Collect the override questions for a work type. Searches the
@@ -655,7 +631,7 @@ export function buildEpisodes(
   options?: { engageDesigner?: boolean; dcName?: string }
 ): Episode[] {
   const normalized = normalizeWorkType(workType);
-    console.log("normalized",normalized)
+    // console.log("normalized",normalized)
   if (normalized === "custom") {
     const customEpisodes = (customQuestionsJson as Episode[]).map((ep) =>
       ep.card && ep.card.description
@@ -689,9 +665,9 @@ export function buildEpisodes(
     return customEpisodes;
   }
   const base = resolveWorkTypeEpisodes(workType);
-  console.log("base",base)
+  // console.log("base",base)
   const overrides = collectWorkTypeOverrides(workType);
-  console.log("overrides",overrides)
+  // console.log("overrides",overrides)
   if (overrides.length === 0) {
     // No overrides found — return the work type's episodes unchanged.
     return base;

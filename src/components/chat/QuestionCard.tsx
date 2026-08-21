@@ -131,52 +131,74 @@ function QuestionCard({
   const isAnyUploading = Object.values(uploadingSlots).some(Boolean);
 
   // Continue/Next button is disabled until answer is given.
-  // When both textarea and upload-grid are present on the same card, providing an answer to EITHER one enables the button.
+  // - Radio fields: disabled until an option is selected.
+  // - Checkbox fields: disabled until at least one option is checked or notes are typed.
+  // - Combined Textarea + Upload-Grid fields: enabled if EITHER text is entered OR an image is uploaded.
+  // - Standalone Textarea: disabled until text is entered.
+  // - Standalone Upload-Grid: disabled until at least one image is uploaded.
+  // const canContinue =
+  //   !disabled &&
+  //   !isAnyUploading &&
+  //   (() => {
+  //     // 1. Radio fields MUST have an option selected
+  //     const radiosSatisfied = spec.fields.every(
+  //       (f) => f.kind !== "radio" || radio !== null
+  //     );
+  //     if (!radiosSatisfied) return false;
+
+  //     // 2. Checkbox fields MUST have a check or notes
+  //     const checkboxesSatisfied = spec.fields.every(
+  //       (f) => f.kind !== "checkbox" || checks.size > 0 || notes.trim().length > 0
+  //     );
+  //     if (!checkboxesSatisfied) return false;
+
+  //     const hasTextarea = spec.fields.some((f) => f.kind === "textarea");
+  //     const hasUploadGrid = spec.fields.some((f) => f.kind === "upload-grid");
+
+  //     // 3. Combined Textarea + Upload-Grid card: either text OR image upload satisfies
+  //     if (hasTextarea && hasUploadGrid) {
+  //       const hasText = spec.fields.some(
+  //         (f, i) => f.kind === "textarea" && (textByField[i] ?? "").trim().length > 0
+  //       );
+  //       const hasUpload = spec.fields.some(
+  //         (f, i) =>
+  //           f.kind === "upload-grid" &&
+  //           Object.values(urlsByField[i] ?? {}).length > 0
+  //       );
+  //       return hasText || hasUpload;
+  //     }
+
+  //     // 4. Standalone Textarea card
+  //     if (hasTextarea) {
+  //       return spec.fields.every(
+  //         (f, i) =>
+  //           f.kind !== "textarea" || (textByField[i] ?? "").trim().length > 0
+  //       );
+  //     }
+
+  //     // 5. Standalone Upload-Grid card
+  //     if (hasUploadGrid) {
+  //       return spec.fields.every(
+  //         (f, i) =>
+  //           f.kind !== "upload-grid" ||
+  //           Object.values(urlsByField[i] ?? {}).length > 0
+  //       );
+  //     }
+
+  //     return true;
+  //   })();
   const canContinue =
     !disabled &&
     !isAnyUploading &&
-    (() => {
-      const hasTextarea = spec.fields.some((f) => f.kind === "textarea");
-      const hasUploadGrid = spec.fields.some((f) => f.kind === "upload-grid");
-
-      if (hasTextarea && hasUploadGrid) {
-        const hasText = spec.fields.some(
-          (f, i) => f.kind === "textarea" && (textByField[i] ?? "").trim().length > 0
-        );
-        const hasUpload = spec.fields.some(
-          (f, i) =>
-            f.kind === "upload-grid" &&
-            Object.values(urlsByField[i] ?? {}).length > 0
-        );
-        const textOrUploadSatisfied = hasText || hasUpload;
-
-        const otherFieldsSatisfied = spec.fields.every((field, i) => {
-          if (field.kind === "textarea" || field.kind === "upload-grid") return true;
-          if (field.kind === "radio") return radio !== null;
-          if (field.kind === "checkbox") return checks.size > 0 || notes.trim().length > 0;
-          return true;
-        });
-
-        return textOrUploadSatisfied && otherFieldsSatisfied;
+    spec.fields.every((field, i) => {
+      if (field.kind === "textarea" && field.required) {
+        return (textByField[i] ?? "").trim().length > 0;
       }
-
-      return spec.fields.every((field, i) => {
-        if (field.kind === "textarea") {
-          return (textByField[i] ?? "").trim().length > 0;
-        }
-        if (field.kind === "radio") {
-          return radio !== null;
-        }
-        if (field.kind === "checkbox") {
-          return checks.size > 0 || notes.trim().length > 0;
-        }
-        if (field.kind === "upload-grid") {
-          const uploadedCount = Object.values(urlsByField[i] ?? {}).length;
-          return uploadedCount > 0;
-        }
-        return false;
-      });
-    })();
+      if (field.kind === "radio" && field.required) {
+        return radio !== null;
+      }
+      return true; // upload grids and checkboxes are optional
+    });
 
   const hasOnlyUploads = spec.fields.every((f) => f.kind === "upload-grid");
 
