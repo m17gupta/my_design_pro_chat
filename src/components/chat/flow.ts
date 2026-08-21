@@ -537,7 +537,12 @@ export function getApiQuestions(episodes: Episode[]): ApiQuestionMeta[] {
  * used — `id` must match an episode apiKey; `details`/`name` replace the card
  * and API text. Layout/field config comes exclusively from the base EPISODES.
  */
-type QJsonQuestion = { id: string; details?: string; name?: string };
+type QJsonQuestion = {
+  id: string;
+  details?: string;
+  name?: string;
+  placeholder?: string;
+};
 
 /** True when a string contains HTML tags (as used by the API question text). */
 function looksLikeHtml(text: string): boolean {
@@ -656,7 +661,7 @@ export function buildEpisodes(
       ep.card && ep.card.description
         ? {
             ...ep,
-            card: { ...ep.card, description: htmlToDisplay(ep.card.description) },
+            card: { ...ep.card, description: ep.card.description },
           }
         : ep
     );
@@ -699,13 +704,27 @@ export function buildEpisodes(
     // Card description shows readable text; the API question keeps the exact
     // (possibly HTML) wording the backend expects.
     const newDescription = override.details
-      ? htmlToDisplay(override.details)
+      ? override.details
       : ep.card.description;
+    const updatedFields = ep.card.fields.map((f) => {
+      const newF = { ...f };
+      if (override.placeholder) {
+        if (newF.kind === "textarea") {
+          newF.placeholder = override.placeholder;
+        }
+        if (newF.kind === "checkbox") {
+          newF.notesPlaceholder = override.placeholder;
+        }
+      }
+      return newF;
+    });
+
     return {
       ...ep,
       card: {
         ...ep.card,
         description: newDescription,
+        fields: updatedFields,
         ...(override.name ? { title: override.name } : {}),
       },
       ...(ep.api
@@ -736,7 +755,6 @@ export interface AllQQuestion {
   details?: string;
   label?: string;
   placeholder?: string;
-  required?: boolean;
   max_files?: number;
   max_selection?: number;
   is_ai_design?: boolean;
@@ -901,7 +919,7 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
   const cardTitle = q.name?.trim() || "";
   const apiName = q.name?.trim() || formatQuestionIdAsName(q.id);
   const details = q.details ?? "";
-  const displayDetails = htmlToDisplay(details);
+  const displayDetails = details;
   // Default checklistId to the question's own id so each question maps to
   // its own checklist entry (per-question granularity).
   const cid = checklistId ?? q.id;
@@ -938,9 +956,8 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
             fields: [
               {
                 kind: "textarea",
-                placeholder: q.placeholder ?? "Share your thoughts",
+                placeholder: q.placeholder || "Share your thoughts",
                 rows: 4,
-                required: q.required,
               },
             ],
           },
@@ -957,7 +974,6 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
             fields: [
               {
                 kind: "radio",
-                required: q.required,
                 options: normalizeOptions(q.options),
               },
             ],
@@ -972,7 +988,12 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
           card: {
             title: cardTitle,
             description: displayDetails,
-            fields: [{ kind: "checkbox", options: normalizeOptions(q.options) }],
+            fields: [
+              {
+                kind: "checkbox",
+                options: normalizeOptions(q.options),
+              },
+            ],
           },
           api: api("value-notes"),
         },
@@ -988,7 +1009,7 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
               {
                 kind: "checkbox",
                 options: normalizeOptions(q.options),
-                notesPlaceholder: "Enter your notes",
+                notesPlaceholder: q.placeholder || "Enter your notes",
               },
             ],
           },
@@ -1005,9 +1026,8 @@ function questionToEpisodes(q: AllQQuestion, checklistId?: string): Episode[] {
             fields: [
               {
                 kind: "textarea",
-                placeholder: "Share your thoughts",
+                placeholder: q.placeholder || "Share your thoughts",
                 rows: 3,
-                required: q.required,
               },
               { kind: "upload-grid", count: q.max_files ?? 4, accept: "image/*" },
             ],
@@ -1121,8 +1141,8 @@ export function buildEpisodesFromContext(
     if (!phase) continue;
     for (const q of phase.questions) {
       if (q.id === "design_summary") {
-        if (q.details) summaryParts.push(htmlToDisplay(q.details));
-        if (q.example) summaryParts.push(htmlToDisplay(q.example));
+        if (q.details) summaryParts.push(q.details);
+        if (q.example) summaryParts.push(q.example);
         continue;
       }
       if (q.id === "design_direction_approval") continue;
@@ -1176,7 +1196,6 @@ export function buildEpisodesFromContext(
         const content =
           [q.details, q.example]
             .filter((s): s is string => Boolean(s))
-            .map(htmlToDisplay)
             .join("\n\n") || fallback.description || DEFAULT_SUMMARY_TEXT;
         episodes.push({ apiKey: "revision-summary", kind: "summary", title: fallback.title || "Design Summary", content });
         continue;

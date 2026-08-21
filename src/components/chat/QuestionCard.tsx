@@ -38,7 +38,7 @@ function QuestionCard({
   onCancel,
 }: QuestionCardProps) {
 
-
+  console.log("spec--",spec)
 
   // Compute initial states from initialAnswer
   const initTextByField = useMemo(() => {
@@ -130,19 +130,53 @@ function QuestionCard({
 
   const isAnyUploading = Object.values(uploadingSlots).some(Boolean);
 
-  // Continue is enabled once every required field has input.
+  // Continue/Next button is disabled until answer is given.
+  // When both textarea and upload-grid are present on the same card, providing an answer to EITHER one enables the button.
   const canContinue =
     !disabled &&
     !isAnyUploading &&
-    spec.fields.every((field, i) => {
-      if (field.kind === "textarea" && field.required) {
-        return (textByField[i] ?? "").trim().length > 0;
+    (() => {
+      const hasTextarea = spec.fields.some((f) => f.kind === "textarea");
+      const hasUploadGrid = spec.fields.some((f) => f.kind === "upload-grid");
+
+      if (hasTextarea && hasUploadGrid) {
+        const hasText = spec.fields.some(
+          (f, i) => f.kind === "textarea" && (textByField[i] ?? "").trim().length > 0
+        );
+        const hasUpload = spec.fields.some(
+          (f, i) =>
+            f.kind === "upload-grid" &&
+            Object.values(urlsByField[i] ?? {}).length > 0
+        );
+        const textOrUploadSatisfied = hasText || hasUpload;
+
+        const otherFieldsSatisfied = spec.fields.every((field, i) => {
+          if (field.kind === "textarea" || field.kind === "upload-grid") return true;
+          if (field.kind === "radio") return radio !== null;
+          if (field.kind === "checkbox") return checks.size > 0 || notes.trim().length > 0;
+          return true;
+        });
+
+        return textOrUploadSatisfied && otherFieldsSatisfied;
       }
-      if (field.kind === "radio" && field.required) {
-        return radio !== null;
-      }
-      return true; // upload grids and checkboxes are optional
-    });
+
+      return spec.fields.every((field, i) => {
+        if (field.kind === "textarea") {
+          return (textByField[i] ?? "").trim().length > 0;
+        }
+        if (field.kind === "radio") {
+          return radio !== null;
+        }
+        if (field.kind === "checkbox") {
+          return checks.size > 0 || notes.trim().length > 0;
+        }
+        if (field.kind === "upload-grid") {
+          const uploadedCount = Object.values(urlsByField[i] ?? {}).length;
+          return uploadedCount > 0;
+        }
+        return false;
+      });
+    })();
 
   const hasOnlyUploads = spec.fields.every((f) => f.kind === "upload-grid");
 
@@ -283,20 +317,13 @@ function QuestionCard({
     >
       {showHeader && (
         <div className="w-full">
-          {/* {spec.title!=="" && (
+          {spec.title!=="" && (
             <h3 className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 mb-2">
               {spec.title}
             </h3>
-          )} */}
-          <div className="question-details space-y-2">
-            {spec.description.split("\n\n").map((para, i) => (
-              <p
-                key={i}
-                className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300"
-              >
-                {renderInline(para)}
-              </p>
-            ))}
+          )}
+          <div className="question-details space-y-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+            {renderInline(spec.description)}
           </div>
         </div>
       )}

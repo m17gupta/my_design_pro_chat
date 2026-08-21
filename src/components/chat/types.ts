@@ -16,6 +16,7 @@ export interface UploadGridField {
   /** Number of upload boxes (default 4). */
   count?: number;
   accept?: string;
+  required?: boolean;
 }
 
 /** A free-text textarea. */
@@ -39,6 +40,7 @@ export interface CheckboxField {
   kind: "checkbox";
   options: string[];
   notesPlaceholder?: string;
+  required?: boolean;
 }
 
 export type QuestionField = UploadGridField | TextareaField | RadioField | CheckboxField;

@@ -93,7 +93,7 @@ function useTypewriter (
     // Defer to a timeout so every state update happens asynchronously
     // (keeps the typewriter's interval cleanup safe on dependency changes).
     const id = window.setTimeout(() => {
-      if (!enabled || reduceMotion) {
+      if (!enabled || reduceMotion || /<[a-z][\s\S]*>/i.test(text)) {
         setOut(text)
         return
       }
@@ -184,13 +184,10 @@ export const MessageBubble = ({
   const summaryDisabled =
     originalEntry !== undefined && originalEntry.status !== "failed"
  
-  const cardTitleText = message.card?.title?.trim() ?? ""
   const cardDescText = message.card?.description ?? ""
   const displayText =
     message.kind === 'card' && message.card
-      ? cardTitleText
-        ? `${cardTitleText}\n\n${cardDescText}`
-        : cardDescText
+      ? cardDescText
       : message.content
 
   // The revision summary renders as a card instead of a typed bubble, so the

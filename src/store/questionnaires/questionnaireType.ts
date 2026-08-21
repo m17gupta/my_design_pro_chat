@@ -5,7 +5,6 @@ export interface AllQQuestion {
   details?: string;
   label?: string;
   placeholder?: string;
-  required?: boolean;
   max_files?: number;
   max_selection?: number;
   is_ai_design?: boolean;
