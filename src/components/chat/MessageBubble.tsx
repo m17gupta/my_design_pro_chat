@@ -1,9 +1,10 @@
 'use client'
 
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState, useMemo } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 
 import { renderInline } from './formatText'
+
 import LunaAvatar from './LunaAvatar'
 import OptionButtons from './OptionButtons'
 import QuestionCard, { type CardResult } from './QuestionCard'
@@ -78,50 +79,97 @@ interface MessageBubbleProps {
 }
 
 /**
- * Reveal text word-by-word so Luna appears to be writing it live.
- * Skipped entirely when reduced motion is preferred.
+ * Character-level human-like typewriter.
+ *
+ * Speed model per character:
+ *  • Whitespace / punctuation chars → 12–18 ms (burst)
+ *  • Normal character               → 18–30 ms
+ *  • After sentence end (. ! ?)     → extra 150–350 ms pause
+ *  • After comma / semicolon        → extra 60–120 ms pause
+ *  • 5% random "thinking" burst     → extra 80–200 ms anywhere
+ *  • ±30% jitter on every interval
+ *
+ * Returns { typed: string, isTyping: boolean }
  */
-function useTypewriter (
+function useCharTypewriter(
   text: string,
   enabled: boolean,
   reduceMotion: boolean
-): string {
-  const [out, setOut] = useState(reduceMotion || !enabled ? text : '')
-  const intervalRef = useRef<number | null>(null)
+): { typed: string; isTyping: boolean } {
+  const [typed, setTyped] = useState(reduceMotion || !enabled ? text : '')
+  const [isTyping, setIsTyping] = useState(enabled && !reduceMotion && text.length > 0)
+  const timeoutRef = useRef<number | null>(null)
+  const cancelledRef = useRef(false)
 
   useEffect(() => {
-    // Defer to a timeout so every state update happens asynchronously
-    // (keeps the typewriter's interval cleanup safe on dependency changes).
-    const id = window.setTimeout(() => {
-      if (!enabled || reduceMotion) {
-        setOut(text)
+    cancelledRef.current = false
+
+    if (!enabled || reduceMotion) {
+      setTyped(text)
+      setIsTyping(false)
+      return
+    }
+
+    setTyped('')
+    setIsTyping(text.length > 0)
+
+    let charIdx = 0
+    let acc = ''
+
+    function computeDelay(char: string, prevChar: string): number {
+      const isBurst = /[\s!?,.:;—–•*]/.test(char)
+      let delay = isBurst
+        ? 40 + Math.random() * 25     // burst chars (space/punct): 40–65 ms
+        : 60 + Math.random() * 40     // normal chars: 60–100 ms
+
+      // Sentence-ending punctuation on the PREVIOUS character
+      if (/[.!?]/.test(prevChar)) delay += 370 + Math.random() * 310  // 370–680 ms pause
+      // Comma / semicolon pause
+      else if (/[,;]/.test(prevChar)) delay += 155 + Math.random() * 115  // 155–270 ms pause
+
+      // 5% chance of a "thinking" micro-pause
+      if (Math.random() < 0.05) delay += 200 + Math.random() * 220   // 200–420 ms
+
+      // ±25% jitter
+      delay *= 0.75 + Math.random() * 0.5
+
+      return Math.max(30, delay)
+    }
+
+    function tick() {
+      if (cancelledRef.current) return
+      if (charIdx >= text.length) {
+        setIsTyping(false)
         return
       }
-      setOut('')
-      const tokens = text.split(/(\s+)/)
-      let i = 0
-      let acc = ''
-      intervalRef.current = window.setInterval(() => {
-        acc += tokens[i] ?? ''
-        i += 1
-        setOut(acc)
-        if (i >= tokens.length && intervalRef.current !== null) {
-          window.clearInterval(intervalRef.current)
-          intervalRef.current = null
-        }
-      }, 80)
-    }, 0)
+
+      const char = text[charIdx]
+      const prevChar = charIdx > 0 ? text[charIdx - 1] : ''
+      charIdx++
+      acc += char
+      const snapshot = acc
+
+      setTyped(snapshot)
+
+      const delay = computeDelay(char, prevChar)
+      timeoutRef.current = window.setTimeout(tick, delay)
+    }
+
+    // Brief initial pause before Luna starts typing (feels more natural)
+    timeoutRef.current = window.setTimeout(tick, 120 + Math.random() * 80)
+
     return () => {
-      window.clearTimeout(id)
-      if (intervalRef.current !== null) {
-        window.clearInterval(intervalRef.current)
-        intervalRef.current = null
+      cancelledRef.current = true
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
       }
     }
   }, [text, enabled, reduceMotion])
 
-  return out
+  return { typed, isTyping }
 }
+
 
 export const MessageBubble = ({
   message,
@@ -195,7 +243,7 @@ export const MessageBubble = ({
   // typewriter is skipped entirely and the card appears immediately.
   // Restored messages (from sessionStorage on refresh) also skip the typewriter
   // so the chat snaps back to its previous state without replaying animations.
-  const typed = useTypewriter(
+  const { typed, isTyping } = useCharTypewriter(
     displayText,
     !isUser && !isRevisionSummary && !message.isRestored,
     reduceMotion
@@ -244,21 +292,21 @@ export const MessageBubble = ({
             <motion.div
               initial={
                 message.isRestored
-                  ? { opacity: 1, y: 0, scale: 1 }
+                  ? { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }
                   : reduceMotion
                   ? { opacity: 0 }
-                  : { opacity: 0, y: 12, scale: 0.96 }
+                  : { opacity: 0, y: 16, scale: 0.97, filter: 'blur(4px)' }
               }
-              animate={{ opacity: 1, y: 0, scale: 1 }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
               exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.15 } }}
               transition={
                 message.isRestored
                   ? { duration: 0 }
                   : {
                       type: 'spring',
-                      stiffness: 380,
-                      damping: 30,
-                      mass: 0.9
+                      stiffness: 420,
+                      damping: 28,
+                      mass: 0.85
                     }
               }
               className='flex w-full items-start justify-start'
@@ -281,10 +329,10 @@ export const MessageBubble = ({
                 >
                   <p className='whitespace-pre-wrap break-words'>
                     {renderInline(typed)}
-                    {!done && (
+                    {isTyping && (
                       <span
                         aria-hidden='true'
-                        className='ml-0.5 inline-block h-[1em] w-[2px] animate-pulse rounded-sm bg-emerald-500 align-middle dark:bg-emerald-400'
+                        className='caret-blink ml-px inline-block h-[1.1em] w-[2px] rounded-[1px] bg-zinc-500 align-middle dark:bg-zinc-400'
                       />
                     )}
                   </p>
@@ -292,7 +340,7 @@ export const MessageBubble = ({
                   {done && message.showChecklist && (
                     checklist && checklist.length > 0 ? (
                       <ol className='mt-3 space-y-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-800'>
-                        {bubbleVisibleChecklist.map(({ item, displayText, isTyping }) => (
+                        {bubbleVisibleChecklist.map(({ item, displayText, isTyping: itemTyping }) => (
                           <li
                             key={item.id}
                             className='flex items-baseline gap-2 text-[13.5px] text-zinc-600 dark:text-zinc-300'
@@ -302,10 +350,10 @@ export const MessageBubble = ({
                             </span>
                             <span>
                               {displayText}
-                              {isTyping && (
+                              {itemTyping && (
                                 <span
                                   aria-hidden='true'
-                                  className='ml-0.5 inline-block h-[1em] w-[2px] animate-pulse rounded-sm bg-emerald-500 align-middle dark:bg-emerald-400'
+                                  className='caret-blink ml-px inline-block h-[1.1em] w-[2px] rounded-[1px] bg-zinc-400 align-middle dark:bg-zinc-500'
                                 />
                               )}
                             </span>

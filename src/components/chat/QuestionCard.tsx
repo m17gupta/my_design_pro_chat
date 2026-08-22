@@ -6,6 +6,7 @@ import type { UploadResult } from "../../lib/upload";
 import { renderInline } from "./formatText";
 import UploadZone from "./UploadZone";
 import type { AnswerValue, QuestionCardSpec } from "./types";
+import GlareCard from "../ui/GlareCard";
 
 export interface CardResult {
   /** Human-readable text for the chat bubble / summary. */
@@ -331,12 +332,13 @@ function QuestionCard({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-      className="w-full rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
-    >
+    <GlareCard className="w-full">
+      <motion.div
+        initial={{ opacity: 0, y: 14, filter: "blur(3px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ type: "spring", stiffness: 400, damping: 28 }}
+        className="w-full rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+      >
       {showHeader && (
         <div className="w-full">
           {spec.title!=="" && (
@@ -504,17 +506,25 @@ function QuestionCard({
           <motion.button
             type="button"
             onClick={submit}
-            disabled={!canContinue}
-            whileHover={canContinue ? { scale: 1.03 } : undefined}
-            whileTap={canContinue ? { scale: 0.95 } : undefined}
+            disabled={!canContinue || isAnyUploading}
+            whileHover={canContinue && !isAnyUploading ? { scale: 1.04, boxShadow: "0 6px 20px rgba(74,94,104,0.35)" } : undefined}
+            whileTap={canContinue ? { scale: 0.96 } : undefined}
             transition={{ type: "spring", stiffness: 500, damping: 24 }}
-            className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-500/25 transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-zinc-700 to-zinc-900 px-5 py-2 text-sm font-semibold text-white shadow-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none dark:from-zinc-200 dark:to-zinc-100 dark:text-zinc-900"
           >
-            {onCancel ? "Save Changes" : hasOnlyUploads ? "Continue →" : "Next →"}
+            {isAnyUploading ? (
+              <>
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                Uploading…
+              </>
+            ) : (
+              onCancel ? "Save Changes" : hasOnlyUploads ? "Continue →" : "Next →"
+            )}
           </motion.button>
         </div>
       )}
-    </motion.div>
+      </motion.div>
+    </GlareCard>
   );
 }
 

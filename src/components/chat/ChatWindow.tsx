@@ -1013,14 +1013,47 @@ export default function ChatWindow() {
 
   if (!hydrated || isQuestionnairesLoading) {
     return (
-      <div className="flex h-dvh items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-emerald-500 dark:border-zinc-800 dark:border-t-emerald-400" />
-          <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">Loading project...</span>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex h-dvh flex-col items-center justify-center gap-5 bg-white dark:bg-zinc-950"
+      >
+        {/* Luna avatar with pulse */}
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 320, damping: 24, delay: 0.1 }}
+        >
+          <LunaAvatar size="md" pulse />
+        </motion.div>
+
+        {/* Thinking dots */}
+        <div className="flex items-center gap-1.5">
+          {[0, 0.18, 0.36].map((delay, i) => (
+            <motion.span
+              key={i}
+              animate={{ y: [0, -5, 0], opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 1.2, repeat: Infinity, delay, ease: "easeInOut" }}
+              className="h-2 w-2 rounded-full bg-zinc-400 dark:bg-zinc-500"
+            />
+          ))}
         </div>
-      </div>
+
+        {/* Caption */}
+        <motion.p
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.4 }}
+          className="text-sm font-medium text-zinc-400 dark:text-zinc-500"
+        >
+          Preparing your workspace…
+        </motion.p>
+      </motion.div>
     );
   }
+
 
   return (
     <div>
