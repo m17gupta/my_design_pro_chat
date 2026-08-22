@@ -329,12 +329,7 @@ export const MessageBubble = ({
                 >
                   <p className='whitespace-pre-wrap break-words'>
                     {renderInline(typed)}
-                    {isTyping && (
-                      <span
-                        aria-hidden='true'
-                        className='caret-blink ml-px inline-block h-[1.1em] w-[2px] rounded-[1px] bg-zinc-500 align-middle dark:bg-zinc-400'
-                      />
-                    )}
+                
                   </p>
 
                   {done && message.showChecklist && (
