@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { summaryCopyForWorkType } from "../types";
 import { buildEpisodesFromContext } from "../flow";
@@ -9,6 +10,157 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { isAnswerEmpty, answerToText } from "@/lib/briefDisplay";
 import { selectQuestionnaireSequence } from "@/store/questionnaires/questionnaireSlice";
+
+// ── File-type helpers ─────────────────────────────────────────────────────────
+type FileCategory = "image" | "pdf" | "doc" | "cad" | "other";
+
+function getFileExt(nameOrUrl: string): string {
+  if (!nameOrUrl) return "";
+  const clean = nameOrUrl.split("?")[0].split("#")[0];
+  const parts = clean.split(".");
+  if (parts.length <= 1) return "";
+  return "." + parts.pop()!.toLowerCase();
+}
+
+function getFileCategory(nameOrUrl: string): FileCategory {
+  const ext = getFileExt(nameOrUrl);
+  if ([".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"].includes(ext)) return "image";
+  if (ext === ".pdf") return "pdf";
+  if ([".doc", ".docx"].includes(ext)) return "doc";
+  if ([".dwg", ".rvt", ".skp"].includes(ext)) return "cad";
+  return "other";
+}
+
+const FILE_ICON: Record<Exclude<FileCategory, "image">, { icon: string; bg: string; text: string; label: string }> = {
+  pdf:   { icon: "bi bi-file-earmark-pdf-fill", bg: "bg-red-50 dark:bg-red-950/40",       text: "text-red-500 dark:text-red-400",       label: "PDF"  },
+  doc:   { icon: "bi bi-file-earmark-word-fill",bg: "bg-blue-50 dark:bg-blue-950/40",     text: "text-blue-500 dark:text-blue-400",     label: "DOC"  },
+  cad:   { icon: "bi bi-rulers",                bg: "bg-violet-50 dark:bg-violet-950/40", text: "text-violet-500 dark:text-violet-400", label: "CAD"  },
+  other: { icon: "bi bi-file-earmark-fill",     bg: "bg-zinc-100 dark:bg-zinc-800",       text: "text-zinc-500 dark:text-zinc-400",     label: "File" },
+};
+
+// ── Image modal (portal — escapes overflow/transform parents) ────────────────
+function ImageModal({ url, onClose }: { url: string; onClose: () => void }) {
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Image preview"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-h-[90vh] max-w-[90vw]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={url}
+          alt="Full size preview"
+          className="max-h-[85vh] max-w-[85vw] rounded-2xl object-contain shadow-2xl"
+        />
+        <button
+          type="button"
+          aria-label="Close preview"
+          onClick={onClose}
+          className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-lg text-zinc-700 hover:bg-zinc-100 transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>,
+    document.body
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Programmatic download that works for cross-origin URLs (e.g. S3).
+ * The `download` attribute on <a> is silently ignored by browsers for
+ * cross-origin resources — fetching as a blob and using a local object URL
+ * is the only reliable approach.
+ */
+async function triggerDownload(url: string, fileName: string) {
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    // Fallback: open in new tab so the user can save manually
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
+
+/** Single URL rendered as image thumbnail (opens modal) or file chip (triggers download). */
+function FileThumbnail({ url, idx, onImageClick }: { url: string; idx: number; onImageClick: (url: string) => void }) {
+  const [downloading, setDownloading] = useState(false);
+  const category = getFileCategory(url);
+  const fileName = url.split("/").pop()?.replace(/^\d+-[a-z0-9]+-/, "") || `File ${idx + 1}`;
+
+  if (category === "image") {
+    return (
+      <button
+        type="button"
+        data-opt="show-me"
+        title="View image"
+        onClick={() => onImageClick(url)}
+        className="group relative h-8 w-8 shrink-0 overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt={`thumbnail ${idx + 1}`} className="h-full w-full object-cover" />
+        {/* Expand hint on hover */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity group-hover:opacity-100">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+          </svg>
+        </div>
+      </button>
+    );
+  }
+
+  const cfg = FILE_ICON[category];
+  return (
+    <button
+      type="button"
+      disabled={downloading}
+      title={downloading ? "Downloading…" : `Download ${fileName}`}
+      onClick={async () => {
+        setDownloading(true);
+        await triggerDownload(url, fileName);
+        setDownloading(false);
+      }}
+      className={`flex h-8 w-8 shrink-0 flex-col items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800 ${cfg.bg} transition-transform hover:scale-105 disabled:opacity-60 disabled:cursor-wait`}
+    >
+      {downloading ? (
+        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent opacity-60" />
+      ) : (
+        <>
+          <i className={`${cfg.icon} ${cfg.text} text-[15px] leading-none`} />
+          <span className={`mt-0.5 text-[8px] font-semibold uppercase leading-none ${cfg.text}`}>
+            {cfg.label}
+          </span>
+        </>
+      )}
+    </button>
+  );
+}
+
 
 interface DesignSummaryCardProps {
   answers: Record<string, string>;
@@ -48,6 +200,8 @@ export default function DesignSummaryCard({
   const { data: questionnaire } = useSelector((state: RootState) => state.questionnaires);
   const questionnaireSequence = useSelector(selectQuestionnaireSequence);
 
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
   const orderedKeys = useMemo(() => {
     if (!original || Object.keys(original).length === 0) return [];
     
@@ -79,11 +233,17 @@ export default function DesignSummaryCard({
     return [...presentEpisodeKeys, ...remainingKeys];
   }, [original, work_type, user_type, role, question_sets, questionnaire, questionnaireSequence]);
 
-  const title ="Design Summary";
-  const description =  "Let me generate an initial rendering based on my understanding of what you are looking for.";
+  const title = "Design Summary";
+  const description = "Let me generate an initial rendering based on my understanding of what you are looking for.";
 
   return (
-    <motion.div
+    <>
+      {/* ── Portal image modal ── */}
+      {lightboxUrl && (
+        <ImageModal url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
+      )}
+
+      <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 380, damping: 30 }}
@@ -148,34 +308,9 @@ export default function DesignSummaryCard({
                   </p>
                 ) : isArray ? (
                   <div className="flex flex-wrap gap-1 justify-end max-w-[50%]">
-                    {answer.map((url, idx) => {
-                      const isImage = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || url.startsWith("data:image");
-                      if (isImage) {
-                        return (
-                          <a
-                            key={idx}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 transition-transform hover:scale-105"
-                          >
-                            <img src={url} alt="thumbnail" className="h-full w-full object-cover" />
-                          </a>
-                        );
-                      } else {
-                        return (
-                          <a
-                            key={idx}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex h-8 px-2 shrink-0 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-[10px] font-medium text-zinc-500 hover:bg-zinc-100"
-                          >
-                            File {idx + 1}
-                          </a>
-                        );
-                      }
-                    })}
+                    {answer.map((url, idx) => (
+                      <FileThumbnail key={idx} url={url} idx={idx} onImageClick={setLightboxUrl} />
+                    ))}
                   </div>
                 ) : isObject ? (
                   (() => {
@@ -196,34 +331,9 @@ export default function DesignSummaryCard({
                         )}
                         {files.length > 0 && (
                           <div className="flex flex-wrap gap-1 justify-end">
-                            {files.map((url, idx) => {
-                              const isImage = /\.(jpeg|jpg|gif|png|webp|svg)/i.test(url) || url.startsWith("data:image");
-                              if (isImage) {
-                                return (
-                                  <a
-                                    key={idx}
-                                    href={url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800 transition-transform hover:scale-105"
-                                  >
-                                    <img src={url} alt="thumbnail" className="h-full w-full object-cover" />
-                                  </a>
-                                );
-                              } else {
-                                return (
-                                  <a
-                                    key={idx}
-                                    href={url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="flex h-8 px-2 shrink-0 items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-[10px] font-medium text-zinc-500 hover:bg-zinc-100"
-                                  >
-                                    File {idx + 1}
-                                  </a>
-                                );
-                              }
-                            })}
+                            {files.map((url, idx) => (
+                              <FileThumbnail key={idx} url={url} idx={idx} onImageClick={setLightboxUrl} />
+                            ))}
                           </div>
                         )}
                       </div>
@@ -321,5 +431,6 @@ export default function DesignSummaryCard({
         </div>
       )}
     </motion.div>
+    </>
   );
 }
