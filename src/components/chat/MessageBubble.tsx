@@ -96,7 +96,13 @@ function useCharTypewriter(
   enabled: boolean,
   reduceMotion: boolean
 ): { typed: string; isTyping: boolean } {
-  const [typed, setTyped] = useState(reduceMotion || !enabled ? text : '')
+  // Track whether this instance already completed a typewriter pass for `text`.
+  // If it did, we never replay — even if the component re-mounts due to key change.
+  const alreadyTypedRef = useRef(false)
+
+  // Initialise to full text if animation is disabled OR if the text is empty.
+  const initialTyped = reduceMotion || !enabled ? text : ''
+  const [typed, setTyped] = useState(initialTyped)
   const [isTyping, setIsTyping] = useState(enabled && !reduceMotion && text.length > 0)
   const timeoutRef = useRef<number | null>(null)
   const cancelledRef = useRef(false)
@@ -105,6 +111,15 @@ function useCharTypewriter(
     cancelledRef.current = false
 
     if (!enabled || reduceMotion) {
+      setTyped(text)
+      setIsTyping(false)
+      alreadyTypedRef.current = true
+      return
+    }
+
+    // If we already finished typing this exact text, show it immediately
+    // without re-animating (handles re-renders / StrictMode double-invoke).
+    if (alreadyTypedRef.current) {
       setTyped(text)
       setIsTyping(false)
       return
@@ -140,6 +155,7 @@ function useCharTypewriter(
       if (cancelledRef.current) return
       if (charIdx >= text.length) {
         setIsTyping(false)
+        alreadyTypedRef.current = true
         return
       }
 

@@ -1162,11 +1162,13 @@ export default function ChatWindow() {
                     !hideRevisionEdit;
 
                 
-                  // Key by initialAnswer too, so "I'd Like To Make Changes"
-                  // re-mounts the comments card with its pre-filled fields.
+                  // Key by message id only (stable) so editing-state changes don't
+                  // cause unrelated messages to remount and replay the typewriter.
+                  // Re-mount the revision comments card when pre-filled (Make Changes)
+                  // so QuestionCard picks up the new initialAnswer values.
                   const bubbleKey = m.initialAnswer
-                    ? `${m.id}-prefilled-${i}`
-                    : `${m.id}-${i}`;
+                    ? `${m.id}-prefilled`
+                    : m.id;
 
                   // Hide revision question card once the user has submitted it
                   // (i.e. it is no longer the current active card).
@@ -1174,8 +1176,14 @@ export default function ChatWindow() {
                     m.id.startsWith(`ep-${revisionKey}`) && !isRevisionSummary;
                   if (isRevisionQuestionCard && !isCurrent) return null;
 
-                  const isCardBeingEdited = msgEpId && editingId === `ep-${msgEpId}`;
-                  if (isCardBeingEdited) return null;
+                  // Only hide the assistant CARD message that is being re-edited in place.
+                  // Never hide user answer bubbles — they must remain visible for context.
+                  // NOTE: The card intentionally stays visible during editing because the
+                  // QuestionCard itself becomes the edit UI (!disabled || onCardCancel check
+                  // in MessageBubble makes it interactive). We only skip rendering when
+                  // another card explicitly owns the editingId slot.
+                  // (isCardBeingEdited guard removed — it was incorrectly hiding both
+                  // the assistant card AND user answer bubbles simultaneously)
 
                   // Extract already-uploaded image URLs from Redux so UserAnswerBubble
                   // can render thumbnails for the user's submitted answer.
