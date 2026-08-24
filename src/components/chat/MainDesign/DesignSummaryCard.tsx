@@ -137,13 +137,13 @@ export default function DesignSummaryCard({
                   </p>
                 </div>
                 {isEmpty ? (
-                  <p className="min-w-0 max-w-[45%] truncate text-right text-sm text-zinc-800 dark:text-zinc-100">
+                  <p className="min-w-0 max-w-[45%] text-right text-sm text-zinc-800 dark:text-zinc-100">
                     <span className="italic text-zinc-400 dark:text-zinc-500">
                       Not answered
                     </span>
                   </p>
                 ) : typeof answer === "string" ? (
-                  <p className="min-w-0 max-w-[45%] truncate text-right text-sm text-zinc-800 dark:text-zinc-100" title={answer}>
+                  <p className="min-w-0 max-w-[45%]  text-right text-sm text-zinc-800 dark:text-zinc-100" title={answer}>
                     {answer}
                   </p>
                 ) : isArray ? (
