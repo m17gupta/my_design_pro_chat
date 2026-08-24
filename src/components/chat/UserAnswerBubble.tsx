@@ -187,7 +187,7 @@ function UserAnswerBubble({
                 {/* Image / File grid */}
                 {hasImages && (
                   <div
-                    className={`grid gap-1.5 p-2 ${
+                    className={`flex gap-1.5 p-2 ${
                       finalImageUrls.length === 1
                         ? "grid-cols-1"
                         : finalImageUrls.length === 2

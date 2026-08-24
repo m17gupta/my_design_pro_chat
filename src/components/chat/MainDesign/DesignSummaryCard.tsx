@@ -185,12 +185,12 @@ export default function DesignSummaryCard({
                     return (
                       <div className="flex flex-col gap-1 items-end max-w-[60%]">
                         {notes.trim() && (
-                          <p className="text-right text-sm text-zinc-800 dark:text-zinc-100 truncate w-full" title={notes}>
+                          <p className="text-right text-sm text-zinc-800 dark:text-zinc-100  w-full" title={notes}>
                             {notes}
                           </p>
                         )}
                         {value.length > 0 && (
-                          <p className="text-right text-xs text-zinc-500 dark:text-zinc-400 truncate w-full" title={value.join(", ")}>
+                          <p className="text-right text-xs text-zinc-500 dark:text-zinc-400  w-full" title={value.join(", ")}>
                             {value.join(", ")}
                           </p>
                         )}
