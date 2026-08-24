@@ -252,7 +252,7 @@ export const MessageBubble = ({
   const checklistAnimated = done && message.showChecklist && !message.isRestored
   const { visibleItems: bubbleVisibleChecklist, isFinished: checklistFinished } = useLineByLineTypewriter(
     checklist,
-    { enabled: checklistAnimated, speedMs: 100, lineDelayMs: 900 }
+    { enabled: checklistAnimated, speedMs: 75, lineDelayMs: 1200 }
   )
 
   const cardContainerRef = useRef<HTMLDivElement>(null)

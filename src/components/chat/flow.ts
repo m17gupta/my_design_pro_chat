@@ -51,7 +51,7 @@ const EPISODES: Episode[] = [
     apiKey: "photos",
     kind: "ready",
     content:
-      "Perfect! Go ahead and upload any additional angles of the front view. These extra views help us better understand your property.",
+      "First, do you have any additional photos of the house that you think are helpful for us to see?",
     checklistId: "photos",
     options: ["Yes I do", "No I don't"],
   },

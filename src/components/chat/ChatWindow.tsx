@@ -1160,6 +1160,8 @@ export default function ChatWindow() {
                     (msgEpisode?.editable ?? true) &&
                     (!isFlowChat || !hasCompletedEntry) &&
                     !hideRevisionEdit;
+
+                
                   // Key by initialAnswer too, so "I'd Like To Make Changes"
                   // re-mounts the comments card with its pre-filled fields.
                   const bubbleKey = m.initialAnswer

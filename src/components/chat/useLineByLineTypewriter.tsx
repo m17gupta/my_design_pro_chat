@@ -164,47 +164,42 @@ export function useLineByLineTypewriter(
     const currentItem = items[state.completedIndex]
     if (!currentItem) return
 
-    const tokens = currentItem.label.split(/(\s+)/)
-    let tokenIndex = 0
+    // Split into individual characters for true keystroke-by-keystroke typing
+    const chars = currentItem.label.split('')
+    let charIndex = 0
     let currentText = ''
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     let cancelled = false
 
-    /** Compute how long to wait before revealing this token. */
-    function computeDelay(token: string): number {
-      const trimmed = token.trim()
+    /** Compute how long to wait before revealing this character. */
+    function computeDelay(char: string, prevChar: string): number {
+      const isSpace = char === ' '
+      const isPunct = /[!?,.:;/—–•*]/.test(char)
 
-      // Classify the token
-      const isBurst =
-        trimmed.length === 0 ||
-        trimmed.length <= 2 ||
-        /^[!?,.:;—–•*]/.test(trimmed)
-      const isLong = trimmed.length >= 9
+      // Base delay per character type
+      let delay = isSpace || isPunct
+        ? Math.max(40, Math.floor(speedMs * 0.4))  // spaces/punct are quick
+        : speedMs                                   // normal chars use full speedMs
 
-      let delay = speedMs
-      if (isBurst) delay = Math.max(12, Math.floor(speedMs * 0.45))
-      else if (isLong) delay = Math.floor(speedMs * 1.5)
+      // ±25% random jitter so it feels human
+      delay = Math.floor(delay * (0.75 + Math.random() * 0.5))
 
-      // ±20% random variation per token
-      delay = Math.floor(delay * (0.8 + Math.random() * 0.4))
-
-      // Extra pause after sentence-ending punctuation
-      if (/[.!?]$/.test(trimmed)) {
-        delay += 180 + Math.floor(Math.random() * 250)
-      } else if (/[,;]$/.test(trimmed)) {
-        // Slight comma / semicolon breath
-        delay += 60 + Math.floor(Math.random() * 80)
+      // Natural pause after the PREVIOUS character is sentence-ending punctuation
+      if (/[.!?]/.test(prevChar)) {
+        delay += 300 + Math.floor(Math.random() * 300) // 300–600 ms breath
+      } else if (/[,;/]/.test(prevChar)) {
+        delay += 80 + Math.floor(Math.random() * 100)  // 80–180 ms comma pause
       }
 
-      return Math.max(12, delay)
+      return Math.max(30, delay)
     }
 
-    /** Recursively schedule the next token. */
+    /** Recursively schedule the next character. */
     function scheduleNext() {
       if (cancelled) return
 
-      // All tokens for this line are typed — wait then advance to next item.
-      if (tokenIndex >= tokens.length) {
+      // All characters for this line are typed — wait then advance to next item.
+      if (charIndex >= chars.length) {
         timeoutId = setTimeout(() => {
           if (cancelled) return
           setState((previous) => ({
@@ -217,13 +212,14 @@ export function useLineByLineTypewriter(
         return
       }
 
-      const token = tokens[tokenIndex]
-      const delay = computeDelay(token)
-      tokenIndex++
+      const char = chars[charIndex]
+      const prevChar = charIndex > 0 ? chars[charIndex - 1] : ''
+      const delay = computeDelay(char, prevChar)
+      charIndex++
 
       timeoutId = setTimeout(() => {
         if (cancelled) return
-        currentText += token
+        currentText += char
         setState((previous) => ({ ...previous, currentText }))
         scheduleNext()
       }, delay)
@@ -232,7 +228,7 @@ export function useLineByLineTypewriter(
     // "Thinking" pause before Luna starts typing each new line
     timeoutId = setTimeout(
       scheduleNext,
-      80 + Math.floor(Math.random() * 120)
+      200 + Math.floor(Math.random() * 150)
     )
 
     /*
