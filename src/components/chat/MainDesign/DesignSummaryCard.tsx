@@ -92,9 +92,9 @@ export default function DesignSummaryCard({
       <h3 className="text-base font-semibold tracking-tight text-emerald-700 dark:text-emerald-400">
         {title}
       </h3>
-      <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+      {/* <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
         {description}
-      </p>
+      </p> */}
 
       <div className="mt-4 overflow-scroll max-h-[calc(100vh-330px)] rounded-xl border border-zinc-200/80 dark:border-zinc-800">
 
