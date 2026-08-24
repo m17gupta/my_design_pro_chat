@@ -96,7 +96,7 @@ export default function DesignSummaryCard({
         {description}
       </p>
 
-      <div className="mt-4 overflow-scroll max-h-[calc(100vh-300px)] rounded-xl border border-zinc-200/80 dark:border-zinc-800">
+      <div className="mt-4 overflow-scroll max-h-[calc(100vh-330px)] rounded-xl border border-zinc-200/80 dark:border-zinc-800">
 
         { orderedKeys.length > 0 &&
           orderedKeys.map((key, i) => {
