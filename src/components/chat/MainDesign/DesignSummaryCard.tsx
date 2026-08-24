@@ -276,6 +276,7 @@ export default function DesignSummaryCard({
                   i > 0 ? "border-t border-zinc-200/80 dark:border-zinc-800" : ""
                 }`}
               >
+               
                 <svg
                   width="15"
                   height="15"
@@ -291,23 +292,24 @@ export default function DesignSummaryCard({
                   <path d="M3 10.5L12 3l9 7.5" />
                   <path d="M5 9.5V21h14V9.5" />
                 </svg>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                <div className="min-w-0 flex-1 max-w-[30%]">
+                  <p className="text-sm  font-semibold text-zinc-500 dark:text-zinc-400">
                     {name}
                   </p>
-                </div>
+                 </div>
+               
                 {isEmpty ? (
-                  <p className="min-w-0 max-w-[45%] text-right text-sm text-zinc-800 dark:text-zinc-100">
+                  <p className="min-w-0 max-w-[60%] text-right text-sm text-zinc-800 dark:text-zinc-100">
                     <span className="italic text-zinc-400 dark:text-zinc-500">
                       Not answered
                     </span>
                   </p>
                 ) : typeof answer === "string" ? (
-                  <p className="min-w-0 max-w-[45%]  text-right text-sm text-zinc-800 dark:text-zinc-100" title={answer}>
+                  <p className="min-w-0 max-w-[60%]  text-left text-sm text-zinc-800 dark:text-zinc-100" title={answer}>
                     {answer}
                   </p>
                 ) : isArray ? (
-                  <div className="flex flex-wrap gap-1 justify-end max-w-[50%]">
+                  <div className="flex flex-wrap gap-1 justify-start max-w-[50%]">
                     {answer.map((url, idx) => (
                       <FileThumbnail key={idx} url={url} idx={idx} onImageClick={setLightboxUrl} />
                     ))}
@@ -318,19 +320,19 @@ export default function DesignSummaryCard({
                     const files = "files" in answer ? answer.files : [];
                     const value = "value" in answer ? answer.value : [];
                     return (
-                      <div className="flex flex-col gap-1 items-end max-w-[60%]">
+                      <div className="flex flex-col gap-1 max-w-[60%]">
                         {notes.trim() && (
-                          <p className="text-right text-sm text-zinc-800 dark:text-zinc-100  w-full" title={notes}>
+                          <p className="text-left text-sm text-zinc-800 dark:text-zinc-100  w-full" title={notes}>
                             {notes}
                           </p>
                         )}
                         {value.length > 0 && (
-                          <p className="text-right text-xs text-zinc-500 dark:text-zinc-400  w-full" title={value.join(", ")}>
+                          <p className="text-left text-xs text-zinc-500 dark:text-zinc-400  w-full" title={value.join(", ")}>
                             {value.join(", ")}
                           </p>
                         )}
                         {files.length > 0 && (
-                          <div className="flex flex-wrap gap-1 justify-end">
+                          <div className="flex flex-wrap gap-1 justify-start">
                             {files.map((url, idx) => (
                               <FileThumbnail key={idx} url={url} idx={idx} onImageClick={setLightboxUrl} />
                             ))}
