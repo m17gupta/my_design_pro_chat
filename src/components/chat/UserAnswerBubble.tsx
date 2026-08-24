@@ -150,13 +150,13 @@ function UserAnswerBubble({
         <div className="flex max-w-[85%] flex-col items-end gap-1 sm:max-w-[75%]">
           {/* ── Main answer bubble ── */}
           <div
-            className={`rounded-2xl rounded-br-md shadow-sm overflow-hidden bg-zinc-900 dark:bg-zinc-100 ${
-              editing && !isOptionEdit ? 'ring-2 ring-zinc-600/50' : ''
+            className={`rounded-2xl rounded-br-md shadow-sm overflow-hidden bg-[#475C66] text-white ${
+              editing && !isOptionEdit ? 'ring-2 ring-[#475C66]/50' : ''
             }`}
           >
             {/* ── Edit mode: text textarea ── */}
             {editing && !isOptionEdit && (
-              <div className="bg-zinc-900 dark:bg-zinc-100 p-3">
+              <div className="bg-[#475C66] p-3">
                 <textarea
                   ref={editRef}
                   defaultValue={finalContent}
@@ -174,7 +174,7 @@ function UserAnswerBubble({
                     e.target.style.height = "auto";
                     e.target.style.height = `${Math.min(e.target.scrollHeight, 180)}px`;
                   }}
-                  className="w-full resize-none rounded-xl bg-white/10 px-3 py-2 text-[15px] leading-relaxed text-white dark:text-zinc-900 outline-none ring-1 ring-white/20 placeholder:text-white/50 focus:bg-white/15 focus:ring-2 focus:ring-white/40"
+                  className="w-full resize-none rounded-xl bg-white/10 px-3 py-2 text-[15px] leading-relaxed text-white outline-none ring-1 ring-white/20 placeholder:text-white/50 focus:bg-white/15 focus:ring-2 focus:ring-white/40"
                 />
               </div>
             )}
@@ -265,7 +265,7 @@ function UserAnswerBubble({
                 {/* Text content */}
                 {hasText && (
                   <p
-                    className={`whitespace-pre-wrap break-words px-4 py-2.5 text-[15px] leading-relaxed text-zinc-100 dark:text-zinc-900 ${
+                    className={`whitespace-pre-wrap break-words px-4 py-2.5 text-[15px] leading-relaxed text-white ${
                       hasImages ? 'border-t border-white/10' : ''
                     }`}
                   >
@@ -275,7 +275,7 @@ function UserAnswerBubble({
 
                 {/* Image/File fallback label when no text at all */}
                 {!hasText && hasImages && (
-                  <p className="px-3 pb-2 text-xs text-zinc-400 dark:text-zinc-500">
+                  <p className="px-3 pb-2 text-xs text-white/80">
                     {finalImageUrls.length} file{finalImageUrls.length > 1 ? 's' : ''} uploaded
                   </p>
                 )}
@@ -299,7 +299,7 @@ function UserAnswerBubble({
                   <button
                     type="button"
                     onClick={handleSave}
-                    className="rounded-full bg-zinc-900 px-3.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                    className="rounded-full bg-[#475C66] px-3.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#37474f]"
                   >
                     Save
                   </button>
