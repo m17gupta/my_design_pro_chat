@@ -105,6 +105,7 @@ export interface QuestionCardSpec {
   title: string;
   description: string;
   fields: QuestionField[];
+  required?: boolean;
 }
 
 /**
@@ -127,6 +128,7 @@ export interface Message {
   showChecklist?: boolean;
   /** The checklist item this episode collects an answer for. */
   checklistId?: string;
+  required?: boolean;
   /**
    * When true, this message was restored from the persisted session (sessionStorage).
    * Animated components (typewriter, enter transitions) should skip their

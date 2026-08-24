@@ -84,6 +84,8 @@ function UserAnswerBubble({
     }
   }, [editing]);
 
+  console.log("editing",editing)
+
   const handleSave = () => {
     if (editRef.current) {
       onEditSave?.(editRef.current.value);

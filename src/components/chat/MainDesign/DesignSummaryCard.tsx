@@ -1,11 +1,14 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { summaryCopyForWorkType } from "../types";
+import { buildEpisodesFromContext } from "../flow";
 
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { isAnswerEmpty, answerToText } from "@/lib/briefDisplay";
+import { selectQuestionnaireSequence } from "@/store/questionnaires/questionnaireSlice";
 
 interface DesignSummaryCardProps {
   answers: Record<string, string>;
@@ -43,14 +46,39 @@ export default function DesignSummaryCard({
 
   const { original, work_type, role, user_type, question_sets } = useSelector((state: RootState) => state.chat);
   const { data: questionnaire } = useSelector((state: RootState) => state.questionnaires);
+  const questionnaireSequence = useSelector(selectQuestionnaireSequence);
 
-  // const fallback = summaryCopyForWorkType(
-  //   work_type ?? undefined,
-  //   role ?? undefined,
-  //   questionnaire ?? undefined,
-  //   user_type ?? undefined,
-  //   question_sets ?? undefined
-  // );
+  const orderedKeys = useMemo(() => {
+    if (!original || Object.keys(original).length === 0) return [];
+    
+    if (questionnaireSequence && questionnaireSequence.length > 0) {
+      const presentKeys = questionnaireSequence.filter((key) => key in original);
+      const remainingKeys = Object.keys(original).filter(
+        (key) => !presentKeys.includes(key)
+      );
+      return [...presentKeys, ...remainingKeys];
+    }
+
+    // Fallback: calculate episodes if questionnaireSequence is not populated (e.g. page refresh)
+    const episodes = buildEpisodesFromContext(
+      {
+        work_type: work_type ?? undefined,
+        user_type: user_type ?? undefined,
+        role: role ?? undefined,
+        question_sets: question_sets ?? undefined,
+      },
+      questionnaire ?? undefined
+    );
+
+    const episodeKeys = episodes.map((ep) => ep.apiKey);
+    const presentEpisodeKeys = episodeKeys.filter((key) => key in original);
+    const remainingKeys = Object.keys(original).filter(
+      (key) => !presentEpisodeKeys.includes(key)
+    );
+
+    return [...presentEpisodeKeys, ...remainingKeys];
+  }, [original, work_type, user_type, role, question_sets, questionnaire, questionnaireSequence]);
+
   const title ="Design Summary";
   const description =  "Let me generate an initial rendering based on my understanding of what you are looking for.";
 
@@ -70,10 +98,10 @@ export default function DesignSummaryCard({
 
       <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200/80 dark:border-zinc-800">
 
-        { original && Object.keys(original).length > 0 &&
-          Object.keys(original).map((key, i) => {
+        { orderedKeys.length > 0 &&
+          orderedKeys.map((key, i) => {
             const item = original[key];
-            console.log("itetemmm",item)
+        
             if (!item) return null;
             const { answer, name } = item;
             

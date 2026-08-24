@@ -130,7 +130,7 @@ export default function RevisionDesign({
           round={round}
           rating={rating}
           onRate={onRate}
-          locked={!isCurrent || Boolean(submittedAction)}
+          locked={!isCurrent || Boolean(submittedAction) || generating}
           regenerateDisabled={regenerateDisabled}
           submittedAction={submittedAction}
           onAllINeed={onAllINeed}

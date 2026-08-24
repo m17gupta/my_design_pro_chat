@@ -33,6 +33,7 @@ export interface Episode {
   revisionStep?: boolean;
   /** Optional headline for summary-kind episodes (AllQuestion-driven flows). */
   title?: string;
+  required?: boolean;
 }
 
 
@@ -542,6 +543,7 @@ type QJsonQuestion = {
   details?: string;
   name?: string;
   placeholder?: string;
+  required?: boolean;
 };
 
 /** True when a string contains HTML tags (as used by the API question text). */
@@ -697,6 +699,7 @@ export function buildEpisodes(
 
     return {
       ...ep,
+      ...(override.required !== undefined ? { required: override.required } : {}),
       card: {
         ...ep.card,
         description: newDescription,
@@ -738,6 +741,7 @@ export interface AllQQuestion {
   example?: string;
   options?: string[] | Record<string, string>;
   multi_questions?: AllQQuestion[];
+  required?: boolean;
 }
 
 /** One phase: a titled, ordered list of questions. */
@@ -939,7 +943,12 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
     answerShape,
     checklistId: cid,
   });
-  const base: Episode = { apiKey: q.id, kind: "card", checklistId: cid };
+  const base: Episode = {
+    apiKey: q.id,
+    kind: "card",
+    checklistId: cid,
+    ...(q.required !== undefined ? { required: q.required } : {}),
+  };
 
   switch (q.type) {
     case "file":

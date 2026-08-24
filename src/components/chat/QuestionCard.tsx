@@ -137,69 +137,63 @@ function QuestionCard({
   // - Combined Textarea + Upload-Grid fields: enabled if EITHER text is entered OR an image is uploaded.
   // - Standalone Textarea: disabled until text is entered.
   // - Standalone Upload-Grid: disabled until at least one image is uploaded.
-  // const canContinue =
-  //   !disabled &&
-  //   !isAnyUploading &&
-  //   (() => {
-  //     // 1. Radio fields MUST have an option selected
-  //     const radiosSatisfied = spec.fields.every(
-  //       (f) => f.kind !== "radio" || radio !== null
-  //     );
-  //     if (!radiosSatisfied) return false;
+  const isRequired = spec.required ?? true;
 
-  //     // 2. Checkbox fields MUST have a check or notes
-  //     const checkboxesSatisfied = spec.fields.every(
-  //       (f) => f.kind !== "checkbox" || checks.size > 0 || notes.trim().length > 0
-  //     );
-  //     if (!checkboxesSatisfied) return false;
-
-  //     const hasTextarea = spec.fields.some((f) => f.kind === "textarea");
-  //     const hasUploadGrid = spec.fields.some((f) => f.kind === "upload-grid");
-
-  //     // 3. Combined Textarea + Upload-Grid card: either text OR image upload satisfies
-  //     if (hasTextarea && hasUploadGrid) {
-  //       const hasText = spec.fields.some(
-  //         (f, i) => f.kind === "textarea" && (textByField[i] ?? "").trim().length > 0
-  //       );
-  //       const hasUpload = spec.fields.some(
-  //         (f, i) =>
-  //           f.kind === "upload-grid" &&
-  //           Object.values(urlsByField[i] ?? {}).length > 0
-  //       );
-  //       return hasText || hasUpload;
-  //     }
-
-  //     // 4. Standalone Textarea card
-  //     if (hasTextarea) {
-  //       return spec.fields.every(
-  //         (f, i) =>
-  //           f.kind !== "textarea" || (textByField[i] ?? "").trim().length > 0
-  //       );
-  //     }
-
-  //     // 5. Standalone Upload-Grid card
-  //     if (hasUploadGrid) {
-  //       return spec.fields.every(
-  //         (f, i) =>
-  //           f.kind !== "upload-grid" ||
-  //           Object.values(urlsByField[i] ?? {}).length > 0
-  //       );
-  //     }
-
-  //     return true;
-  //   })();
   const canContinue =
     !disabled &&
     !isAnyUploading &&
-    spec.fields.every((field, i) => {
-      if (field.kind === "textarea" && field.required) {
-        return (textByField[i] ?? "").trim().length > 0;
+    (() => {
+      // 1. Radio fields: MUST have an option selected if required
+      const hasRadio = spec.fields.some((f) => f.kind === "radio");
+      if (hasRadio && radio === null) {
+        return !isRequired;
       }
-      if (field.kind === "radio" && field.required) {
-        return radio !== null;
+
+      // 2. Checkbox fields: MUST have a check or notes if required
+      const hasCheckbox = spec.fields.some((f) => f.kind === "checkbox");
+      if (hasCheckbox && checks.size === 0 && notes.trim().length === 0) {
+        return !isRequired;
       }
-      return true; // upload grids and checkboxes are optional
-    });
+
+      const hasTextarea = spec.fields.some((f) => f.kind === "textarea");
+      const hasUploadGrid = spec.fields.some((f) => f.kind === "upload-grid");
+
+      // 3. Combined Textarea + Upload-Grid fields: if user gives answer to EITHER text OR upload image, Next button is active!
+      if (hasTextarea && hasUploadGrid) {
+        const hasText = spec.fields.some(
+          (f, i) => f.kind === "textarea" && (textByField[i] ?? "").trim().length > 0
+        );
+        const hasUpload = spec.fields.some(
+          (f, i) =>
+            f.kind === "upload-grid" &&
+            Object.values(urlsByField[i] ?? {}).length > 0
+        );
+        if (hasText || hasUpload) return true;
+        return !isRequired;
+      }
+
+      // 4. Standalone Textarea card
+      if (hasTextarea) {
+        const hasText = spec.fields.some(
+          (f, i) => f.kind === "textarea" && (textByField[i] ?? "").trim().length > 0
+        );
+        if (hasText) return true;
+        return !isRequired;
+      }
+
+      // 5. Standalone Upload-Grid card
+      if (hasUploadGrid) {
+        const hasUpload = spec.fields.some(
+          (f, i) =>
+            f.kind === "upload-grid" &&
+            Object.values(urlsByField[i] ?? {}).length > 0
+        );
+        if (hasUpload) return true;
+        return !isRequired;
+      }
+
+      return true;
+    })();
 
   const hasOnlyUploads = spec.fields.every((f) => f.kind === "upload-grid");
 

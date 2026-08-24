@@ -32,6 +32,7 @@ describe("questionnaireSlice", () => {
     const state = questionnaireReducer(undefined, { type: "UNKNOWN" });
     expect(state).toEqual({
       data: null,
+      questionnaireSequence: [],
       lifecycle: "idle",
       error: null,
       lastFetchedAt: null,
@@ -51,6 +52,7 @@ describe("questionnaireSlice", () => {
     const resetState = questionnaireReducer(stateWithData, resetQuestionnaires());
     expect(resetState).toEqual({
       data: null,
+      questionnaireSequence: [],
       lifecycle: "idle",
       error: null,
       lastFetchedAt: null,
@@ -78,6 +80,7 @@ describe("questionnaireSlice", () => {
     const rootState = {
       questionnaires: {
         data: sampleData,
+        questionnaireSequence: [],
         lifecycle: "succeeded" as const,
         error: null,
         lastFetchedAt: 12345,

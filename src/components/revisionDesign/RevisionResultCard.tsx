@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import type { EnterpriseEntry } from "@/store/enterprise/enterpriseType";
 import { useSelector } from "react-redux";
@@ -55,18 +56,25 @@ export default function RevisionResultCard({
   onAllINeed,
   onRegenerate,
   onEngageDesigner,
-}: RevisionResultCardProps) {  const hasImage = Boolean(entry.url);
+}: RevisionResultCardProps) {
+  const [regenerateClicked, setRegenerateClicked] = useState(false);
+  const hasImage = Boolean(entry.url);
   const done = entry.status === "completed" || hasImage;
   const failed = entry.status === "failed";
-
   const { entries } = useSelector((state: RootState) => state.enterprise);
   const getRevison = entries.filter((item) => item.type === "revision");
-  // This round's entry is getRevison[round - 1] — while its status is still
-  // "pending" (generation in flight) every action button stays disabled.
-  const roundPending = getRevison[round - 1]?.status === "pending";
+
+  const isGenerating =
+    entry.status === "pending" ||
+    entry.status === "queued" ||
+    entry.status === "processing" ||
+    (!done && !failed);
+
   const hideButtons =
-    getRevison.length > round && getRevison[round]?.status === "completed";
-  const interactive = !locked && !submittedAction && !roundPending;
+    isGenerating ||
+    !done ||
+    (getRevison.length > round && getRevison[round]?.status === "completed");
+  const interactive = !locked && !submittedAction && !isGenerating && !regenerateClicked;
 
   return (
     <motion.div
@@ -185,7 +193,10 @@ export default function RevisionResultCard({
 
             <motion.button
               type="button"
-              onClick={onRegenerate}
+              onClick={() => {
+                setRegenerateClicked(true);
+                onRegenerate();
+              }}
               disabled={!interactive || regenerateDisabled}
               whileHover={interactive && !regenerateDisabled ? { scale: 1.03 } : undefined}
               whileTap={interactive && !regenerateDisabled ? { scale: 0.95 } : undefined}

@@ -27,6 +27,7 @@ export type QuestionnairesResponse = Record<string, unknown>;
 
 export interface QuestionnairesState {
   data: QuestionnairesResponse | null;
+  questionnaireSequence: string[];
   lifecycle: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
   lastFetchedAt: number | null;

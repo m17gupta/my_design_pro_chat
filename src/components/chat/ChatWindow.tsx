@@ -58,7 +58,6 @@ import {
   selectQuestionnairesData,
   selectQuestionnairesState,
 } from "../../store/questionnaires/questionnaireSlice";
-import { fetchQuestionnaires } from "../../store/questionnaires/questionnaireThunk";
 
 let idCounter = 0;
 const nextId = () => `m-${Date.now()}-${idCounter++}`;
@@ -961,12 +960,18 @@ export default function ChatWindow() {
    */
   const handleEditStart = useCallback(
     (messageId: string) => {
-      const epId = messageEpisodes[messageId];
-      dispatch(setEditId(epId))
-      if (epId && episodeById(epId, episodes).revisionStep) {
+      const epId = messageEpisodes[messageId] ?? (messageId.startsWith(`ep-${revisionKey}`) ? revisionKey : undefined);
+      dispatch(setEditId(epId));
+      
+      const isRevisionMessage =
+        messageId.startsWith(`ep-${revisionKey}`) ||
+        epId === revisionKey ||
+        (epId && episodeById(epId, episodes).revisionStep);
+
+      if (isRevisionMessage) {
         const msgIdx = messages.findIndex((m) => m.id === messageId);
         if (msgIdx >= 0) {
-          for (let i = msgIdx - 1; i >= 0; i--) {
+          for (let i = msgIdx; i >= 0; i--) {
             const isRevCard =
               messages[i].id === `ep-${revisionKey}` ||
               messages[i].id.startsWith(`ep-${revisionKey}-`);
@@ -981,6 +986,9 @@ export default function ChatWindow() {
             }
           }
         }
+        // Fallback to round 1 if no specific round message found
+        handleMakeChanges(1);
+        return;
       }
 
       let targetId = messageId;
@@ -1126,15 +1134,16 @@ export default function ChatWindow() {
                       : episodeApiKey;
                   // Only editable episodes get an edit icon on their user answer
                   // (overview / photos are marked non-editable).
-                  const msgEpId = messageEpisodes[m.id];
+                  const isRevisionUserMsg = m.role === "user" && (
+                    messageEpisodes[m.id] === revisionKey ||
+                    (i > 0 && messages[i - 1]?.id.startsWith(`ep-${revisionKey}`))
+                  );
+                  const msgEpId = messageEpisodes[m.id] ?? (isRevisionUserMsg || m.id.startsWith(`ep-${revisionKey}`) ? revisionKey : undefined);
                   const msgEpisode = msgEpId ? episodeById(msgEpId, episodes) : undefined;
                   const hasCompletedEntry = entries.some(
                     (entry) => entry.status === "completed"
                   );
-                  // Any episode in the current work type's flow is an intake
-                  // message (edit-gated once a design entry exists) — derived
-                  // so color-material's topic cards count too.
-                  const isFlowChat = msgEpId
+                  const isFlowChat = msgEpId && msgEpId !== revisionKey
                     ? episodes.some((e) => e.apiKey === msgEpId)
                     : false;
 
@@ -1142,14 +1151,14 @@ export default function ChatWindow() {
                     (entry) => entry.type === "revision"
                   );
                   const hideRevisionEdit =
-                    msgEpId === revisionKey &&
-                    revisionEntries.length === 1 &&
-                    revisionEntries[0].status === "completed";
+                    (msgEpId === revisionKey || isRevisionUserMsg) &&
+                    revisionEntries.length > 0 &&
+                    revisionEntries.every(e => e.status === "completed");
 
                   const canEdit =
                     m.role === "user" &&
                     (msgEpisode?.editable ?? true) &&
-                    !(isFlowChat && hasCompletedEntry) &&
+                    (!isFlowChat || !hasCompletedEntry) &&
                     !hideRevisionEdit;
                   // Key by initialAnswer too, so "I'd Like To Make Changes"
                   // re-mounts the comments card with its pre-filled fields.
