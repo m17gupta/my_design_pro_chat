@@ -61,7 +61,8 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
   }
 
   return (
-    <motion.div
+    <>
+{  isGenerating &&  <motion.div
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 380, damping: 30 }}
@@ -145,6 +146,7 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
           />
         </div>
       </div>
-    </motion.div>
+    </motion.div>}
+    </>
   );
 }

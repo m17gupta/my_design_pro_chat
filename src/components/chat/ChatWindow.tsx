@@ -1337,7 +1337,7 @@ export default function ChatWindow() {
 
               <AnimatePresence>{typing && <TypingIndicator key="typing" />}</AnimatePresence>
 
-              <div ref={bottomRef} className="h-16 shrink-0" />
+              <div ref={bottomRef} />
           </div>
         </main>
       </div>
