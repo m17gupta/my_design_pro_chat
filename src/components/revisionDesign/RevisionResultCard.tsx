@@ -200,7 +200,7 @@ const handleDownload = async () => {
                   onClick={handleDownload}
                   title="Download Image"
                   aria-label="Download revised design image"
-                  className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md transition-all duration-150 hover:bg-black/80 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-lg"
+                  className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md transition-all duration-150 hover:bg-black/80 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-lg"
                 >
                   <svg
                     width="18"
