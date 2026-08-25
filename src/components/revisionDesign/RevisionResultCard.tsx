@@ -76,50 +76,46 @@ export default function RevisionResultCard({
     (getRevison.length > round && getRevison[round]?.status === "completed");
   const interactive = !locked && !submittedAction && !isGenerating && !regenerateClicked;
 
-  const handleDownload = async () => {
-    if (!entry.url) return;
-    const filename = `luna-design-revision-${round}.jpg`;
-    try {
-      const res = await fetch(entry.url);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-    } catch {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = entry.url;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth || img.width;
-        canvas.height = img.naturalHeight || img.height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
-          const link = document.createElement("a");
-          link.href = dataUrl;
-          link.download = filename;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      };
-      img.onerror = () => {
-        const link = document.createElement("a");
-        link.href = entry.url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      };
+const handleDownload = async () => {
+  if (!entry.url) return;
+
+  try {
+    const response = await fetch(entry.url, {
+      mode: "cors",
+      credentials: "omit",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`);
     }
-  };
+
+    const blob = await response.blob();
+
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = `luna-design-revision-${round}.jpg`;
+    link.style.display = "none";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Don't revoke immediately — allow browser to start download
+    setTimeout(() => {
+      window.URL.revokeObjectURL(blobUrl);
+    }, 3000);
+  } catch (error) {
+    console.error("Image download failed:", error);
+
+    // Don't navigate to entry.url as fallback.
+    // That would open the image in the current window.
+    alert(
+      "Unable to download this image. Please check the image server's CORS settings."
+    );
+  }
+};
 
   return (
     <motion.div
