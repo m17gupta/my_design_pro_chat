@@ -108,23 +108,31 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
             />
             <div className="relative flex flex-col items-center gap-2 text-zinc-400 dark:text-zinc-500">
               <svg
-                width="34"
-                height="34"
+                width="32"
+                height="32"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="1.5"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 aria-hidden="true"
-                className="opacity-60"
+                className="animate-spin text-emerald-500 dark:text-emerald-400"
               >
-                <path d="M3 12l3-3 4 4 4-4 7 7" />
-                <path d="M21 9v6H3V9" />
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
-              <span className="animate-pulse text-xs font-medium">
-                Generating preview…
-              </span>
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={messageIndex}
+                  initial={{ opacity: 0, y: 3 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -3 }}
+                  transition={{ duration: 0.25 }}
+                  className="px-4 text-center text-xs font-medium text-zinc-600 dark:text-zinc-300"
+                >
+                  {subtitle}
+                </motion.span>
+              </AnimatePresence>
             </div>
           </div>
         </div>

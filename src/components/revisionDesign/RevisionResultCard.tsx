@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import type { EnterpriseEntry } from "@/store/enterprise/enterpriseType";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -27,6 +27,16 @@ interface RevisionResultCardProps {
   onRegenerate: () => void;
   onEngageDesigner: (rating: number) => void;
 }
+
+const GENERATING_MESSAGES = [
+  "Thanks! I'm putting everything together...",
+  "Logging our conversation...",
+  "Organizing your ideas...",
+  "Making sure I didn't miss a thing...",
+  "One last pass before we're done...",
+  "Don't leave; I'm finishing up.",
+  "Almost there! Just a few more seconds.",
+];
 
 const RATING_EMOJIS = ["😞", "🙁", "😐", "🙂", "🤩"] as const;
 const RATING_LABELS = [
@@ -58,6 +68,7 @@ export default function RevisionResultCard({
   onEngageDesigner,
 }: RevisionResultCardProps) {
   const [regenerateClicked, setRegenerateClicked] = useState(false);
+  const [messageIndex, setMessageIndex] = useState(0);
   const hasImage = Boolean(entry.url);
   const done = entry.status === "completed" || hasImage;
   const failed = entry.status === "failed";
@@ -69,6 +80,23 @@ export default function RevisionResultCard({
     entry.status === "queued" ||
     entry.status === "processing" ||
     (!done && !failed);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setMessageIndex(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setMessageIndex((prev) =>
+        prev < GENERATING_MESSAGES.length - 1 ? prev + 1 : prev
+      );
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isGenerating]);
+
+  const subtitle = GENERATING_MESSAGES[messageIndex];
 
   const hideButtons =
     isGenerating ||
@@ -223,9 +251,18 @@ const handleDownload = async () => {
           ) : (
             <div className="flex flex-col items-center gap-3 px-4 py-10">
               <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-emerald-500" />
-              <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
-                Luna is preparing your revision…
-              </p>
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={messageIndex}
+                  initial={{ opacity: 0, y: 3 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -3 }}
+                  transition={{ duration: 0.25 }}
+                  className="px-4 text-center text-sm font-medium text-zinc-600 dark:text-zinc-300"
+                >
+                  {subtitle}
+                </motion.p>
+              </AnimatePresence>
             </div>
           )}
         </div>
