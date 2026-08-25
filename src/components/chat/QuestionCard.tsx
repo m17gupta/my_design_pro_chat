@@ -209,9 +209,14 @@ function QuestionCard({
           handlers.set(slot, (map) =>
             setUrlsByField((prev) => {
               const currentSlot = prev[slot] ?? {};
-              const restoredKeys = Object.fromEntries(
-                Object.entries(currentSlot).filter(([k]) => k.startsWith("restored-"))
-              );
+              const hasNewUploads = Object.keys(map).length > 0;
+              const restoredKeys = hasNewUploads
+                ? {}
+                : Object.fromEntries(
+                    Object.entries(currentSlot).filter(([k]) =>
+                      k.startsWith("restored-")
+                    )
+                  );
               return { ...prev, [slot]: { ...restoredKeys, ...map } };
             })
           );

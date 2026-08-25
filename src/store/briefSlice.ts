@@ -5,10 +5,11 @@ import {
 } from '@reduxjs/toolkit'
 import type { AnswerValue, WorkType } from '../components/chat/types'
 import { toWorkType } from '../components/chat/types'
-import { buildEpisodesFromContext, getApiQuestions } from '../components/chat/flow'
+import { buildEpisodesFromContext, getApiQuestions, EPISODES, formatQuestionIdAsName } from '../components/chat/flow'
 import {
   buildApiPayload,
   buildQuestionItem,
+  normalizeAnswer,
   type ApiBriefItem,
   type ApiBriefPayload,
   type BriefContext,
@@ -176,6 +177,18 @@ const briefSlice = createSlice({
         state.original[action.payload.apiKey] = {
           ...state.original[action.payload.apiKey],
           answer: action.payload.answer as ApiBriefItem['answer']
+        }
+      } else {
+        const ep = EPISODES.find(e => e.apiKey === action.payload.apiKey)
+        const name = ep?.api?.name || formatQuestionIdAsName(action.payload.apiKey)
+        const question = ep?.api?.question || ""
+        const shape = ep?.api?.answerShape
+        state.original[action.payload.apiKey] = {
+          name,
+          question,
+          answer: shape
+            ? normalizeAnswer(shape, action.payload.answer)
+            : (action.payload.answer as ApiBriefItem['answer'])
         }
       }
     },

@@ -63,15 +63,17 @@ function UserAnswerBubble({
   const briefPayload = useAppSelector(selectBriefPayload);
   const item = apiKey ? briefPayload.original[apiKey] : undefined;
 
+  const itemUrlsList = item ? itemUrls(item) : [];
+  const finalImageUrls = itemUrlsList.length > 0 ? itemUrlsList : imageUrls;
   const finalContent = item ? answerToText(item) : content;
-  const finalImageUrls = item ? itemUrls(item) : imageUrls;
 
   const editRef = useRef<HTMLTextAreaElement>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const isOptionEdit = Boolean(editing && editOptions?.length);
-  const hasText = finalContent.trim().length > 0;
   const hasImages = finalImageUrls.length > 0;
+  const isUploadSummaryText = /^\d+ files? uploaded$/i.test(finalContent.trim());
+  const hasText = finalContent.trim().length > 0 && (!hasImages || !isUploadSummaryText);
   // Auto-resize textarea
   useEffect(() => {
     if (editing && editRef.current) {
@@ -88,6 +90,7 @@ function UserAnswerBubble({
 
   const handleSave = () => {
     if (editRef.current) {
+      console.log("editRef.current.value", editRef.current.value)
       onEditSave?.(editRef.current.value);
     }
   };
