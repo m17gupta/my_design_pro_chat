@@ -917,7 +917,6 @@ export default function ChatWindow() {
       clearTypingTimeout();
       busyRef.current = false;
       setTyping(false);
-      setEditingId(null);
       announcedIdRef.current = null;
       hasUserInteractedRef.current = true;
 
@@ -930,7 +929,8 @@ export default function ChatWindow() {
       // Truncate back to (and including) this round's comments card — dropping
       // the round's summary and any later rounds — so re-submitting edits
       // re-creates the summary without duplicating messages. The card is
-      // re-hydrated with the round's notes/files via initialAnswer.
+      // re-hydrated with the round's notes/files via initialAnswer and set to
+      // isRestored: true so Luna does not re-type the question text.
       const idx = messages.findIndex((m) => m.id === commentId);
       if (idx < 0) return;
       setMessages((prev) => {
@@ -938,11 +938,12 @@ export default function ChatWindow() {
         const base = i >= 0 ? prev.slice(0, i + 1) : prev;
         return base.map((m) =>
           m.id === commentId
-            ? { ...m, initialAnswer: { files, notes } }
+            ? { ...m, initialAnswer: { files, notes }, isRestored: true }
             : m
         );
       });
       setCurrentId(revisionKey);
+      setEditingId(commentId);
       setPendingRevisionGenerate(null);
       // Scroll to the freshly-editable comments card.
       window.setTimeout(() => {

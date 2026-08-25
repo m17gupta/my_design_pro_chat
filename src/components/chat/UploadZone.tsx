@@ -191,9 +191,17 @@ function UploadZone({
     [files, onChange, onUrlsChange]
   );
 
+  const [removedInitial, setRemovedInitial] = useState(false);
+
+  useEffect(() => {
+    setRemovedInitial(false);
+  }, [initialUrls]);
+
+  const activeInitialUrls = removedInitial ? [] : initialUrls;
+
   // A compact slot that already holds files becomes an image-preview box
   // (solid border, no padding) instead of the dashed drop target.
-  const filled = compact && (files.length > 0 || initialUrls.length > 0);
+  const filled = compact && (files.length > 0 || activeInitialUrls.length > 0);
 
   return (
     <div className={compact ? "" : "mt-2.5 w-full max-w-sm"}>
@@ -368,7 +376,7 @@ function UploadZone({
                     </button>
                   </motion.div>
                 );
-              }) : initialUrls.map((url, i) => {
+              }) : activeInitialUrls.map((url, i) => {
                 const category = getFileCategory(url);
                 const fileName = url.split("/").pop() || `File ${i + 1}`;
                 return (
@@ -413,6 +421,7 @@ function UploadZone({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
+                        setRemovedInitial(true);
                         onUrlsChange?.({});
                       }}
                       aria-label={`Remove file ${i + 1}`}

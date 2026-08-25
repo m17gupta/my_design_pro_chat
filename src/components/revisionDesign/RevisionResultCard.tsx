@@ -76,6 +76,51 @@ export default function RevisionResultCard({
     (getRevison.length > round && getRevison[round]?.status === "completed");
   const interactive = !locked && !submittedAction && !isGenerating && !regenerateClicked;
 
+  const handleDownload = async () => {
+    if (!entry.url) return;
+    const filename = `luna-design-revision-${round}.jpg`;
+    try {
+      const res = await fetch(entry.url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = entry.url;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+          const link = document.createElement("a");
+          link.href = dataUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      };
+      img.onerror = () => {
+        const link = document.createElement("a");
+        link.href = entry.url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -117,7 +162,7 @@ export default function RevisionResultCard({
         </p> */}
 
         {/* Revision image — loading placeholder until the task completes. */}
-        <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="relative mt-4 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">
           {failed ? (
             <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
               <svg
@@ -144,14 +189,41 @@ export default function RevisionResultCard({
               </p>
             </div>
           ) : done ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={entry.url}
-              alt={`Revised design preview — revision ${round}`}
-              loading="lazy"
-              decoding="async"
-              className="block h-auto w-full object-cover"
-            />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={entry.url}
+                alt={`Revised design preview — revision ${round}`}
+                loading="lazy"
+                decoding="async"
+                className="block h-auto w-full object-cover"
+              />
+              {entry.url && (
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  title="Download Image"
+                  aria-label="Download revised design image"
+                  className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md transition-all duration-150 hover:bg-black/80 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-lg"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </button>
+              )}
+            </>
           ) : (
             <div className="flex flex-col items-center gap-3 px-4 py-10">
               <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-emerald-500" />

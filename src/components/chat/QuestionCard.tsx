@@ -122,6 +122,18 @@ function QuestionCard({
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   };
 
+  const prevDisabledRef = useRef(disabled);
+  useEffect(() => {
+    if (prevDisabledRef.current && !disabled) {
+      setUrlsByField(initUrlsByField);
+      setTextByField(initTextByField);
+      setRadio(initRadio);
+      setChecks(initChecks);
+      setNotes(initNotes);
+    }
+    prevDisabledRef.current = disabled;
+  }, [disabled, initUrlsByField, initTextByField, initRadio, initChecks, initNotes]);
+
   useEffect(() => {
     spec.fields.forEach((f, i) => {
       if (f.kind === "textarea") autoResize(i);
@@ -162,10 +174,8 @@ function QuestionCard({
         const hasText = spec.fields.some(
           (f, i) => f.kind === "textarea" && (textByField[i] ?? "").trim().length > 0
         );
-        const hasUpload = spec.fields.some(
-          (f, i) =>
-            f.kind === "upload-grid" &&
-            Object.values(urlsByField[i] ?? {}).length > 0
+        const hasUpload = Object.values(urlsByField).some(
+          (slotMap) => Object.keys(slotMap ?? {}).length > 0
         );
         if (hasText || hasUpload) return true;
         return !isRequired;
@@ -182,10 +192,8 @@ function QuestionCard({
 
       // 5. Standalone Upload-Grid card
       if (hasUploadGrid) {
-        const hasUpload = spec.fields.some(
-          (f, i) =>
-            f.kind === "upload-grid" &&
-            Object.values(urlsByField[i] ?? {}).length > 0
+        const hasUpload = Object.values(urlsByField).some(
+          (slotMap) => Object.keys(slotMap ?? {}).length > 0
         );
         if (hasUpload) return true;
         return !isRequired;
@@ -207,18 +215,7 @@ function QuestionCard({
       if (field.kind === "upload-grid") {
         Array.from({ length: field.count ?? 4 }).forEach((_, slot) => {
           handlers.set(slot, (map) =>
-            setUrlsByField((prev) => {
-              const currentSlot = prev[slot] ?? {};
-              const hasNewUploads = Object.keys(map).length > 0;
-              const restoredKeys = hasNewUploads
-                ? {}
-                : Object.fromEntries(
-                    Object.entries(currentSlot).filter(([k]) =>
-                      k.startsWith("restored-")
-                    )
-                  );
-              return { ...prev, [slot]: { ...restoredKeys, ...map } };
-            })
+            setUrlsByField((prev) => ({ ...prev, [slot]: map }))
           );
         });
       }
@@ -273,7 +270,10 @@ function QuestionCard({
     if (!canContinue) return;
 
     const parts: string[] = [];
-    let uploadTotal = 0;
+    let uploadTotal = Object.values(urlsByField).reduce(
+      (sum, map) => sum + Object.keys(map ?? {}).length,
+      0
+    );
     spec.fields.forEach((field, i) => {
       if (field.kind === "textarea") {
         const v = (textByField[i] ?? "").trim();
@@ -286,8 +286,6 @@ function QuestionCard({
         if (selected.length && trimmedNotes) parts.push(`${selected.join(", ")} — ${trimmedNotes}`);
         else if (selected.length) parts.push(selected.join(", "));
         else if (trimmedNotes) parts.push(trimmedNotes);
-      } else if (field.kind === "upload-grid") {
-        uploadTotal += Object.keys(urlsByField[i] ?? {}).length;
       }
     });
 

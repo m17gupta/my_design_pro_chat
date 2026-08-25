@@ -48,6 +48,46 @@ export default function DesignResultCard({
   const isRegenerateDisabled =
     isRegenerating || hasRevisionComment || !interactive;
 
+  const handleDownload = async () => {
+  if (!imageUrl) return;
+
+  try {
+    const response = await fetch(imageUrl, {
+      mode: "cors",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = "luna-design-render.jpg";
+    link.style.display = "none";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => {
+      window.URL.revokeObjectURL(blobUrl);
+    }, 2000);
+
+  } catch (error) {
+    console.error("Download failed:", error);
+
+    // IMPORTANT:
+    // Do NOT use imageUrl directly here.
+    // That is what causes the current page to navigate to the image.
+
+    alert("Unable to download the image. Please try again.");
+  }
+};
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -81,7 +121,7 @@ export default function DesignResultCard({
           )}
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="relative mt-4 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl}
@@ -90,6 +130,31 @@ export default function DesignResultCard({
             decoding="async"
             className="block h-auto w-full object-cover"
           />
+          {imageUrl && (
+            <button
+              type="button"
+              onClick={handleDownload}
+              title="Download Image"
+              aria-label="Download design image"
+              className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md transition-all duration-150 hover:bg-black/80 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-lg"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {!(revision.length > 0 && revision[0].status === "completed") && (
