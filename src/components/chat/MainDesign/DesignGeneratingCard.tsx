@@ -83,7 +83,7 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{title}</p>
-            <AnimatePresence mode="wait">
+            {/* <AnimatePresence mode="wait">
               <motion.p
                 key={messageIndex}
                 initial={{ opacity: 0, y: 3 }}
@@ -94,7 +94,7 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
               >
                 {subtitle}
               </motion.p>
-            </AnimatePresence>
+            </AnimatePresence> */}
           </div>
         </div>
 
