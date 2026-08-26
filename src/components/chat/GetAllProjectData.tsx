@@ -50,7 +50,7 @@ const GetAllProjectData = () => {
 
     const rawParams = searchParams.get("params");
     let params = decodeClientParams(rawParams);
-  console.log("parmas", params)
+  // console.log("parmas", params)
     if (rawParams) {
       try {
         sessionStorage.setItem("dzinly_chat_params", rawParams);

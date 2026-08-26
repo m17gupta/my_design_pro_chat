@@ -86,11 +86,11 @@ function UserAnswerBubble({
     }
   }, [editing]);
 
-  console.log("editing",editing)
+  // console.log("editing",editing)
 
   const handleSave = () => {
     if (editRef.current) {
-      console.log("editRef.current.value", editRef.current.value)
+      // console.log("editRef.current.value", editRef.current.value)
       onEditSave?.(editRef.current.value);
     }
   };

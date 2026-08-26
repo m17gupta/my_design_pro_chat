@@ -116,7 +116,7 @@ function UploadZone({
 
   const startUpload = useCallback(
     (file: File) => {
-      console.log("hjsds")
+      // console.log("hjsds")
       const key = keyOf(file);
       setStatus((prev) => ({ ...prev, [key]: { state: "uploading", percent: 0 } }));
       uploadFile(file, (percent) =>
