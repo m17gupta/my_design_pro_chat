@@ -8,6 +8,7 @@ import { renderInline } from './formatText'
 import LunaAvatar from './LunaAvatar'
 import OptionButtons from './OptionButtons'
 import QuestionCard, { type CardResult } from './QuestionCard'
+import AdditionalImagesUploadCard from './AdditionalImagesUploadCard'
 import UserAnswerBubble from './UserAnswerBubble'
 import { CHECKLIST, type ChecklistItem, type Message, type AnswerValue } from './types'
 import RevisionDesign from '../revisionDesign/RevisionDesign'
@@ -448,16 +449,28 @@ export const MessageBubble = ({
                     }
                     className='mt-3 w-full'
                   >
-                    <QuestionCard
-                      key={`${message.id}-${disabled ? 'disabled' : 'editing'}`}
-                      spec={message.card}
-                      filesByField={filesByField}
-                      initialAnswer={initialAnswer ?? message.initialAnswer}
-                      disabled={disabled}
-                      showHeader={false}
-                      onSubmit={onCardSubmit ?? (() => {})}
-                      onCancel={onCardCancel}
-                    />
+                    {message.id === 'ep-additional_images_upload' || message.id.startsWith('ep-additional_images_upload-') ? (
+                      <AdditionalImagesUploadCard
+                        key={`${message.id}-${disabled ? 'disabled' : 'editing'}`}
+                        spec={message.card}
+                        filesByField={filesByField}
+                        initialAnswer={initialAnswer ?? message.initialAnswer}
+                        disabled={disabled}
+                        onSubmit={onCardSubmit ?? (() => {})}
+                        onCancel={onCardCancel}
+                      />
+                    ) : (
+                      <QuestionCard
+                        key={`${message.id}-${disabled ? 'disabled' : 'editing'}`}
+                        spec={message.card}
+                        filesByField={filesByField}
+                        initialAnswer={initialAnswer ?? message.initialAnswer}
+                        disabled={disabled}
+                        showHeader={false}
+                        onSubmit={onCardSubmit ?? (() => {})}
+                        onCancel={onCardCancel}
+                      />
+                    )}
                   </motion.div>
                 )}
               </div>

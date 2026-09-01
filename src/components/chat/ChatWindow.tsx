@@ -828,11 +828,16 @@ export default function ChatWindow() {
   }, []);
 
   const handleEngageDesignerThankYou = useCallback((message?: string) => {
-    console.log("handleEngageDesignerThankYou-->", message);
     setIsEngagingDesigner(false);
     setSubmittedAction("engage_designer");
     if (message) {
       toast.success(message);
+      const thankYouMsg: Message = {
+        id: nextId(),
+        role: "assistant",
+        content: message,
+      };
+      setMessages((prev) => [...prev, thankYouMsg]);
     }
   }, []);
 

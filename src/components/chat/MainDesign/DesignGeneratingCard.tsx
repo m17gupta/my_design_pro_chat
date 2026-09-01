@@ -34,9 +34,6 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
       currentStatus === "processing" ||
       currentStatus === "");
 
-  const rendering = currentStatus === "processing";
-  const title=rendering ? "Rendering your design…" : `I’ll send everything over to ${dc_name}. Before I do, I would love to show you a quick design idea based on everything you’ve shared with me.`
-
   const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
@@ -82,7 +79,13 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
             />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">{title}</p>
+            <p className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
+              I’ll send everything over to{" "}
+              <strong className="font-bold text-zinc-900 dark:text-zinc-50">
+                {dc_name ? `${dc_name}.` : ""}
+              </strong>{" "}
+              Before I do, I would love to show you a quick design idea based on everything you’ve shared with me.
+            </p>
             {/* <AnimatePresence mode="wait">
               <motion.p
                 key={messageIndex}
