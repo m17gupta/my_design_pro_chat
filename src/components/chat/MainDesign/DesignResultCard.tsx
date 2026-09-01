@@ -41,7 +41,7 @@ export default function DesignResultCard({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const { entries } = useSelector((state: RootState) => state.enterprise);
   const { revision_comment } = useSelector((state: RootState) => state.chat);
-
+  const {dc_name}= useSelector((state:RootState)=>state.chat)
   const revision = entries.filter((item) => item.type == "revision");
   const hasRevisionComment =
     revision_comment.notes !== "" || revision_comment.files.length > 0;
@@ -101,8 +101,11 @@ export default function DesignResultCard({
       <div className="p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
-            Before I get this project over to your design coordinator, I have taken the
-            liberty of generating an initial render of how I interpreted your requests.
+            Before I get this project over to{" "}
+            <strong className="font-bold text-zinc-900 dark:text-zinc-50">
+              {dc_name || "your design coordinator"}
+            </strong>
+            , I have taken the liberty of generating an initial render of how I interpreted your requests.
           </p>
           {submittedAction && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">

@@ -201,7 +201,7 @@ export default function DesignSummaryCard({
   const questionnaireSequence = useSelector(selectQuestionnaireSequence);
 
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-
+   const {dc_name}= useSelector((state:RootState)=>state.chat)
   const orderedKeys = useMemo(() => {
     if (!original || Object.keys(original).length === 0) return [];
     

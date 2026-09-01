@@ -5,7 +5,6 @@ import { revisionRoundFromMessage } from "../chat/flow";
 import RevisionResultCard, {
   type SubmitAction,
 } from "./RevisionResultCard";
-import RevisionSummaryCard from "./RevisionSummaryCard";
 
 export interface DerivedRevisionRound {
   /** 1-based loop round. */
@@ -51,17 +50,16 @@ interface RevisionDesignProps {
   pendingGenerate: boolean;
   /** True when the round cap is reached — disables Regenerate on the result card. */
   regenerateDisabled: boolean;
-  onGenerate: () => void;
-  onMakeChanges: () => void;
+  onGenerate?: () => void;
+  onMakeChanges?: () => void;
   onAllINeed: (rating: number) => void;
   onRegenerate: () => void;
   onEngageDesigner: (rating: number) => void;
 }
 
 /**
- * Per-round orchestrator: renders the Revision Summary card ("what you asked
- * for") + Revision Result card ("what you got") for exactly one loop round.
- * Pure — reads nothing from Redux, every value arrives via props.
+ * Per-round orchestrator: renders the Revision Result card ("what you got")
+ * for exactly one loop round.
  */
 export default function RevisionDesign({
   messageId,
@@ -75,8 +73,6 @@ export default function RevisionDesign({
   isEngagingDesigner = false,
   pendingGenerate,
   regenerateDisabled,
-  onGenerate,
-  onMakeChanges,
   onAllINeed,
   onRegenerate,
   onEngageDesigner,
@@ -85,63 +81,58 @@ export default function RevisionDesign({
   if (!derived) return null;
   const { round, entry } = derived;
 
-  // The round's comments come from its own entry once it exists.
-  // HOWEVER, if this is the current round and the user has actively provided
-  // feedback in `revision_comment` (fallbackNotes), that takes precedence
-  // over any stale `entry` data (e.g. if they edited a failed round).
   const hasActiveFallback = isCurrent && (fallbackNotes !== "" || fallbackFiles.length > 0);
-  const notes = hasActiveFallback ? fallbackNotes : (entry?.questions[0]?.answer.notes ?? fallbackNotes);
-  const files = hasActiveFallback ? fallbackFiles : (entry?.questions[0]?.answer.files ?? fallbackFiles);
+  const notes = hasActiveFallback ? fallbackNotes : (entry?.questions[0]?.answer?.notes ?? fallbackNotes);
+  const files = hasActiveFallback ? fallbackFiles : (entry?.questions[0]?.answer?.files ?? fallbackFiles);
 
   const status = entry?.status;
   const hasImage = Boolean(entry?.url);
-  // Spinner while the task is in flight: an entry without an image that hasn't
-  // reached a terminal status (matches the result card's own loading state).
   const inFlight =
     Boolean(entry) &&
     !hasImage &&
     status !== "failed" &&
     status !== "completed";
-  const completed = entry?.status === "completed";
   const inProgress =
     status === "pending" || status === "queued" || status === "processing";
 
   const generating = pendingGenerate || inFlight || inProgress;
-  const pending = status === "pending";
 
-  // History rounds (and completed current rounds) keep the summary read-only;
-  // a failed entry stays clickable so the same round can be retried.
-  const disabled = generating || completed || pending || !isCurrent;
-  const showActions = isCurrent && !completed;
+  const effectiveEntry: EnterpriseEntry | undefined =
+    entry ||
+    (generating
+      ? {
+          id: `pending-revision-${round}`,
+          type: "revision",
+          status: "pending",
+          url: "",
+          questions: [
+            {
+              name: "Revision Comment",
+              type: "textarea",
+              details: "",
+              answer: { files, notes },
+            },
+          ],
+        }
+      : undefined);
+
+  if (!effectiveEntry) return null;
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <RevisionSummaryCard
+      <RevisionResultCard
+        entry={effectiveEntry}
         round={round}
-        notes={notes}
-        filesCount={files.length}
-        files={files}
-        generating={generating}
-        disabled={disabled}
-        showActions={showActions}
-        onGenerate={onGenerate}
-        onChanges={onMakeChanges}
+        rating={rating}
+        onRate={onRate}
+        locked={!isCurrent || Boolean(submittedAction) || generating}
+        regenerateDisabled={regenerateDisabled}
+        submittedAction={submittedAction}
+        isEngagingDesigner={isEngagingDesigner}
+        onAllINeed={onAllINeed}
+        onRegenerate={onRegenerate}
+        onEngageDesigner={onEngageDesigner}
       />
-      {entry && (
-        <RevisionResultCard
-          entry={entry}
-          round={round}
-          rating={rating}
-          onRate={onRate}
-          locked={!isCurrent || Boolean(submittedAction) || generating}
-          regenerateDisabled={regenerateDisabled}
-          submittedAction={submittedAction}
-          isEngagingDesigner={isEngagingDesigner}
-          onAllINeed={onAllINeed}
-          onRegenerate={onRegenerate}
-          onEngageDesigner={onEngageDesigner}
-        />
-      )}
     </div>
   );
 }

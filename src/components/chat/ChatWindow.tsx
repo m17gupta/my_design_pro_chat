@@ -301,6 +301,10 @@ export default function ChatWindow() {
     submitCustomProjectRef.current = submitCustomProject;
   }, [submitCustomProject]);
 
+  const handleRevisionGenerateRef = useRef<
+    ((round: number, overrideComment?: { files: string[]; notes: string }) => Promise<void>) | null
+  >(null);
+
   const commit = useCallback(
     (
       userText: string,
@@ -367,22 +371,35 @@ export default function ChatWindow() {
         if (isCustomEngage && ep.apiKey === "custom_engage_continue") {
           submitCustomProjectRef.current("engage_designer", 0);
         } else {
+          let revRound: number | null = null;
           setMessages((prev) => {
             const nextMsg = buildMessage(episodeById(nextEpisode, episodes));
             // One summary per revision round — suffix by the round's comment-card
             // count so round N always lands on `ep-revision-summary[-N]`.
-            const id =
-              nextEpisode === "revision-summary"
-                ? episodeMessageId("revision-summary", countRevisionRounds(prev))
-                : (() => {
-                    const count = prev.filter(
-                      (m) => m.id === nextMsg.id || m.id.startsWith(`${nextMsg.id}-`)
-                    ).length;
-                    return count === 0 ? nextMsg.id : `${nextMsg.id}-${count + 1}`;
-                  })();
+            if (nextEpisode === "revision-summary") {
+              const r = countRevisionRounds(prev, revisionKey);
+              revRound = r;
+              const id = episodeMessageId("revision-summary", r);
+              return [...prev, { ...nextMsg, id }];
+            }
+            const count = prev.filter(
+              (m) => m.id === nextMsg.id || m.id.startsWith(`${nextMsg.id}-`)
+            ).length;
+            const id = count === 0 ? nextMsg.id : `${nextMsg.id}-${count + 1}`;
             return [...prev, { ...nextMsg, id }];
           });
           setCurrentId(nextEpisode);
+
+          if (ep.revisionStep) {
+            const round = revRound ?? countRevisionRounds(messages, revisionKey);
+            const urls = urlsByField
+              ? Object.values(urlsByField).flatMap((byKey) => Object.values(byKey))
+              : [];
+            handleRevisionGenerateRef.current?.(round, {
+              files: urls,
+              notes: userText,
+            });
+          }
         }
       }, typingConfig.typingIndicatorMs);
     },
@@ -934,27 +951,26 @@ export default function ChatWindow() {
    * questions on retry).
    */
   const handleRevisionGenerate = useCallback(
-    async (round: number) => {
+    async (round: number, overrideComment?: { files: string[]; notes: string }) => {
       hasUserInteractedRef.current = true;
       if (pendingRevisionGenerate !== null) return;
       setPendingRevisionGenerate(round);
       const revisions = entries.filter((entry) => entry.type === "revision");
   
       const entry = revisions[round - 1];
-      const hasActiveFallback = revisionComment.notes !== "" || (revisionComment.files && revisionComment.files.length > 0);
-      const notes = hasActiveFallback ? revisionComment.notes : (entry?.questions[0]?.answer?.notes ?? revisionComment.notes);
-      const files = hasActiveFallback ? (revisionComment.files ?? []) : (entry?.questions[0]?.answer?.files ?? revisionComment.files ?? []);
+      const commentToUse = overrideComment ?? revisionComment;
+      const hasActiveFallback = commentToUse.notes !== "" || (commentToUse.files && commentToUse.files.length > 0);
+      const notes = hasActiveFallback ? commentToUse.notes : (entry?.questions[0]?.answer?.notes ?? commentToUse.notes);
+      const files = hasActiveFallback ? (commentToUse.files ?? []) : (entry?.questions[0]?.answer?.files ?? commentToUse.files ?? []);
       const payload = buildApiPayload(getApiQuestions(episodes), chat_original, {
-        projectId:id,
+        projectId: id,
         watermark: watermark ?? "",
         work_type: work_type ?? "",
         image_url: entries[entries.length - 1]?.url ?? "",
         revision: { files, notes },
-        
       });
       try {
         await dispatch(generateEnterpriseDesign({ payload, round })).unwrap();
-        // toast.success("Your design brief has been sent to Brooke Edwards for review!");
       } catch (error) {
         setPendingRevisionGenerate(null);
         toast.error(
@@ -966,8 +982,12 @@ export default function ChatWindow() {
         );
       }
     },
-    [pendingRevisionGenerate, entries, revisionComment, chat_original, watermark, work_type, question_sets, dispatch]
+    [pendingRevisionGenerate, entries, revisionComment, chat_original, watermark, work_type, id, episodes, dispatch]
   );
+
+  useEffect(() => {
+    handleRevisionGenerateRef.current = handleRevisionGenerate;
+  }, [handleRevisionGenerate]);
 
   /**
    * "I'd Like To Make Changes" — jump back to this round's comments card,
