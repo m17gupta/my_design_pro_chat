@@ -14,6 +14,7 @@ import RevisionDesign from '../revisionDesign/RevisionDesign'
 import type { SubmitAction } from '../revisionDesign/RevisionResultCard'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store'
+import { selectTypingConfig, type TypingConfig } from '@/store/settings/settingsSlice'
 import DesignSummaryCard from './MainDesign/DesignSummaryCard'
 import DesignGeneratingCard from './MainDesign/DesignGeneratingCard'
 import DesignResultCard from './MainDesign/DesignResultCard'
@@ -55,6 +56,8 @@ interface MessageBubbleProps {
   onRevisionRate?: (value: number) => void
   /** Set once a terminal action was submitted — locks every result card. */
   submittedAction?: SubmitAction | null
+  /** True while the engage designer host action is pending */
+  isEngagingDesigner?: boolean
   /** True while this round's generate POST is in flight (entry not appended yet). */
   revisionPendingGenerate?: boolean
   /** True when the round cap is reached — disables Regenerate on the result card. */
@@ -94,7 +97,8 @@ interface MessageBubbleProps {
 function useCharTypewriter(
   text: string,
   enabled: boolean,
-  reduceMotion: boolean
+  reduceMotion: boolean,
+  typingConfig: TypingConfig
 ): { typed: string; isTyping: boolean } {
   // Track whether this instance already completed a typewriter pass for `text`.
   // If it did, we never replay — even if the component re-mounts due to key change.
@@ -134,21 +138,25 @@ function useCharTypewriter(
     function computeDelay(char: string, prevChar: string): number {
       const isBurst = /[\s!?,.:;—–•*]/.test(char)
       let delay = isBurst
-        ? 40 + Math.random() * 25     // burst chars (space/punct): 40–65 ms
-        : 60 + Math.random() * 40     // normal chars: 60–100 ms
+        ? typingConfig.charBurstMin + Math.random() * (typingConfig.charBurstMax - typingConfig.charBurstMin)
+        : typingConfig.charNormalMin + Math.random() * (typingConfig.charNormalMax - typingConfig.charNormalMin)
 
       // Sentence-ending punctuation on the PREVIOUS character
-      if (/[.!?]/.test(prevChar)) delay += 370 + Math.random() * 310  // 370–680 ms pause
-      // Comma / semicolon pause
-      else if (/[,;]/.test(prevChar)) delay += 155 + Math.random() * 115  // 155–270 ms pause
+      if (/[.!?]/.test(prevChar)) {
+        delay += typingConfig.sentencePauseMin + Math.random() * (typingConfig.sentencePauseMax - typingConfig.sentencePauseMin)
+      } else if (/[,;]/.test(prevChar)) {
+        delay += typingConfig.commaPauseMin + Math.random() * (typingConfig.commaPauseMax - typingConfig.commaPauseMin)
+      }
 
-      // 5% chance of a "thinking" micro-pause
-      if (Math.random() < 0.05) delay += 200 + Math.random() * 220   // 200–420 ms
+      // Thinking micro-pause
+      if (Math.random() < typingConfig.thinkPauseChance) {
+        delay += 120 + Math.random() * 150
+      }
 
-      // ±25% jitter
-      delay *= 0.75 + Math.random() * 0.5
+      // Jitter
+      delay *= 0.8 + Math.random() * 0.4
 
-      return Math.max(30, delay)
+      return Math.max(typingConfig.minDelay, delay)
     }
 
     function tick() {
@@ -171,8 +179,11 @@ function useCharTypewriter(
       timeoutRef.current = window.setTimeout(tick, delay)
     }
 
-    // Brief initial pause before Luna starts typing (feels more natural)
-    timeoutRef.current = window.setTimeout(tick, 120 + Math.random() * 80)
+    // Brief initial pause before Luna starts typing
+    const initDelay =
+      typingConfig.initialDelayMin +
+      Math.random() * (typingConfig.initialDelayMax - typingConfig.initialDelayMin)
+    timeoutRef.current = window.setTimeout(tick, initDelay)
 
     return () => {
       cancelledRef.current = true
@@ -181,7 +192,7 @@ function useCharTypewriter(
         timeoutRef.current = null
       }
     }
-  }, [text, enabled, reduceMotion])
+  }, [text, enabled, reduceMotion, typingConfig])
 
   return { typed, isTyping }
 }
@@ -213,6 +224,7 @@ export const MessageBubble = ({
   revisionRating = 0,
   onRevisionRate,
   submittedAction = null,
+  isEngagingDesigner = false,
   revisionPendingGenerate = false,
   revisionRegenerateDisabled = false,
   onRevisionGenerate,
@@ -232,6 +244,7 @@ export const MessageBubble = ({
 }: MessageBubbleProps) => {
   const isUser = message.role === 'user'
   const reduceMotion = useReducedMotion() ?? false
+  const typingConfig = useSelector(selectTypingConfig)
   const { entries } = useSelector((state: RootState) => state.enterprise)
   // The intake (original) entry drives the summary + result card below it.
   const originalEntry = entries.find((entry) => entry.type === "original")
@@ -262,13 +275,18 @@ export const MessageBubble = ({
   const { typed, isTyping } = useCharTypewriter(
     displayText,
     !isUser && !isRevisionSummary && !message.isRestored,
-    reduceMotion
+    reduceMotion,
+    typingConfig
   )
   const done = isUser || typed === displayText
   const checklistAnimated = done && message.showChecklist && !message.isRestored
   const { visibleItems: bubbleVisibleChecklist, isFinished: checklistFinished } = useLineByLineTypewriter(
     checklist,
-    { enabled: checklistAnimated, speedMs: 75, lineDelayMs: 1200 }
+    {
+      enabled: checklistAnimated,
+      speedMs: typingConfig.checklistBubbleSpeedMs,
+      lineDelayMs: typingConfig.checklistBubbleLineDelayMs,
+    }
   )
 
   const cardContainerRef = useRef<HTMLDivElement>(null)
@@ -285,6 +303,17 @@ export const MessageBubble = ({
   const optionsVisible =
     done &&
     (!message.showChecklist || (checklist && checklist.length > 0 && checklistFinished))
+
+  const checklistItem = useMemo(() => {
+    if (!checklist || checklist.length === 0) return null
+    const targetId = message.checklistId || apiKey
+    if (!targetId || targetId === 'overview' || targetId === 'summary') return null
+    return checklist.find((item) => item.id === targetId) ?? null
+  }, [checklist, message.checklistId, apiKey])
+
+  const sequenceLabel = checklistItem && checklist?.length
+    ? `${checklistItem.number} of ${checklist.length}`
+    : null
 
   return (
     <div className='w-full'>
@@ -345,8 +374,15 @@ export const MessageBubble = ({
                 >
                   <p className='whitespace-pre-wrap break-words'>
                     {renderInline(typed)}
-                
                   </p>
+
+                  {sequenceLabel && (
+                    <div className='mt-1 flex justify-end'>
+                      <span className='text-[11.5px] font-medium text-zinc-400 dark:text-zinc-500 select-none'>
+                        {sequenceLabel}
+                      </span>
+                    </div>
+                  )}
 
                   {done && message.showChecklist && (
                     checklist && checklist.length > 0 ? (
@@ -458,6 +494,7 @@ export const MessageBubble = ({
               rating={revisionRating}
               onRate={onRevisionRate ?? (() => {})}
               submittedAction={submittedAction}
+              isEngagingDesigner={isEngagingDesigner}
               pendingGenerate={revisionPendingGenerate}
               regenerateDisabled={revisionRegenerateDisabled}
               onGenerate={onRevisionGenerate ?? (() => {})}
@@ -486,6 +523,7 @@ export const MessageBubble = ({
                     imageUrl={originalEntry.url}
                     disabled={originalPending}
                     submittedAction={submittedAction}
+                    isEngagingDesigner={isEngagingDesigner}
                     onAllINeed={onDesignAllINeed ?? (() => {})}
                     onRegenerate={onDesignRegenerate ?? (() => {})}
                     onEngageDesigner={onDesignEngage ?? (() => {})}

@@ -8,6 +8,7 @@ import briefReducer, { resetBrief, payloadFromState } from "./briefSlice";
 import enterpriseReducer, { resetEnterprise } from "./enterprise/enterpriseSlice";
 import persistenceReducer from "./persistence/persistenceSlice";
 import questionnaireReducer from "./questionnaires/questionnaireSlice";
+import settingsReducer from "./settings/settingsSlice";
 import {
   deleteProject,
   saveProject,
@@ -105,6 +106,7 @@ const rootReducer = combineReducers({
   enterprise: enterpriseReducer,
   persistence: persistenceReducer,
   questionnaires: questionnaireReducer,
+  settings: settingsReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

@@ -164,7 +164,7 @@
               "max_files": 4,
               "name": "Additional House Photos (Optional)",
               "label": "",
-              "details": "<p class='mb-3'>Great, your main photo has been received! If you have additional photos of <b>this same side of your home taken</b> from different angles, distances, or perspectives (such as closer shots or views from the left or right while still facing this same elevation), please upload them here.</p> <p>These additional photos help us better understand your home's architecture and create the most accurate design possible.</p>"
+              "details": "You can upload additional images below."
             },
             {
               "required": false,

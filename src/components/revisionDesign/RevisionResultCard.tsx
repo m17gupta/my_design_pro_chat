@@ -23,6 +23,8 @@ interface RevisionResultCardProps {
   regenerateDisabled?: boolean;
   /** Set once a terminal action was submitted — locks buttons + confirms. */
   submittedAction?: SubmitAction | null;
+  /** True while the engage designer host action is pending */
+  isEngagingDesigner?: boolean;
   onAllINeed: (rating: number) => void;
   onRegenerate: () => void;
   onEngageDesigner: (rating: number) => void;
@@ -63,6 +65,7 @@ export default function RevisionResultCard({
   locked = false,
   regenerateDisabled = false,
   submittedAction = null,
+  isEngagingDesigner = false,
   onAllINeed,
   onRegenerate,
   onEngageDesigner,
@@ -102,7 +105,7 @@ export default function RevisionResultCard({
     isGenerating ||
     !done ||
     (getRevison.length > round && getRevison[round]?.status === "completed");
-  const interactive = !locked && !submittedAction && !isGenerating && !regenerateClicked;
+  const interactive = !locked && !submittedAction && !isEngagingDesigner && !isGenerating && !regenerateClicked;
 
 const handleDownload = async () => {
   if (!entry.url) return;
@@ -178,7 +181,7 @@ const handleDownload = async () => {
         </div>
 
         <h3 className="mt-2 text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Your Revised Design
+        My Revised Design - Based on your request
         </h3>
         {/* <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
           Thanks for the feedback — I&apos;ve applied your revision comments and
@@ -327,28 +330,51 @@ const handleDownload = async () => {
             <motion.button
               type="button"
               onClick={() => onEngageDesigner(rating)}
-              disabled={!interactive}
-              whileHover={interactive ? { scale: 1.03 } : undefined}
-              whileTap={interactive ? { scale: 0.95 } : undefined}
+              disabled={!interactive || isEngagingDesigner}
+              whileHover={interactive && !isEngagingDesigner ? { scale: 1.03 } : undefined}
+              whileTap={interactive && !isEngagingDesigner ? { scale: 0.95 } : undefined}
               className={BUTTON_CLASS}
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-              Engage Designer
+              {isEngagingDesigner ? (
+                <svg
+                  className="h-3.5 w-3.5 animate-spin text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              )}
+              {isEngagingDesigner ? "Engaging Designer..." : "Engage Designer"}
             </motion.button>
           </div>
         )}

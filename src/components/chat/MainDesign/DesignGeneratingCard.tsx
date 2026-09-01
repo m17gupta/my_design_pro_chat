@@ -25,7 +25,7 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
   const reduceMotion = useReducedMotion() ?? false;
   const { entries } = useSelector((state: RootState) => state.enterprise);
   const original = entries.find((entry) => entry.type === "original");
-  
+  const {dc_name}= useSelector((state:RootState)=>state.chat)
   const currentStatus = original?.status || status;
   const isGenerating =
     original &&
@@ -35,7 +35,7 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
       currentStatus === "");
 
   const rendering = currentStatus === "processing";
-  const title = rendering ? "Rendering your design…" : "Preparing your design…";
+  const title=rendering ? "Rendering your design…" : `I’ll send everything over to ${dc_name}. Before I do, I would love to show you a quick design idea based on everything you’ve shared with me.`
 
   const [messageIndex, setMessageIndex] = useState(0);
 

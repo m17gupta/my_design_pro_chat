@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import LunaAvatar from "./LunaAvatar";
 import MessageBubble from "./MessageBubble";
 import ProgressChecklist from "./ProgressChecklist";
+import SettingsMenu from "./SettingsMenu";
 import type { CardResult } from "./QuestionCard";
 import TypingIndicator from "./TypingIndicator";
 import {
@@ -25,6 +26,7 @@ import {
 import {
   HOST_ACTION_CANCEL_ALL_NEED,
   HOST_ACTION_CUSTOM_PROJECT,
+  HOST_ACTION_ENGAGE_DESIGNER_THANK_YOU,
   HOST_ACTION_SUBMIT_PROJECT,
   isFromParent,
   noteHostOrigin,
@@ -58,11 +60,11 @@ import {
   selectQuestionnairesData,
   selectQuestionnairesState,
 } from "../../store/questionnaires/questionnaireSlice";
+import { selectTypingConfig } from "../../store/settings/settingsSlice";
 
 let idCounter = 0;
 const nextId = () => `m-${Date.now()}-${idCounter++}`;
 
-const TYPING_MS = 950;
 /** Max revision loop rounds — beyond this, Regenerate is capped. */
 const MAX_REVISION_ROUNDS = 4;
 
@@ -96,12 +98,12 @@ export default function ChatWindow() {
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [typing, setTyping] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const announcedIdRef = useRef<string | null>(null);
 
 
   const [submittedAction, setSubmittedAction] = useState<SubmitAction | null>(null);
+  const [isEngagingDesigner, setIsEngagingDesigner] = useState(false);
   const [pendingRevisionGenerate, setPendingRevisionGenerate] = useState<number | null>(
     null
   );
@@ -110,6 +112,7 @@ export default function ChatWindow() {
   const dispatch = useAppDispatch();
   const briefPayload = useAppSelector(selectBriefPayload);
   const revisionComment = useAppSelector((s) => s.chat.revision_comment);
+  const typingConfig = useAppSelector(selectTypingConfig);
   const latestEnterpriseEntry = useAppSelector((s) =>
     selectLatestEnterpriseEntry(s.enterprise)
   );
@@ -284,7 +287,11 @@ export default function ChatWindow() {
       };
       console.log("hit action cutsom", data)
       postToHost({ action: HOST_ACTION_CUSTOM_PROJECT, data });
-      setSubmittedAction(action);
+      if (action === "engage_designer") {
+        setIsEngagingDesigner(true);
+      } else {
+        setSubmittedAction(action);
+      }
     },
     []
   );
@@ -377,7 +384,7 @@ export default function ChatWindow() {
           });
           setCurrentId(nextEpisode);
         }
-      }, TYPING_MS);
+      }, typingConfig.typingIndicatorMs);
     },
     [
       typing,
@@ -389,6 +396,7 @@ export default function ChatWindow() {
       clearTypingTimeout,
       custom_engage_designer,
       work_type,
+      typingConfig.typingIndicatorMs,
     ]
   );
 
@@ -762,8 +770,32 @@ export default function ChatWindow() {
         );
       }
       setCurrentId(firstQuestion.apiKey);
-    }, TYPING_MS);
-  }, [messages, clearTypingTimeout, dispatch, episodes]);
+    }, typingConfig.typingIndicatorMs);
+  }, [messages, clearTypingTimeout, dispatch, episodes, typingConfig.typingIndicatorMs]);
+
+  /** Restart the whole intake conversation back to the beginning. */
+  const handleStartOver = useCallback(() => {
+    clearTypingTimeout();
+    busyRef.current = false;
+    setTyping(false);
+    const firstEp = episodes[0];
+    setMessages(firstEp ? [buildMessage(firstEp)] : []);
+    setCurrentId(firstEp?.apiKey ?? "overview");
+    setAnswers({});
+    dispatch(resetBrief());
+    dispatch(resetEnterprise());
+    setUploads({});
+    setCompleted(new Set());
+    setGenerating(false);
+    setEditingId(null);
+    setMessageEpisodes({});
+    setRatings({});
+    setSubmittedAction(null);
+    setIsEngagingDesigner(false);
+    setPendingRevisionGenerate(null);
+    announcedIdRef.current = null;
+    toast.success("Chat restarted");
+  }, [clearTypingTimeout, dispatch, episodes]);
 
   /**
    * Terminal submit — posts the project back to the host with the full design
@@ -779,7 +811,11 @@ export default function ChatWindow() {
         action,
       };
       postToHost({ action: HOST_ACTION_SUBMIT_PROJECT, data });
-      setSubmittedAction(action);
+      if (action === "engage_designer") {
+        setIsEngagingDesigner(true);
+      } else {
+        setSubmittedAction(action);
+      }
     },
     [id, chat_original, entries]
   );
@@ -787,7 +823,17 @@ export default function ChatWindow() {
 
 
   const handleCancelAllNeed = useCallback(() => {
+    setIsEngagingDesigner(false);
     setSubmittedAction(null);
+  }, []);
+
+  const handleEngageDesignerThankYou = useCallback((message?: string) => {
+    console.log("handleEngageDesignerThankYou-->", message);
+    setIsEngagingDesigner(false);
+    setSubmittedAction("engage_designer");
+    if (message) {
+      toast.success(message);
+    }
   }, []);
 
   useEffect(() => {
@@ -800,11 +846,21 @@ export default function ChatWindow() {
       noteHostOrigin(event.origin);
       if (event.data?.action === HOST_ACTION_CANCEL_ALL_NEED) {
         handleCancelAllNeed();
+      } else if (event.data?.action === HOST_ACTION_ENGAGE_DESIGNER_THANK_YOU) {
+        const msg =
+          typeof event.data?.message === "string"
+            ? event.data.message
+            : typeof event.data?.data?.message === "string"
+            ? event.data.data.message
+            : typeof event.data?.data === "string"
+            ? event.data.data
+            : undefined;
+        handleEngageDesignerThankYou(msg);
       }
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [handleCancelAllNeed]);
+  }, [handleCancelAllNeed, handleEngageDesignerThankYou]);
 
 
   /** "This is All I Need" — the initial render is approved as-is. */
@@ -1076,29 +1132,14 @@ export default function ChatWindow() {
         Skip to chat
       </a>
 
-
-
-      {/* Mobile checklist dropdown */}
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="z-10 overflow-hidden border-b border-zinc-200/70 bg-white/95 backdrop-blur-md lg:hidden dark:border-zinc-800/70 dark:bg-zinc-950/95"
-          >
-            <div className="px-5 py-4">
-              <ProgressChecklist
-                completed={completed}
-                currentId={currentId}
-                episodes={episodes}
-                checklist={checklist}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Floating Settings Menu pinned top-right — remains visible on scroll */}
+      <SettingsMenu
+        onStartOver={handleStartOver}
+        checklist={checklist}
+        completed={completed}
+        currentId={currentId}
+        episodes={episodes}
+      />
 
       <div>
         {/* Chat content */}
@@ -1287,6 +1328,7 @@ export default function ChatWindow() {
                           : undefined
                       }
                       submittedAction={submittedAction}
+                      isEngagingDesigner={isEngagingDesigner}
                       revisionPendingGenerate={
                         isRevisionSummary &&
                         pendingRevisionGenerate === revisionRound

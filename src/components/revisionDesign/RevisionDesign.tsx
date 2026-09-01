@@ -45,6 +45,8 @@ interface RevisionDesignProps {
   onRate: (value: number) => void;
   /** Set once a terminal action was submitted — locks every result card. */
   submittedAction: SubmitAction | null;
+  /** True while the engage designer host action is pending */
+  isEngagingDesigner?: boolean;
   /** True while this round's generate POST is in flight (entry not appended yet). */
   pendingGenerate: boolean;
   /** True when the round cap is reached — disables Regenerate on the result card. */
@@ -70,6 +72,7 @@ export default function RevisionDesign({
   rating,
   onRate,
   submittedAction,
+  isEngagingDesigner = false,
   pendingGenerate,
   regenerateDisabled,
   onGenerate,
@@ -133,6 +136,7 @@ export default function RevisionDesign({
           locked={!isCurrent || Boolean(submittedAction) || generating}
           regenerateDisabled={regenerateDisabled}
           submittedAction={submittedAction}
+          isEngagingDesigner={isEngagingDesigner}
           onAllINeed={onAllINeed}
           onRegenerate={onRegenerate}
           onEngageDesigner={onEngageDesigner}

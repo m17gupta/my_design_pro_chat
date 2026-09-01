@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { ChecklistItem } from "./types";
 import type { Episode } from "./flow";
 import { useLineByLineTypewriter } from "./useLineByLineTypewriter";
+import { useAppSelector } from "@/store/hooks";
+import { selectTypingConfig } from "@/store/settings/settingsSlice";
 
 interface ProgressChecklistProps {
   completed: ReadonlySet<string>;
@@ -25,13 +27,17 @@ export default function ProgressChecklist({
   episodes,
   checklist,
   animate = true,
-  speedMs = 25,
-  lineDelayMs = 900,
+  speedMs,
+  lineDelayMs,
 }: ProgressChecklistProps) {
+  const typingConfig = useAppSelector(selectTypingConfig);
+  const activeSpeedMs = speedMs ?? typingConfig.checklistSpeedMs;
+  const activeLineDelayMs = lineDelayMs ?? typingConfig.checklistLineDelayMs;
+
   const { visibleItems } = useLineByLineTypewriter(checklist, {
     enabled: animate,
-    speedMs,
-    lineDelayMs,
+    speedMs: activeSpeedMs,
+    lineDelayMs: activeLineDelayMs,
   });
 
   if (!checklist || checklist.length === 0) {

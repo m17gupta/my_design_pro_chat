@@ -78,7 +78,7 @@ const EPISODES: Episode[] = [
     apiKey: "files",
     kind: "ready",
     content:
-      "Do you have any other file that would be helpful, like a survey, site plan, and inspirational image?",
+      "Do you have any other file that would be helpful, like a survey, site plan, or inspirational image?",
     checklistId: "files",
     options: ["Yes I do", "No I don't"],
   },
@@ -185,6 +185,7 @@ const EPISODES: Episode[] = [
     apiKey: "budget",
     kind: "card",
     checklistId: "budget",
+    required: true,
     card: {
       title: "Budget",
       description:
