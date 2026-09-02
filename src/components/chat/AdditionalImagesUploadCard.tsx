@@ -501,7 +501,7 @@ function AdditionalImagesUploadCard({
               type="button"
               onClick={handleSubmit}
               disabled={!canContinue}
-              className="flex items-center justify-center gap-1.5 rounded-full bg-[#8e98a4] hover:bg-[#7b8591] px-6 py-2.5 text-xs sm:text-sm font-medium text-white shadow-sm transition-all hover:shadow disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-600 dark:hover:bg-zinc-500"
+              className="flex items-center justify-center gap-1.5 rounded-full bg-zinc-900 hover:bg-zinc-700 px-6 py-2.5 text-xs sm:text-sm font-medium text-white shadow-sm transition-all hover:shadow disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
               {isAnyUploading ? (
                 <>
