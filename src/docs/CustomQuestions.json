@@ -23,6 +23,7 @@
   {
     "apiKey": "additional_images_upload",
     "kind": "card",
+    "checklistId": "files",
     "card": {
       "title": "Inspirational Photos",
       "description":"Do you have any inspirational photos you would like me to analyze that portray the look or feel you are trying to achieve?",

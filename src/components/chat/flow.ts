@@ -1330,8 +1330,8 @@ export function checklistFromFlowContext(
     const seen = new Set<string>();
     for (const ep of customEps) {
       if (!ep.card) continue;
-      const id = ep.checklistId || ep.api?.checklistId || ep.apiKey;
-      if (seen.has(id)) continue;
+      const id = ep.apiKey || ep.checklistId || ep.api?.checklistId;
+      if (!id || seen.has(id)) continue;
       seen.add(id);
       const label = ep.card.title?.trim() || ep.api?.name?.trim() || formatQuestionIdAsName(id);
       items.push({ id, number: items.length + 1, label });
@@ -1431,7 +1431,7 @@ export function buildMessage(episode: Episode): Message {
     options: episode.options,
     card: episode.card,
     showChecklist: episode.showChecklist,
-    checklistId: episode.checklistId,
+    checklistId: episode.checklistId ?? episode.api?.checklistId ?? episode.apiKey,
     ...(episode.title ? { title: episode.title } : {}),
   };
 }

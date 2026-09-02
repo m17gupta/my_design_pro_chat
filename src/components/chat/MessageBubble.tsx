@@ -23,6 +23,7 @@ import { useLineByLineTypewriter } from './useLineByLineTypewriter'
 
 interface MessageBubbleProps {
   message: Message
+  workType?: string
   /** Uploads per field index for question-card messages. */
   filesByField?: Record<number, File[]>
   disabled?: boolean
@@ -242,12 +243,12 @@ export const MessageBubble = ({
   apiKey,
   editingNextMessage = false,
   onOptionEditSave,
+  workType,
 }: MessageBubbleProps) => {
   const isUser = message.role === 'user'
   const reduceMotion = useReducedMotion() ?? false
   const typingConfig = useSelector(selectTypingConfig)
   const { entries } = useSelector((state: RootState) => state.enterprise)
-  // The intake (original) entry drives the summary + result card below it.
   const originalEntry = entries.find((entry) => entry.type === "original")
   const originalPending = Boolean(
     originalEntry &&
@@ -255,20 +256,18 @@ export const MessageBubble = ({
         originalEntry.status === "processing" ||
         originalEntry.status === "pending")
   )
-  // console.log("MessageBubbleProps")
   const summaryActionsHidden =
     originalEntry !== undefined && originalEntry.status !== "failed"
 
   const summaryDisabled =
     originalEntry !== undefined && originalEntry.status !== "failed"
- 
+
   const cardDescText = message.card?.description ?? ""
   const displayText =
-    message.kind === 'card' && message.card
+    message.kind === "card" && message.card
       ? cardDescText
       : message.content
-   
-   
+
   // The revision summary renders as a card instead of a typed bubble, so the
   // typewriter is skipped entirely and the card appears immediately.
   // Restored messages (from sessionStorage on refresh) also skip the typewriter
@@ -308,21 +307,41 @@ export const MessageBubble = ({
   const checklistItem = useMemo(() => {
     if (!checklist || checklist.length === 0) return null
     const targetId = message.checklistId || apiKey
-    if (!targetId || targetId === 'overview' || targetId === 'summary') return null
-    return checklist.find((item) => item.id === targetId) ?? null
-  }, [checklist, message.checklistId, apiKey])
+    if (targetId === 'overview' || targetId === 'summary') return null
+
+    const messageApiKey = message.id.replace(/^ep-/, '').replace(/-\d+$/, '')
+
+    return (
+      checklist.find(
+        (item) =>
+          item.id === targetId ||
+          (message.checklistId && item.id === message.checklistId) ||
+          (apiKey && item.id === apiKey) ||
+          item.id === messageApiKey ||
+          (message.checklistId && item.id.includes(message.checklistId)) ||
+          item.id.includes(messageApiKey)
+      ) ?? null
+    )
+  }, [checklist, message.checklistId, message.id, apiKey])
 
   // Hide "N of 8" only on the upload-card bubbles (kind === 'card') for these
-  // optional questions — the preceding text question bubbles still show it.
+  // optional questions in standard flows — in custom flows, the upload card itself represents the step.
   const UNNUMBERED_CARD_IDS = ['additional_images_upload', 'supporting_files_upload']
 
+  const isCustomWorkType = (workType ?? '').trim().toLowerCase().replace(/-/g, '_') === 'custom'
+
+  const isSuppressedUploadCard =
+    !isCustomWorkType &&
+    message.kind === 'card' &&
+    UNNUMBERED_CARD_IDS.some((id) => (message.checklistId || apiKey || '').includes(id))
+
   const sequenceLabel =
-    checklistItem &&
-    checklist?.length &&
-    !(message.kind === 'card' && UNNUMBERED_CARD_IDS.some((id) => (message.checklistId || apiKey || '').includes(id)))
+    checklistItem && checklist?.length && !isSuppressedUploadCard
       ? `${checklistItem.number} of ${checklist.length}`
       : null
 
+
+      console.log('sequenceLabel', sequenceLabel, isSuppressedUploadCard, checklistItem, checklist?.length);
   return (
     <div className='w-full'>
       {!isRevisionSummary && (
