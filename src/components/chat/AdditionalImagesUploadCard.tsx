@@ -7,6 +7,11 @@ import { useAppSelector } from "../../store/hooks";
 import type { CardResult } from "./QuestionCard";
 import type { AnswerValue, QuestionCardSpec } from "./types";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+const ACCEPTED_TYPES = "image/*,.jpg,.jpeg,.png,.webp,.gif";
+const MAX_SLOTS = 8;   // maximum images allowed
+const MIN_UPLOADED = 1; // minimum successfully-uploaded images to enable Continue
+
 interface SlotItem {
   id: string;
   file?: File;
@@ -24,8 +29,6 @@ interface AdditionalImagesUploadCardProps {
   onSubmit: (result: CardResult) => void;
   onCancel?: () => void;
 }
-
-const ACCEPTED_TYPES = "image/*,.jpg,.jpeg,.png,.webp,.gif";
 
 function AdditionalImagesUploadCard({
   filesByField = {},
@@ -138,45 +141,51 @@ function AdditionalImagesUploadCard({
   // Distribute newly selected files to empty slots or starting at targetSlot
   const handleFilesAdded = useCallback(
     (newFiles: FileList | File[], targetSlot?: number) => {
-      const fileArray = Array.from(newFiles).filter((f) =>
-        f.type.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif)$/i.test(f.name)
+      const fileArray = Array.from(newFiles).filter(
+        (f) => f.type.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif)$/i.test(f.name)
       );
       if (fileArray.length === 0) {
         toast.error("Please upload valid image files (JPG, PNG, WEBP, etc.)");
         return;
       }
 
-      setSlots((currentSlots) => {
-        let nextSlots = { ...currentSlots };
-        let fileIdx = 0;
+      const currentSlots = slots;
+      const totalFilled = Object.values(currentSlots).filter(Boolean).length;
+      const available = MAX_SLOTS - totalFilled;
+      if (available <= 0) {
+        toast.error(`Maximum ${MAX_SLOTS} images allowed.`);
+        return;
+      }
 
-        // If a specific target slot was selected, fill it first
-        if (targetSlot !== undefined && fileIdx < fileArray.length) {
-          handleUploadFileForSlot(targetSlot, fileArray[fileIdx]);
-          fileIdx++;
+      const capped = fileArray.slice(0, available);
+      let fileIdx = 0;
+
+      // Fill target slot first (Replace or direct click)
+      if (targetSlot !== undefined && fileIdx < capped.length) {
+        handleUploadFileForSlot(targetSlot, capped[fileIdx++]);
+      }
+
+      // Fill remaining empty slots 0–2
+      for (let i = 0; i < 3 && fileIdx < capped.length; i++) {
+        if (i === targetSlot) continue;
+        if (!currentSlots[i]) {
+          handleUploadFileForSlot(i, capped[fileIdx++]);
         }
+      }
 
-        // Fill remaining slots
-        for (let i = 0; i < 3 && fileIdx < fileArray.length; i++) {
-          if (i === targetSlot) continue;
-          if (!nextSlots[i]) {
-            handleUploadFileForSlot(i, fileArray[fileIdx]);
-            fileIdx++;
-          }
+      // Overflow: add new slots beyond 2, up to MAX_SLOTS
+      if (fileIdx < capped.length) {
+        let nextSlotIndex = Math.max(...Object.keys(currentSlots).map(Number), 2) + 1;
+        while (fileIdx < capped.length && nextSlotIndex < MAX_SLOTS) {
+          handleUploadFileForSlot(nextSlotIndex++, capped[fileIdx++]);
         }
+      }
 
-        // If user uploaded more than 3, allow dynamic expansion or fill available slots
-        while (fileIdx < fileArray.length) {
-          const highestSlot = Math.max(...Object.keys(nextSlots).map(Number), 2);
-          const newSlotIndex = highestSlot + 1;
-          handleUploadFileForSlot(newSlotIndex, fileArray[fileIdx]);
-          fileIdx++;
-        }
-
-        return nextSlots;
-      });
+      if (fileIdx < fileArray.length) {
+        toast.error(`Only ${MAX_SLOTS} images allowed. Some files were skipped.`);
+      }
     },
-    [handleUploadFileForSlot]
+    [slots, handleUploadFileForSlot]
   );
 
   const handleRemoveSlot = useCallback((slotIndex: number) => {
@@ -193,8 +202,17 @@ function AdditionalImagesUploadCard({
 
   const isAnyUploading = Object.values(slots).some((s) => s?.isUploading);
 
+  const uploadedCount = Object.values(slots).filter(
+    (s) => s && s.s3Url && !s.isUploading && !s.error
+  ).length;
+
+  const canContinue = !isAnyUploading && uploadedCount >= MIN_UPLOADED;
+
+  const totalSlotCount = Object.values(slots).filter(Boolean).length;
+  const canAddMore = totalSlotCount < MAX_SLOTS && !disabled;
+
   const handleSubmit = () => {
-    if (disabled || isAnyUploading) return;
+    if (disabled || !canContinue) return;
 
     const uploadedUrls: string[] = [];
     const filesRecord: Record<number, File[]> = {};
@@ -280,7 +298,7 @@ function AdditionalImagesUploadCard({
               />
 
               {item ? (
-                /* Filled slot: Image preview */
+                /* ── Filled slot ── */
                 <div className="group relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -291,33 +309,66 @@ function AdditionalImagesUploadCard({
 
                   {/* Uploading overlay */}
                   {item.isUploading && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[1px] text-white">
-                      <span className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      <span className="mt-1.5 text-[11px] font-medium tracking-wide">Uploading...</span>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px] text-white">
+                      <span className="h-7 w-7 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      <span className="mt-2 text-[11px] font-medium tracking-wide">Uploading…</span>
                     </div>
                   )}
 
-                  {/* Remove button */}
-                  {!disabled && !item.isUploading && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveSlot(slotIndex);
-                      }}
-                      className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white shadow-md backdrop-blur-sm transition-all hover:bg-red-600 hover:scale-110"
-                      title="Remove image"
-                    >
-                      <svg
-                        className="h-3.5 w-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  {/* Error overlay with Retry */}
+                  {item.error && !item.isUploading && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-red-900/70 backdrop-blur-[2px] text-white p-2">
+                      <svg className="h-5 w-5 shrink-0 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                       </svg>
-                    </button>
+                      <span className="text-[10px] font-medium leading-tight text-center">Upload failed</span>
+                      {!disabled && item.file && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleUploadFileForSlot(slotIndex, item.file!); }}
+                          className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-semibold hover:bg-white/30 transition-colors"
+                        >
+                          Retry
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Controls: Remove + Replace (hover-revealed when idle) */}
+                  {!disabled && !item.isUploading && !item.error && (
+                    <div className="absolute inset-0 flex items-start justify-between p-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      {/* Remove */}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveSlot(slotIndex); }}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white shadow-md backdrop-blur-sm transition-all hover:bg-red-600 hover:scale-110"
+                        title="Remove image"
+                      >
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                      {/* Replace */}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); slotInputRefs.current[slotIndex]?.click(); }}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white shadow-md backdrop-blur-sm transition-all hover:bg-blue-600 hover:scale-110"
+                        title="Replace image"
+                      >
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Success tick badge */}
+                  {item.s3Url && !item.isUploading && !item.error && (
+                    <span className="absolute bottom-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 shadow pointer-events-none">
+                      <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
                   )}
                 </div>
               ) : (
@@ -385,92 +436,85 @@ function AdditionalImagesUploadCard({
           );
         })}
 
-        {/* 4th Box: "Add More" Slot */}
-        <div className="relative aspect-square w-full">
-          <div
-            role="button"
-            tabIndex={disabled ? -1 : 0}
-            onClick={() => {
-              if (!disabled) {
-                addMoreInputRef.current?.click();
-              }
-            }}
-            onKeyDown={(e) => {
-              if ((e.key === "Enter" || e.key === " ") && !disabled) {
+        {/* "Add More" slot — hidden once MAX_SLOTS is reached */}
+        {canAddMore && (
+          <div className="relative aspect-square w-full">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => addMoreInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  addMoreInputRef.current?.click();
+                }
+              }}
+              onDragOver={(e) => { e.preventDefault(); setDragOverSlot(999); }}
+              onDragLeave={() => setDragOverSlot(null)}
+              onDrop={(e) => {
                 e.preventDefault();
-                addMoreInputRef.current?.click();
-              }
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              if (!disabled) setDragOverSlot(999);
-            }}
-            onDragLeave={() => setDragOverSlot(null)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOverSlot(null);
-              if (!disabled && e.dataTransfer.files.length > 0) {
-                handleFilesAdded(e.dataTransfer.files);
-              }
-            }}
-            className={`flex h-full w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-3 text-center transition-all duration-150 select-none ${
-              dragOverSlot === 999
-                ? "border-emerald-500 bg-emerald-50/70 dark:border-emerald-400 dark:bg-emerald-500/10 scale-[1.02]"
-                : "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50/60 dark:border-zinc-700 dark:bg-zinc-900/80 dark:hover:border-zinc-600 dark:hover:bg-zinc-800/60"
-            } ${disabled ? "pointer-events-none opacity-50" : ""}`}
-          >
-            <div className="mb-1 text-slate-700 dark:text-zinc-200">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="mx-auto"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+                setDragOverSlot(null);
+                if (e.dataTransfer.files.length > 0) handleFilesAdded(e.dataTransfer.files);
+              }}
+              className={`flex h-full w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-3 text-center transition-all duration-150 select-none ${
+                dragOverSlot === 999
+                  ? "border-emerald-500 bg-emerald-50/70 dark:border-emerald-400 dark:bg-emerald-500/10 scale-[1.02]"
+                  : "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50/60 dark:border-zinc-700 dark:bg-zinc-900/80 dark:hover:border-zinc-600 dark:hover:bg-zinc-800/60"
+              }`}
+            >
+              <div className="mb-1 text-slate-500 dark:text-zinc-400">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="mx-auto">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </div>
+              <span className="text-xs font-semibold text-slate-600 dark:text-zinc-300">Add More</span>
+              {/* <span className="mt-0.5 text-[10px] text-slate-400 dark:text-zinc-500">{totalSlotCount}/{MAX_SLOTS}</span> */}
             </div>
-            <span className="text-xs font-semibold text-slate-700 dark:text-zinc-200">
-              Add More
-            </span>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Footer / Continue button matching screenshot */}
+      {/* Footer */}
       {!disabled && (
-        <div className="mt-5 flex items-center justify-end gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-          {onCancel && (
+        <div className="mt-5 flex items-center justify-between gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+          {/* Upload progress hint */}
+          <span className="text-xs text-slate-400 dark:text-zinc-500">
+            {isAnyUploading
+              ? "Uploading…"
+              : uploadedCount > 0
+              ? `${uploadedCount} image${uploadedCount > 1 ? "s" : ""} ready`
+              : "Upload at least 1 image to continue"}
+          </span>
+
+          <div className="flex items-center gap-2">
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="rounded-full border border-zinc-300 px-4 py-2 text-xs sm:text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 hover:text-zinc-800 dark:border-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-200"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="button"
-              onClick={onCancel}
-              className="rounded-full border border-zinc-300 px-4 py-2 text-xs sm:text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 hover:text-zinc-800 dark:border-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-200"
+              onClick={handleSubmit}
+              disabled={!canContinue}
+              className="flex items-center justify-center gap-1.5 rounded-full bg-[#8e98a4] hover:bg-[#7b8591] px-6 py-2.5 text-xs sm:text-sm font-medium text-white shadow-sm transition-all hover:shadow disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-600 dark:hover:bg-zinc-500"
             >
-              Cancel
+              {isAnyUploading ? (
+                <>
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Uploading…
+                </>
+              ) : onCancel ? (
+                "Save Changes"
+              ) : (
+                "Continue →"
+              )}
             </button>
-          )}
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isAnyUploading}
-            className="flex items-center justify-center gap-1.5 rounded-full bg-[#8e98a4] hover:bg-[#7b8591] px-6 py-2.5 text-xs sm:text-sm font-medium text-white shadow-sm transition-all hover:shadow disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-600 dark:hover:bg-zinc-500"
-          >
-            {isAnyUploading ? (
-              <>
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                Uploading…
-              </>
-            ) : onCancel ? (
-              "Save Changes"
-            ) : (
-              "Continue →"
-            )}
-          </button>
+          </div>
         </div>
       )}
     </div>

@@ -36,7 +36,7 @@ const GENERATING_MESSAGES = [
   "Organizing your ideas...",
   "Making sure I didn't miss a thing...",
   "One last pass before we're done...",
-  "Don't leave; I'm finishing up.",
+  "Don't leave, I'm finishing up.",
   "Almost there! Just a few more seconds.",
 ];
 

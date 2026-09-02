@@ -312,9 +312,16 @@ export const MessageBubble = ({
     return checklist.find((item) => item.id === targetId) ?? null
   }, [checklist, message.checklistId, apiKey])
 
-  const sequenceLabel = checklistItem && checklist?.length
-    ? `${checklistItem.number} of ${checklist.length}`
-    : null
+  // Hide "N of 8" only on the upload-card bubbles (kind === 'card') for these
+  // optional questions — the preceding text question bubbles still show it.
+  const UNNUMBERED_CARD_IDS = ['additional_images_upload', 'supporting_files_upload']
+
+  const sequenceLabel =
+    checklistItem &&
+    checklist?.length &&
+    !(message.kind === 'card' && UNNUMBERED_CARD_IDS.some((id) => (message.checklistId || apiKey || '').includes(id)))
+      ? `${checklistItem.number} of ${checklist.length}`
+      : null
 
   return (
     <div className='w-full'>
