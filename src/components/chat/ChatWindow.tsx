@@ -848,11 +848,11 @@ export default function ChatWindow() {
     setIsEngagingDesigner(false);
     setSubmittedAction("engage_designer");
     if (message) {
-      toast.success(message);
       const thankYouMsg: Message = {
         id: nextId(),
         role: "assistant",
         content: message,
+        isRestored: true, // Render HTML content immediately without typewriter delay
       };
       setMessages((prev) => [...prev, thankYouMsg]);
     }

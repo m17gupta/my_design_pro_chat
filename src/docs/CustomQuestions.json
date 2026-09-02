@@ -43,22 +43,6 @@
     "apiKey": "summary",
     "kind": "summary",
     "content": "Amazing, I have logged our discussion based on the project details, preferences, and uploaded information you've shared with me! Can you please confirm?"
-  },
-  {
-    "apiKey": "revision",
-    "kind": "card",
-    "card": {
-      "title": "Revision Comments",
-      "description": "Please share your revision requests, I will incorporate them into the design.",
-      "fields": [
-        { "kind": "textarea", "placeholder": "Describe the changes you'd like", "rows": 4, "required": true },
-        { "kind": "upload-grid", "count": 4, "accept": "image/*" }
-      ]
-    }
-  },
-  {
-    "apiKey": "revision-summary",
-    "kind": "summary",
-    "content": "Thanks! I've noted your revision comments. I'm ready to regenerate the design with these changes."
   }
+
 ]
