@@ -324,24 +324,24 @@ export const MessageBubble = ({
     )
   }, [checklist, message.checklistId, message.id, apiKey])
 
-  // Hide "N of 8" only on the upload-card bubbles (kind === 'card') for these
-  // optional questions in standard flows — in custom flows, the upload card itself represents the step.
+  // Hide sequence numbers on upload-card bubbles (kind === 'card') for upload questions
+  // like additional_images_upload, supporting_files_upload, or Inspirational Photos.
   const UNNUMBERED_CARD_IDS = ['additional_images_upload', 'supporting_files_upload']
 
-  const isCustomWorkType = (workType ?? '').trim().toLowerCase().replace(/-/g, '_') === 'custom'
-
   const isSuppressedUploadCard =
-    !isCustomWorkType &&
     message.kind === 'card' &&
-    UNNUMBERED_CARD_IDS.some((id) => (message.checklistId || apiKey || '').includes(id))
+    (UNNUMBERED_CARD_IDS.some(
+      (id) =>
+        (message.checklistId && message.checklistId.includes(id)) ||
+        (apiKey && apiKey.includes(id)) ||
+        (message.id && message.id.includes(id))
+    ) ||
+      message.card?.title === 'Inspirational Photos')
 
   const sequenceLabel =
     checklistItem && checklist?.length && !isSuppressedUploadCard
       ? `${checklistItem.number} of ${checklist.length}`
       : null
-
-
-      console.log('sequenceLabel', sequenceLabel, isSuppressedUploadCard, checklistItem, checklist?.length);
   return (
     <div className='w-full'>
       {!isRevisionSummary && (

@@ -870,7 +870,7 @@ export default function ChatWindow() {
         handleCancelAllNeed();
       } else if (event.data?.action === HOST_ACTION_ENGAGE_DESIGNER_THANK_YOU) {
         console.log("handleEngageDesignerThankYou--->",event?.data)
-        // console.log("handleEngageDesignerThankYou---nannbsb>",event)
+         console.log("handleEngageDesignerThankYou---nannbsb>",event)
         const msg =
           typeof event.data?.message === "string"
             ? event.data.message

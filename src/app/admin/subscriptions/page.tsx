@@ -2,19 +2,19 @@
 
 import React, { useEffect, useState, useTransition } from "react";
 import { useAppDispatch, useAppSelector } from "../../../store/hooks";
-import { fetchAllSubscriptionsThunk } from "../../../store/subscription/subscriptionThunks";
-import { setAdminFilters } from "../../../store/subscription/subscriptionSlice";
+import { fetchAllSubscriptionsThunk } from "../../../store/vendorSubscription/vendorSubscriptionThunks";
+import { setAdminFilters } from "../../../store/vendorSubscription/vendorSubscriptionSlice";
 import SubscriptionKpiCards from "../../../components/subscription/SubscriptionKpiCards";
 import VendorSubscriptionTable from "../../../components/subscription/VendorSubscriptionTable";
-import ManualTriggerButton from "../../../components/subscription/ManualTriggerButton";
 import type { SubscriptionStatus } from "../../../types/subscription";
+
 
 export default function AdminSubscriptionsPage() {
   const dispatch = useAppDispatch();
   const [, startTransition] = useTransition();
 
-  const { data, loading, filters } = useAppSelector(
-    (s) => s.subscription.adminSubscriptions
+  const { allVendor, loading, filters } = useAppSelector(
+    (s) => s.vendorSubscription
   );
 
   const [searchQuery, setSearchQuery] = useState(filters.search || "");
@@ -40,6 +40,14 @@ export default function AdminSubscriptionsPage() {
     });
   };
 
+  const kpiData = {
+    total: allVendor.length,
+    active_count: allVendor.filter((v) => v.is_active).length,
+    expiring_count: 0,
+    expired_count: allVendor.filter((v) => !v.is_active).length,
+    allVendor,
+  };
+
   return (
     <main className="min-h-screen w-full bg-zinc-50/70 p-4 sm:p-8 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -55,18 +63,14 @@ export default function AdminSubscriptionsPage() {
               Vendor Subscription Management
             </h1>
           </div>
-
-          <div className="flex items-center gap-3">
-            <ManualTriggerButton />
-          </div>
         </div>
 
         {/* KPI Stat Cards */}
-        <SubscriptionKpiCards data={data} loading={loading} />
+        <SubscriptionKpiCards data={kpiData} loading={loading} />
 
         {/* Filterable Master Vendor Table */}
         <VendorSubscriptionTable
-          subscriptions={data?.subscriptions ?? []}
+          subscriptions={allVendor as any}
           loading={loading}
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
@@ -77,3 +81,4 @@ export default function AdminSubscriptionsPage() {
     </main>
   );
 }
+

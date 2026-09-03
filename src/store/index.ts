@@ -9,7 +9,7 @@ import enterpriseReducer, { resetEnterprise } from "./enterprise/enterpriseSlice
 import persistenceReducer from "./persistence/persistenceSlice";
 import questionnaireReducer from "./questionnaires/questionnaireSlice";
 import settingsReducer from "./settings/settingsSlice";
-import subscriptionReducer from "./subscription/subscriptionSlice";
+import vendorSubscriptionReducer from "./vendorSubscription/vendorSubscriptionSlice";
 import {
   deleteProject,
   saveProject,
@@ -108,8 +108,10 @@ const rootReducer = combineReducers({
   persistence: persistenceReducer,
   questionnaires: questionnaireReducer,
   settings: settingsReducer,
-  subscription: subscriptionReducer,
+  subscription: vendorSubscriptionReducer,
+  vendorSubscription: vendorSubscriptionReducer,
 });
+
 
 export type RootState = ReturnType<typeof rootReducer>;
 

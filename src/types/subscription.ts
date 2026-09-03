@@ -1,5 +1,25 @@
 export type SubscriptionStatus = 'active' | 'inactive' | 'expired' | 'cancelling';
 
+export interface VendorItem {
+  id: string;
+  company_name: string;
+  contact_email: string;
+  website: string | null;
+  is_active: boolean;
+  subscription_plan: string;
+  scopes: string[];
+  api_key: string | null;
+  vendor_s3_bucket: string | null;
+  vendor_s3_region: string | null;
+  vendor_s3_iam_role_arn: string | null;
+  webhook_url: string | null;
+  webhook_secret: string | null;
+  aws_IAM_access_key: string | null;
+  aws_IAM_secret_key: string | null;
+  aws_s3_external_id: string | null;
+  webhook_access_token: string | null;
+}
+
 export interface Plan {
   id: string;
   name: string;
@@ -25,7 +45,7 @@ export interface SubscriptionListResponse {
   expiring_count: number;
   expired_count: number;
   active_count: number;
-  subscriptions: VendorSubscription[];
+  allVendor: VendorItem[];
 }
 
 export interface SubscriptionFilters {
@@ -40,3 +60,4 @@ export interface TriggerExpiryCheckResponse {
   emails_dispatched: number;
   timestamp: string;
 }
+

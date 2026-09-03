@@ -3,13 +3,13 @@ import type { SubscriptionStatus } from "../../types/subscription";
 
 interface SubscriptionStatusBadgeProps {
   status: SubscriptionStatus;
-  daysRemaining: number;
+  daysRemaining?: number;
   showDaysText?: boolean;
 }
 
 export const SubscriptionStatusBadge: React.FC<SubscriptionStatusBadgeProps> = ({
   status,
-  daysRemaining,
+  daysRemaining = 30,
   showDaysText = true,
 }) => {
   // Determine badge type based on status & daysRemaining

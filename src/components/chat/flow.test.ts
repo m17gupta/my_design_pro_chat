@@ -386,8 +386,6 @@ describe("buildEpisodes", () => {
       "project_goals_or_brief_description",
       "additional_images_upload",
       "custom_engage_continue",
-      "revision",
-      "revision-summary",
     ]);
   });
 
@@ -456,8 +454,6 @@ describe("Work type episode resolution", () => {
       "project_goals_or_brief_description",
       "additional_images_upload",
       "summary",
-      "revision",
-      "revision-summary",
     ]);
   });
 

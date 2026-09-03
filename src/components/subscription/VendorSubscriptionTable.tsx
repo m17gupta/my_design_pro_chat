@@ -37,16 +37,35 @@ export const VendorSubscriptionTable: React.FC<VendorSubscriptionTableProps> = (
     alert(`Sending manual expiry notice to ${company} (${email})...`);
   };
 
+  let filtered = subscriptions || [];
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(
+      (s: any) =>
+        (s.company_name && s.company_name.toLowerCase().includes(q)) ||
+        (s.contact_email && s.contact_email.toLowerCase().includes(q)) ||
+        (s.website && s.website.toLowerCase().includes(q))
+    );
+  }
+
+  if (statusFilter && statusFilter !== "all") {
+    filtered = filtered.filter((s: any) => {
+      const isAct = s.status ? s.status === "active" : s.is_active;
+      if (statusFilter === "active") return isAct;
+      if (statusFilter === "expired" || statusFilter === "inactive") return !isAct;
+      return true;
+    });
+  }
+
   return (
     <div className="w-full space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
       {/* Filter and Search Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Status Filter Tabs */}
         <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
-          {(["all", "active", "expiring", "expired"] as const).map((filterKey) => {
-            const isActive =
-              (filterKey === "expiring" && statusFilter === ("expiring" as any)) ||
-              statusFilter === filterKey;
+          {(["all", "active", "expired"] as const).map((filterKey) => {
+            const isActive = statusFilter === filterKey;
 
             return (
               <button
@@ -59,7 +78,7 @@ export const VendorSubscriptionTable: React.FC<VendorSubscriptionTableProps> = (
                     : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
                 }`}
               >
-                {filterKey === "expiring" ? "Expiring Soon" : filterKey}
+                {filterKey}
               </button>
             );
           })}
@@ -99,9 +118,8 @@ export const VendorSubscriptionTable: React.FC<VendorSubscriptionTableProps> = (
               <th className="p-3.5">Vendor / Company</th>
               <th className="p-3.5">Plan Tier</th>
               <th className="p-3.5">Status</th>
-              <th className="p-3.5">Period End</th>
-              <th className="p-3.5">Days Left</th>
-              <th className="p-3.5">Last Email Sent</th>
+              <th className="p-3.5">Website</th>
+              <th className="p-3.5">S3 Bucket</th>
               <th className="p-3.5 text-right">Action</th>
             </tr>
           </thead>
@@ -118,97 +136,92 @@ export const VendorSubscriptionTable: React.FC<VendorSubscriptionTableProps> = (
                   <td className="p-3.5"><div className="h-5 w-20 rounded-full bg-zinc-200 dark:bg-zinc-700" /></td>
                   <td className="p-3.5"><div className="h-4 w-24 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
                   <td className="p-3.5"><div className="h-4 w-12 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
-                  <td className="p-3.5"><div className="h-4 w-24 rounded bg-zinc-200 dark:bg-zinc-700" /></td>
                   <td className="p-3.5 text-right"><div className="h-6 w-16 rounded bg-zinc-200 dark:bg-zinc-700 ml-auto" /></td>
                 </tr>
               ))
-            ) : subscriptions.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-zinc-500 dark:text-zinc-400">
+                <td colSpan={6} className="p-8 text-center text-zinc-500 dark:text-zinc-400">
                   No vendor subscriptions found matching your filters.
                 </td>
               </tr>
             ) : (
-              subscriptions.map((sub) => (
-                <tr
-                  key={sub.id}
-                  className="transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40"
-                >
-                  {/* Vendor Name & Email */}
-                  <td className="p-3.5">
-                    <div className="font-bold text-zinc-900 dark:text-white">
-                      {sub.company_name}
-                    </div>
-                    <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                      {sub.contact_email}
-                    </div>
-                  </td>
+              filtered.map((sub: any) => {
+                const planName = sub.subscription_plan || sub.plan?.name || "Pro Plan";
+                const isAct = sub.is_active ?? (sub.status === "active");
+                const status = isAct ? "active" : "inactive";
+                const website = sub.website || "N/A";
+                const s3Bucket = sub.vendor_s3_bucket || "N/A";
 
-                  {/* Plan Tier */}
-                  <td className="p-3.5">
-                    <div className="font-semibold text-zinc-800 dark:text-zinc-200">
-                      {sub.plan.name}
-                    </div>
-                    <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
-                      Limit: {sub.plan.api_call_limit.toLocaleString()} calls
-                    </div>
-                  </td>
+                return (
+                  <tr
+                    key={sub.id}
+                    className="transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40"
+                  >
+                    {/* Vendor Name & Email */}
+                    <td className="p-3.5">
+                      <div className="font-bold text-zinc-900 dark:text-white">
+                        {sub.company_name}
+                      </div>
+                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                        {sub.contact_email}
+                      </div>
+                    </td>
 
-                  {/* Status Badge */}
-                  <td className="p-3.5">
-                    <SubscriptionStatusBadge
-                      status={sub.status}
-                      daysRemaining={sub.days_remaining}
-                      showDaysText={false}
-                    />
-                  </td>
+                    {/* Plan Tier */}
+                    <td className="p-3.5">
+                      <div className="font-semibold text-zinc-800 dark:text-zinc-200">
+                        {planName}
+                      </div>
+                    </td>
 
-                  {/* Period End */}
-                  <td className="p-3.5 font-medium whitespace-nowrap">
-                    {formatDate(sub.current_period_end)}
-                  </td>
+                    {/* Status Badge */}
+                    <td className="p-3.5">
+                      <SubscriptionStatusBadge
+                        status={status as any}
+                        showDaysText={false}
+                      />
+                    </td>
 
-                  {/* Days Left */}
-                  <td className="p-3.5 font-mono font-bold">
-                    <span
-                      className={
-                        sub.days_remaining <= 0
-                          ? "text-rose-600 dark:text-rose-400"
-                          : sub.days_remaining <= 15
-                          ? "text-amber-600 dark:text-amber-400"
-                          : "text-emerald-600 dark:text-emerald-400"
-                      }
-                    >
-                      {sub.days_remaining > 0
-                        ? `${sub.days_remaining}d`
-                        : sub.days_remaining === 0
-                        ? "Today"
-                        : `${sub.days_remaining}d`}
-                    </span>
-                  </td>
+                    {/* Website */}
+                    <td className="p-3.5 font-medium whitespace-nowrap text-zinc-500 dark:text-zinc-400">
+                      {website !== "N/A" ? (
+                        <a
+                          href={website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-600 dark:text-emerald-400 hover:underline"
+                        >
+                          {website}
+                        </a>
+                      ) : (
+                        "N/A"
+                      )}
+                    </td>
 
-                  {/* Last Email Notified */}
-                  <td className="p-3.5 text-[11px] text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                    {formatDate(sub.last_expiry_notified_at)}
-                  </td>
+                    {/* S3 Bucket */}
+                    <td className="p-3.5 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
+                      {s3Bucket}
+                    </td>
 
-                  {/* Actions */}
-                  <td className="p-3.5 text-right whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={() => handleSendSingleEmail(sub.company_name, sub.contact_email)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-zinc-300 dark:border-zinc-700 px-2.5 py-1 text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                      title="Send instant notification email to vendor"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                        <polyline points="22,6 12,13 2,6" />
-                      </svg>
-                      <span>Notify</span>
-                    </button>
-                  </td>
-                </tr>
-              ))
+                    {/* Actions */}
+                    <td className="p-3.5 text-right whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => handleSendSingleEmail(sub.company_name, sub.contact_email)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-zinc-300 dark:border-zinc-700 px-2.5 py-1 text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        title="Send instant notification email to vendor"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                          <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                        <span>Notify</span>
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
