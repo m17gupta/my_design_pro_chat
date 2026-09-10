@@ -84,6 +84,14 @@ export default function RevisionResultCard({
     entry.status === "processing" ||
     (!done && !failed);
 
+  // Reset regenerateClicked when the entry transitions back to failed so the
+  // user can click Regenerate again without being stuck in a disabled state.
+  useEffect(() => {
+    if (failed) {
+      setRegenerateClicked(false);
+    }
+  }, [failed]);
+
   useEffect(() => {
     if (!isGenerating) {
       setMessageIndex(0);
@@ -101,10 +109,14 @@ export default function RevisionResultCard({
 
   const subtitle = GENERATING_MESSAGES[messageIndex];
 
+  // Always show buttons when the task failed so the user can retry.
   const hideButtons =
-    isGenerating ||
-    !done ||
-    (getRevison.length > round && getRevison[round]?.status === "completed");
+    !failed &&
+    (
+      isGenerating ||
+      !done ||
+      (getRevison.length > round && getRevison[round]?.status === "completed")
+    );
   const interactive = !locked && !submittedAction && !isEngagingDesigner && !isGenerating && !regenerateClicked;
 
 const handleDownload = async () => {

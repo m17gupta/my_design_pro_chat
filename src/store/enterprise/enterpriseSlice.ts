@@ -1,8 +1,8 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import {
+  buildRevisionQuestion,
   fetchEnterpriseStatus,
   generateEnterpriseDesign,
- 
 } from "./enterpriseThunk";
 import { EnterpriseEntry } from "./enterpriseType";
 
@@ -53,15 +53,51 @@ const enterpriseSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(generateEnterpriseDesign.pending, (state) => {
+      .addCase(generateEnterpriseDesign.pending, (state, action) => {
         state.lifecycle = "loading";
         state.error = null;
+
+        const { payload, round } = action.meta.arg;
+        const isRevision =
+          state.entries.length > 0 || (round !== undefined && round > 0);
+
+        if (isRevision) {
+          const revisionQuestion = buildRevisionQuestion(payload.revision_comment);
+          const pendingEntry: EnterpriseEntry = {
+            id: `pending-revision-${round ?? Date.now()}`,
+            url: "",
+            status: "pending",
+            type: "revision",
+            questions: [revisionQuestion],
+          };
+
+          if (round !== undefined && round > 0) {
+            const revisions = state.entries.filter((e) => e.type === "revision");
+            const prev = revisions[round - 1];
+            if (prev && prev.status !== "completed") {
+              const idx = state.entries.indexOf(prev);
+              if (idx >= 0) {
+                state.entries[idx] = pendingEntry;
+                return;
+              }
+            }
+          }
+
+          const pendingIdx = state.entries.findIndex((e) =>
+            e.id.startsWith("pending-revision-")
+          );
+          if (pendingIdx >= 0) {
+            state.entries[pendingIdx] = pendingEntry;
+          } else {
+            state.entries.push(pendingEntry);
+          }
+        }
       })
       .addCase(generateEnterpriseDesign.fulfilled, (state, action) => {
         state.lifecycle = "pending";
         state.error = null;
         const entry = action.payload;
-     
+
         const round = action.meta.arg.round;
         if (round !== undefined && round > 0) {
           const revisions = state.entries.filter((e) => e.type === "revision");
@@ -74,8 +110,16 @@ const enterpriseSlice = createSlice({
             }
           }
         }
-        // Append the freshly-submitted entry to the design history.
-        state.entries.push(entry);
+
+        const pendingIdx = state.entries.findIndex((e) =>
+          e.id.startsWith("pending-revision-")
+        );
+        if (pendingIdx >= 0) {
+          state.entries[pendingIdx] = entry;
+        } else {
+          // Append the freshly-submitted entry to the design history.
+          state.entries.push(entry);
+        }
       })
       .addCase(generateEnterpriseDesign.rejected, (state, action) => {
         state.lifecycle = "failed";
@@ -88,9 +132,19 @@ const enterpriseSlice = createSlice({
             const idx = state.entries.indexOf(prev);
             if (idx >= 0) {
               state.entries.splice(idx, 1);
+              return;
             }
           }
-        } else {
+        }
+        const pendingIdx = state.entries.findIndex((e) =>
+          e.id.startsWith("pending-revision-")
+        );
+        if (pendingIdx >= 0) {
+          state.entries.splice(pendingIdx, 1);
+        } else if (
+          state.entries.length > 0 &&
+          state.entries[state.entries.length - 1].type === "revision"
+        ) {
           state.entries.pop();
         }
       })
@@ -101,12 +155,10 @@ const enterpriseSlice = createSlice({
         if (entryIdx >= 0) {
           const entry = state.entries[entryIdx];
           if (action.payload.status === "failed") {
-            // Remove failed revision entry from entries
-            if (entry.type === "revision") {
-              state.entries.splice(entryIdx, 1);
-            } else {
-              entry.status = "failed";
-            }
+            // Keep the failed entry in the array with status "failed" so the
+            // UI can render the card with all buttons enabled — letting the
+            // user retry without losing the revision card entirely.
+            entry.status = "failed";
           } else {
             entry.status = action.payload.status;
             if (
@@ -117,23 +169,23 @@ const enterpriseSlice = createSlice({
             }
           }
         }
-        if (action.payload.error) {
-          state.error = action.payload.error;
-        }
         if (action.payload.status === "completed") {
+          // Clear any stale error on success — the backend may include a
+          // non-null `error` field even in a completed response (e.g. a
+          // diagnostic/connection note). Never surface that as a UI error.
+          state.error = null;
           state.lifecycle = "succeeded";
         } else if (action.payload.status === "failed") {
+          // Only record the error from the payload on a true failure.
+          state.error = action.payload.error ?? "Design generation failed";
           state.lifecycle = "failed";
         }
       })
       .addCase(fetchEnterpriseStatus.rejected, (state, action) => {
-        state.lifecycle = "failed";
+        // Only record the error — do NOT remove the entry. A rejected poll is
+        // usually a transient network blip; destroying the entry here would
+        // make the UI lose track of an in-progress revision task.
         state.error = action.payload ?? "Failed to fetch design status";
-        // Remove failed revision entry from entries if network/API fails
-        const entryIdx = state.entries.findIndex((e) => e.id === action.meta.arg);
-        if (entryIdx >= 0 && state.entries[entryIdx].type === "revision") {
-          state.entries.splice(entryIdx, 1);
-        }
       });
   },
 });

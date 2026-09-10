@@ -71,7 +71,7 @@ export function sanitizeRevisionFiles(files: string[]): string[] {
  * `answer.notes` comes from the revision feedback text; `answer.files` is
  * included only when image uploads exist (matching revisonSchema.md).
  */
-function buildRevisionQuestion(revision: RevisionComment): EnterpriseQuestion {
+export function buildRevisionQuestion(revision: RevisionComment): EnterpriseQuestion {
   const files = sanitizeRevisionFiles(revision.files);
   const answer: EnterpriseQuestion["answer"] = { notes: revision.notes };
   if (files.length > 0) {

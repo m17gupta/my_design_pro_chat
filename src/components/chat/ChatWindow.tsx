@@ -656,41 +656,49 @@ export default function ChatWindow() {
     }
   }, []);
 
+  const pollErrorCountRef = useRef(0);
+
   const getStatus = useCallback(async () => {
-    if (!taskId) return;
+    if (!taskId || taskId.startsWith("pending-revision-")) return;
     try {
       const res = await dispatch(fetchEnterpriseStatus(taskId)).unwrap();
+      // Reset error counter on any successful response.
+      pollErrorCountRef.current = 0;
       // Terminal state — stop polling and tell the user.
       if (res.status === "completed" || res.status === "failed") {
         stopPolling();
         setPendingRevisionGenerate(null);
-        if (res.status === "completed") {
-          // toast.success("Your design is ready!");
-        } else {
+        if (res.status === "failed") {
           toast.error(res.error ?? "Design generation failed. Please try again.");
         }
       }
     } catch (error) {
-      // Transient failure (network blip / proxy 5xx). Never permanently
-      // abandon the poll on a single error — the task may still complete and
-      // Redux would then be stuck on a stale status forever. Keep polling at
-      // the same cadence and surface the failure once.
-      setPendingRevisionGenerate(null);
-      toast.error(
-        typeof error === "string"
-          ? error
-          : error instanceof Error
-            ? error.message
-            : "Failed to check design status"
-      );
+      // Transient failure (network blip / proxy 5xx). Keep polling — the task
+      // may still complete. Only surface a toast after 3 consecutive failures
+      // so a single flaky request doesn't alarm the user.
+      pollErrorCountRef.current += 1;
+      if (pollErrorCountRef.current >= 3) {
+        pollErrorCountRef.current = 0;
+        setPendingRevisionGenerate(null);
+        stopPolling();
+        toast.error(
+          typeof error === "string"
+            ? error
+            : error instanceof Error
+              ? error.message
+              : "Failed to check design status"
+        );
+      }
     }
-  }, [taskId, dispatch]);
+  }, [taskId, dispatch, stopPolling]);
 
   // Kick off polling 3s after a task_id lands; clear on unmount / task change.
   // Fast-poll every 3s for MAX_POLLS, then fall back to a slow background poll
   // (SLOW_POLL_MS) so a long-running task still lands in Redux when it completes.
   useEffect(() => {
-    if (!taskId) return;
+    // Do not poll for locally-generated placeholder IDs — they are not real
+    // backend task IDs and will 404 the status endpoint.
+    if (!taskId || taskId.startsWith("pending-revision-")) return;
     pollCountRef.current = 0;
     const startTimer = window.setTimeout(() => {
       const tick = async () => {
@@ -720,7 +728,7 @@ export default function ChatWindow() {
   // When the user returns to the tab, immediately re-check the latest task so
   // a design that completed while the tab was backgrounded reaches Redux.
   useEffect(() => {
-    if (!taskId) return;
+    if (!taskId || taskId.startsWith("pending-revision-")) return;
     const onVisible = () => {
       if (document.visibilityState === "visible") void getStatus();
     };
@@ -968,7 +976,7 @@ export default function ChatWindow() {
         projectId: id,
         watermark: watermark ?? "",
         work_type: work_type ?? "",
-        image_url: entries[entries.length - 1]?.url ?? "",
+        image_url: [...entries].reverse().find((e) => e.url)?.url ?? "",
         revision: { files, notes },
       });
       try {
@@ -1103,6 +1111,17 @@ export default function ChatWindow() {
   const lastRevisionSummaryId =
     revisionSummaries[revisionSummaries.length - 1]?.id;
 
+  // If the latest revision entry has failed (and its card is hidden), treat the
+  // previous revision summary as the effective current one so its buttons remain
+  // active (not locked) for the user to interact with.
+  const revisionEntries = entries.filter((e) => e.type === "revision");
+  const lastRevisionEntryFailed =
+    revisionEntries.length > 0 &&
+    revisionEntries[revisionEntries.length - 1]?.status === "failed";
+  const effectiveRevisionSummaryId = lastRevisionEntryFailed
+    ? (revisionSummaries[revisionSummaries.length - 2]?.id ?? lastRevisionSummaryId)
+    : lastRevisionSummaryId;
+
   if (!hydrated || isQuestionnairesLoading) {
     return (
       <motion.div
@@ -1190,7 +1209,7 @@ export default function ChatWindow() {
                   const revisionRound = revisionRoundFromMessage(m.id);
                   const isRevisionSummary = revisionRound > 0;
                   const isCurrentRevision =
-                    isRevisionSummary && m.id === lastRevisionSummaryId;
+                    isRevisionSummary && m.id === effectiveRevisionSummaryId;
                   const revisionDerived = isRevisionSummary
                     ? deriveRevisionRound(m.id, entries)
                     : null;
@@ -1216,13 +1235,13 @@ export default function ChatWindow() {
                     ? episodes.some((e) => e.apiKey === msgEpId)
                     : false;
 
-                  const revisionEntries = entries.filter(
+                  const msgRevisionEntries = entries.filter(
                     (entry) => entry.type === "revision"
                   );
                   const hideRevisionEdit =
                     (msgEpId === revisionKey || isRevisionUserMsg) &&
-                    revisionEntries.length > 0 &&
-                    revisionEntries.every(e => e.status === "completed");
+                    msgRevisionEntries.length > 0 &&
+                    msgRevisionEntries.every(e => e.status === "completed");
 
                   const canEdit =
                     m.role === "user" &&

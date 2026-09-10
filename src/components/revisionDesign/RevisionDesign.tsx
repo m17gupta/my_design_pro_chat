@@ -87,10 +87,16 @@ export default function RevisionDesign({
 
   const status = entry?.status;
   const hasImage = Boolean(entry?.url);
+  const failed = status === "failed";
+
+  // When the API fails, do not render the failed revision card at all.
+  // The previous revision card's buttons are re-enabled via effectiveRevisionSummaryId in ChatWindow.
+  if (failed) return null;
+
   const inFlight =
     Boolean(entry) &&
     !hasImage &&
-    status !== "failed" &&
+    !failed &&
     status !== "completed";
   const inProgress =
     status === "pending" || status === "queued" || status === "processing";
