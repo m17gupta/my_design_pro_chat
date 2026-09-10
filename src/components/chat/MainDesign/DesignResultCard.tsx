@@ -38,18 +38,22 @@ export default function DesignResultCard({
   onRegenerate,
   onEngageDesigner,
 }: DesignResultCardProps) {
-  const [isRegenerating, setIsRegenerating] = useState(false);
   const { entries } = useSelector((state: RootState) => state.enterprise);
   const { revision_comment } = useSelector((state: RootState) => state.chat);
-  const {dc_name}= useSelector((state:RootState)=>state.chat)
-  const revision = entries.filter((item) => item.type == "revision");
+  const { dc_name } = useSelector((state: RootState) => state.chat);
+  const revision = entries.filter((item) => item.type === "revision");
   const hasRevisionComment =
     revision_comment.notes !== "" || revision_comment.files.length > 0;
+  const isGeneratingRevision = entries.some(
+    (item) =>
+      item.type === "revision" &&
+      (item.status === "pending" || item.status === "processing" || item.status === "queued")
+  );
   const interactive =
-    !disabled && !submittedAction && !isEngagingDesigner && (revision.length <= 4 || hasRevisionComment);
+    !disabled && !submittedAction && !isEngagingDesigner && !isGeneratingRevision && revision.length <= 4;
 
   const isRegenerateDisabled =
-    isRegenerating || hasRevisionComment || !interactive;
+    hasRevisionComment || !interactive;
 
   const handleDownload = async () => {
   if (!imageUrl) return;
@@ -191,10 +195,7 @@ export default function DesignResultCard({
 
             <motion.button
               type="button"
-              onClick={() => {
-                setIsRegenerating(true);
-                onRegenerate();
-              }}
+              onClick={onRegenerate}
               whileHover={!isRegenerateDisabled ? { scale: 1.03 } : undefined}
               whileTap={!isRegenerateDisabled ? { scale: 0.95 } : undefined}
               className={BUTTON_CLASS}

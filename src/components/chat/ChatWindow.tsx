@@ -43,6 +43,7 @@ import {
   setRevision,
 } from "../../store/briefSlice";
 import {
+  removeFailedRevision,
   resetEnterprise,
   selectLatestEnterpriseEntry,
   setEditId,
@@ -658,6 +659,43 @@ export default function ChatWindow() {
 
   const pollErrorCountRef = useRef(0);
 
+  const handleRevisionFailure = useCallback(
+    (round: number, errorMsg?: string) => {
+      setPendingRevisionGenerate(null);
+      clearTypingTimeout();
+      busyRef.current = false;
+      setTyping(false);
+      announcedIdRef.current = null;
+
+      // 1. Remove the revision messages from chat (the prompt card, user answer, and summary)
+      const revCardId = episodeMessageId(revisionKey, round);
+      setMessages((prev) => {
+        const revCardIdx = prev.findIndex((m) => m.id === revCardId);
+        if (revCardIdx >= 0) {
+          return prev.slice(0, revCardIdx);
+        }
+        const summaryId = episodeMessageId("revision-summary", round);
+        return prev.filter((m) => m.id !== revCardId && m.id !== summaryId);
+      });
+
+      // 2. Clear Redux revision comment
+      dispatch(setRevision({ files: [], notes: "" }));
+
+      // 3. Remove the pending / failed revision entry from Redux entries
+      dispatch(removeFailedRevision({ round }));
+
+      // 4. Reset currentId to previous summary
+      const prevSummaryId =
+        round > 1 ? episodeMessageId("revision-summary", round - 1) : "summary";
+      setCurrentId(prevSummaryId);
+
+      if (errorMsg) {
+        toast.error(errorMsg);
+      }
+    },
+    [revisionKey, clearTypingTimeout, dispatch]
+  );
+
   const getStatus = useCallback(async () => {
     if (!taskId || taskId.startsWith("pending-revision-")) return;
     try {
@@ -669,7 +707,13 @@ export default function ChatWindow() {
         stopPolling();
         setPendingRevisionGenerate(null);
         if (res.status === "failed") {
-          toast.error(res.error ?? "Design generation failed. Please try again.");
+          const isRevision = entries.some((e) => e.id === taskId && e.type === "revision");
+          if (isRevision) {
+            const revRound = countRevisionRounds(messages, revisionKey);
+            handleRevisionFailure(revRound || 1, res.error ?? "Design generation failed. Please try again.");
+          } else {
+            toast.error(res.error ?? "Design generation failed. Please try again.");
+          }
         }
       }
     } catch (error) {
@@ -679,18 +723,24 @@ export default function ChatWindow() {
       pollErrorCountRef.current += 1;
       if (pollErrorCountRef.current >= 3) {
         pollErrorCountRef.current = 0;
-        setPendingRevisionGenerate(null);
         stopPolling();
-        toast.error(
+        const isRevision = entries.some((e) => e.id === taskId && e.type === "revision");
+        const msg =
           typeof error === "string"
             ? error
             : error instanceof Error
               ? error.message
-              : "Failed to check design status"
-        );
+              : "Failed to check design status";
+        if (isRevision) {
+          const revRound = countRevisionRounds(messages, revisionKey);
+          handleRevisionFailure(revRound || 1, msg);
+        } else {
+          setPendingRevisionGenerate(null);
+          toast.error(msg);
+        }
       }
     }
-  }, [taskId, dispatch, stopPolling]);
+  }, [taskId, dispatch, stopPolling, entries, messages, revisionKey, handleRevisionFailure]);
 
   // Kick off polling 3s after a task_id lands; clear on unmount / task change.
   // Fast-poll every 3s for MAX_POLLS, then fall back to a slow background poll
@@ -982,17 +1032,16 @@ export default function ChatWindow() {
       try {
         await dispatch(generateEnterpriseDesign({ payload, round })).unwrap();
       } catch (error) {
-        setPendingRevisionGenerate(null);
-        toast.error(
+        const msg =
           typeof error === "string"
             ? error
             : error instanceof Error
               ? error.message
-              : "Failed to submit the design brief"
-        );
+              : "Failed to submit the design brief";
+        handleRevisionFailure(round, msg);
       }
     },
-    [pendingRevisionGenerate, entries, revisionComment, chat_original, watermark, work_type, id, episodes, dispatch]
+    [pendingRevisionGenerate, entries, revisionComment, chat_original, watermark, work_type, id, episodes, dispatch, handleRevisionFailure]
   );
 
   useEffect(() => {

@@ -84,13 +84,21 @@ export default function RevisionResultCard({
     entry.status === "processing" ||
     (!done && !failed);
 
-  // Reset regenerateClicked when the entry transitions back to failed so the
-  // user can click Regenerate again without being stuck in a disabled state.
+  // Reset regenerateClicked when the entry transitions back to failed or
+  // when no next active revision round exists in entries.
   useEffect(() => {
     if (failed) {
       setRegenerateClicked(false);
+      return;
     }
-  }, [failed]);
+    const currentEntryIdx = entries.findIndex((e) => e.id === entry.id);
+    const hasNextActiveRound = currentEntryIdx >= 0 && entries.some(
+      (e, idx) => idx > currentEntryIdx && e.type === "revision" && e.status !== "failed"
+    );
+    if (!hasNextActiveRound) {
+      setRegenerateClicked(false);
+    }
+  }, [failed, entries, entry.id]);
 
   useEffect(() => {
     if (!isGenerating) {

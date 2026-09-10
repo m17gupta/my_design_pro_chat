@@ -49,6 +49,24 @@ const enterpriseSlice = createSlice({
     }, 
     resetEditId(state) {
       state.editId = null;
+    },
+    removeFailedRevision(state, action: PayloadAction<{ round?: number; id?: string } | undefined>) {
+      const round = action?.payload?.round;
+      const id = action?.payload?.id;
+      if (id) {
+        state.entries = state.entries.filter((e) => e.id !== id);
+      } else if (round !== undefined && round > 0) {
+        const revisions = state.entries.filter((e) => e.type === "revision");
+        const target = revisions[round - 1];
+        if (target) {
+          state.entries = state.entries.filter((e) => e !== target);
+        }
+      }
+      state.entries = state.entries.filter(
+        (e) => !e.id.startsWith("pending-revision-") && (e.type !== "revision" || e.status !== "failed")
+      );
+      state.lifecycle = "idle";
+      state.error = null;
     }
   },
   extraReducers: (builder) => {
@@ -155,10 +173,11 @@ const enterpriseSlice = createSlice({
         if (entryIdx >= 0) {
           const entry = state.entries[entryIdx];
           if (action.payload.status === "failed") {
-            // Keep the failed entry in the array with status "failed" so the
-            // UI can render the card with all buttons enabled — letting the
-            // user retry without losing the revision card entirely.
-            entry.status = "failed";
+            if (entry.type === "revision") {
+              state.entries.splice(entryIdx, 1);
+            } else {
+              entry.status = "failed";
+            }
           } else {
             entry.status = action.payload.status;
             if (
@@ -190,5 +209,5 @@ const enterpriseSlice = createSlice({
   },
 });
 
-export const { resetEnterprise, setEntries, setEditId , resetEditId } = enterpriseSlice.actions;
+export const { resetEnterprise, setEntries, setEditId, resetEditId, removeFailedRevision } = enterpriseSlice.actions;
 export default enterpriseSlice.reducer;
