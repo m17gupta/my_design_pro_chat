@@ -17,7 +17,7 @@ const GENERATING_MESSAGES = [
   "Organizing your ideas...",
   "Making sure I didn't miss a thing...",
   "One last pass before we're done...",
-  "Don't leave; I'm finishing up.",
+  "Don't leave, I'm finishing up.",
   "Almost there! Just a few more seconds.",
 ];
 
@@ -131,7 +131,7 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -3 }}
                   transition={{ duration: 0.25 }}
-                  className="px-4 text-center text-xs font-medium text-zinc-600 dark:text-zinc-300"
+                  className="px-4 text-center text-sm font-medium text-zinc-600 dark:text-zinc-300"
                 >
                   {subtitle}
                 </motion.span>

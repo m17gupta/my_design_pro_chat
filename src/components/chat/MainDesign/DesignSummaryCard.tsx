@@ -305,7 +305,7 @@ export default function DesignSummaryCard({
                     </span>
                   </p>
                 ) : typeof answer === "string" ? (
-                  <p className="min-w-0 max-w-[60%]  text-left text-sm text-zinc-800 dark:text-zinc-100" title={answer}>
+                  <p className="min-w-0 max-w-[60%] text-left text-sm text-zinc-800 dark:text-zinc-100 whitespace-pre-wrap break-words" title={answer}>
                     {answer}
                   </p>
                 ) : isArray ? (
@@ -322,7 +322,7 @@ export default function DesignSummaryCard({
                     return (
                       <div className="flex flex-col gap-1 max-w-[60%]">
                         {notes.trim() && (
-                          <p className="text-left text-sm text-zinc-800 dark:text-zinc-100  w-full" title={notes}>
+                          <p className="text-left text-sm text-zinc-800 dark:text-zinc-100 w-full whitespace-pre-wrap break-words" title={notes}>
                             {notes}
                           </p>
                         )}
