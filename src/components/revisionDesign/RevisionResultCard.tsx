@@ -6,6 +6,8 @@ import type { EnterpriseEntry } from "@/store/enterprise/enterpriseType";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
+import CompareImage from "@/components/compareImage/CompareImage";
+
 /** Terminal project actions sent to the host via postMessage. */
 export type SubmitAction = "this_is_all_i_need" | "engage_designer";
 
@@ -70,13 +72,28 @@ export default function RevisionResultCard({
   onRegenerate,
   onEngageDesigner,
 }: RevisionResultCardProps) {
+  const [isCompareMode, setIsCompareMode] = useState(false);
   const [regenerateClicked, setRegenerateClicked] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
   const hasImage = Boolean(entry.url);
   const done = entry.status === "completed" || hasImage;
   const failed = entry.status === "failed";
   const { entries } = useSelector((state: RootState) => state.enterprise);
+  const { image_url } = useSelector((state: RootState) => state.chat);
   const getRevison = entries.filter((item) => item.type === "revision");
+
+  const originalEntry = entries.find((entry) => entry.type === "original");
+  const revisonlEntry = entries.filter((entry) => entry.type === "revision");
+
+  const resolvedInputImage =
+    round === 1
+      ? (originalEntry?.url || image_url || undefined)
+      : revisonlEntry[round - 2]?.url;
+
+  const resolvedOutputImage =
+    revisonlEntry[round - 1]?.url || entry.url;
+
+  const canCompare = Boolean(done && resolvedInputImage && resolvedOutputImage);
 
   const isGenerating =
     entry.status === "pending" ||
@@ -89,6 +106,7 @@ export default function RevisionResultCard({
   useEffect(() => {
     if (failed) {
       setRegenerateClicked(false);
+      setIsCompareMode(false);
       return;
     }
     const currentEntryIdx = entries.findIndex((e) => e.id === entry.id);
@@ -200,62 +218,35 @@ const handleDownload = async () => {
           )}
         </div>
 
-        <h3 className="mt-2 text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-        My Revised Design - Based on your request
-        </h3>
-        {/* <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
-          Thanks for the feedback — I&apos;ve applied your revision comments and
-          generated an updated concept below.
-        </p> */}
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <h3 className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            My Revised Design - Based on your request
+          </h3>
 
-        {/* Revision image — loading placeholder until the task completes. */}
-        <div className="relative mt-4 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">
-          {failed ? (
-            <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                className="text-red-400"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v4" />
-                <path d="M12 16h.01" />
-              </svg>
-              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
-                This revision could not be generated.
-              </p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Use &quot;Generate My Design&quot; above to try again.
-              </p>
-            </div>
-          ) : done ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={entry.url}
-                alt={`Revised design preview — revision ${round}`}
-                loading="lazy"
-                decoding="async"
-                className="block h-auto w-full object-cover"
-              />
-              {entry.url && (
-                <button
-                  type="button"
-                  onClick={handleDownload}
-                  title="Download Image"
-                  aria-label="Download revised design image"
-                  className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md transition-all duration-150 hover:bg-black/80 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-lg"
-                >
+          {/* Compare Button — positioned cleanly right above the preview card on the right */}
+          {canCompare && (
+            <button
+              type="button"
+              onClick={() => setIsCompareMode((prev) => !prev)}
+              aria-pressed={isCompareMode}
+              title={
+                isCompareMode
+                  ? "Return to single image preview"
+                  : round === 1
+                  ? "Compare revision with original design"
+                  : `Compare revision ${round} with revision ${round - 1}`
+              }
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all duration-150 shadow-sm ${
+                isCompareMode
+                  ? "bg-[#2e7d6b] text-white hover:bg-[#256657] shadow-[#2e7d6b]/20"
+                  : "border border-zinc-200/90 bg-zinc-50 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+              }`}
+            >
+              {isCompareMode ? (
+                <>
                   <svg
-                    width="18"
-                    height="18"
+                    width="13"
+                    height="13"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -264,31 +255,126 @@ const handleDownload = async () => {
                     strokeLinejoin="round"
                     aria-hidden="true"
                   >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
-                </button>
+                  <span>Exit Compare</span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="2" y="3" width="20" height="18" rx="2" />
+                    <line x1="12" y1="3" x2="12" y2="21" />
+                  </svg>
+                  <span>Compare</span>
+                </>
               )}
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-3 px-4 py-10">
-              <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-emerald-500" />
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={messageIndex}
-                  initial={{ opacity: 0, y: 3 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -3 }}
-                  transition={{ duration: 0.25 }}
-                  className="px-4 text-center text-sm font-medium text-zinc-600 dark:text-zinc-300"
-                >
-                  {subtitle}
-                </motion.p>
-              </AnimatePresence>
-            </div>
+            </button>
           )}
         </div>
+
+        {/* Revision image — loading placeholder until the task completes, or CompareImage when in compare mode */}
+        {done && isCompareMode ? (
+          <div className="mt-4">
+            <CompareImage
+              inputImage={resolvedInputImage}
+              outputImage={resolvedOutputImage}
+              outputLabel={`Revision ${round}`}
+              inputLabel={round === 1 ? "Original design" : `Revision ${round - 1}`}
+            />
+          </div>
+        ) : (
+          <div className="relative mt-4 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">
+            {failed ? (
+              <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  className="text-red-400"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4" />
+                  <path d="M12 16h.01" />
+                </svg>
+                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                  This revision could not be generated.
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Use &quot;Generate My Design&quot; above to try again.
+                </p>
+              </div>
+            ) : done ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={entry.url}
+                  alt={`Revised design preview — revision ${round}`}
+                  loading="lazy"
+                  decoding="async"
+                  className="block h-auto w-full object-cover"
+                />
+                {entry.url && (
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    title="Download Image"
+                    aria-label="Download revised design image"
+                    className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md transition-all duration-150 hover:bg-black/80 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-lg"
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-3 px-4 py-10">
+                <span className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-emerald-500" />
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={messageIndex}
+                    initial={{ opacity: 0, y: 3 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -3 }}
+                    transition={{ duration: 0.25 }}
+                    className="px-4 text-center text-sm font-medium text-zinc-600 dark:text-zinc-300"
+                  >
+                    {subtitle}
+                  </motion.p>
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+        )}
 
      
 
@@ -322,6 +408,7 @@ const handleDownload = async () => {
             <motion.button
               type="button"
               onClick={() => {
+                setIsCompareMode(false);
                 setRegenerateClicked(true);
                 onRegenerate();
               }}

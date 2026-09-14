@@ -618,6 +618,8 @@ export default function ChatWindow() {
        const payload = buildApiPayload(getApiQuestions(episodes), chat_original, {
         projectId: id,
         watermark: watermark,
+        role: role,
+        user_type: user_type,
         work_type: work_type,
         image_url: image_url,
         revision: revisionComment,
@@ -1024,6 +1026,8 @@ export default function ChatWindow() {
       const files = hasActiveFallback ? (commentToUse.files ?? []) : (entry?.questions[0]?.answer?.files ?? commentToUse.files ?? []);
       const payload = buildApiPayload(getApiQuestions(episodes), chat_original, {
         projectId: id,
+          role: role,
+        user_type: user_type,
         watermark: watermark ?? "",
         work_type: work_type ?? "",
         image_url: [...entries].reverse().find((e) => e.url)?.url ?? "",

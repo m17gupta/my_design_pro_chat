@@ -5,9 +5,10 @@ import { motion } from "framer-motion";
 import type { SubmitAction } from "@/components/revisionDesign/RevisionResultCard";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import CompareImage from "@/components/compareImage/CompareImage";
 
 interface DesignResultCardProps {
-  /** Generated design preview URL from the completed status result. */
+
   imageUrl: string;
   /** Disabled only while the entry itself is pending/failed — never because a revision exists. */
   disabled?: boolean;
@@ -39,8 +40,10 @@ export default function DesignResultCard({
   onEngageDesigner,
 }: DesignResultCardProps) {
   const { entries } = useSelector((state: RootState) => state.enterprise);
-  const { revision_comment } = useSelector((state: RootState) => state.chat);
-  const { dc_name } = useSelector((state: RootState) => state.chat);
+  const { revision_comment, dc_name, image_url } = useSelector(
+    (state: RootState) => state.chat
+  );
+  const resolvedInputImage = image_url;
   const revision = entries.filter((item) => item.type === "revision");
   const hasRevisionComment =
     revision_comment.notes !== "" || revision_comment.files.length > 0;
@@ -51,6 +54,8 @@ export default function DesignResultCard({
   );
   const interactive =
     !disabled && !submittedAction && !isEngagingDesigner && !isGeneratingRevision && revision.length <= 4;
+
+  const [isCompareMode, setIsCompareMode] = useState(false);
 
   const isRegenerateDisabled =
     hasRevisionComment || !interactive;
@@ -103,69 +108,135 @@ export default function DesignResultCard({
       className="w-full overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
     >
       <div className="p-4 sm:p-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
-            Before I get this project over to{" "}
-            <strong className="font-bold text-zinc-900 dark:text-zinc-50">
-              {dc_name || "your design coordinator"}
-            </strong>
-            , I have taken the liberty of generating an initial render of how I interpreted your requests.
-          </p>
-          {submittedAction && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
+              Before I get this project over to{" "}
+              <strong className="font-bold text-zinc-900 dark:text-zinc-50">
+                {dc_name || "your design coordinator"}
+              </strong>
+              , I have taken the liberty of generating an initial render of how I interpreted your requests.
+            </p>
+            {submittedAction && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                Submitted to your design team
+              </span>
+            )}
+          </div>
+
+          {/* Compare Button — positioned cleanly right above the preview card on the right */}
+          {resolvedInputImage && (
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setIsCompareMode((prev) => !prev)}
+                aria-pressed={isCompareMode}
+                title={isCompareMode ? "Return to single image preview" : "Compare design with original property"}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all duration-150 shadow-sm ${
+                  isCompareMode
+                    ? "bg-[#2e7d6b] text-white hover:bg-[#256657] shadow-[#2e7d6b]/20"
+                    : "border border-zinc-200/90 bg-zinc-50 text-zinc-700 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                }`}
               >
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              Submitted to your design team
-            </span>
+                {isCompareMode ? (
+                  <>
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                    <span>Exit Compare</span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="2" y="3" width="20" height="18" rx="2" />
+                      <line x1="12" y1="3" x2="12" y2="21" />
+                    </svg>
+                    <span>Compare</span>
+                  </>
+                )}
+              </button>
+            </div>
           )}
         </div>
 
-        <div className="relative mt-4 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={imageUrl}
-            alt="Generated design preview of your front yard"
-            loading="lazy"
-            decoding="async"
-            className="block h-auto w-full object-cover"
-          />
-          {imageUrl && (
-            <button
-              type="button"
-              onClick={handleDownload}
-              title="Download Image"
-              aria-label="Download design image"
-              className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md transition-all duration-150 hover:bg-black/80 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-lg"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+        {isCompareMode ? (
+          <div className="mt-2.5">
+            <CompareImage
+              inputImage={resolvedInputImage || undefined}
+              outputImage={imageUrl}
+            />
+          </div>
+        ) : (
+          <div className="relative mt-2.5 overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl}
+              alt="Generated design preview of your front yard"
+              loading="lazy"
+              decoding="async"
+              className="block h-auto w-full object-cover"
+            />
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={handleDownload}
+                title="Download Image"
+                aria-label="Download design image"
+                className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-xl bg-black/60 text-white backdrop-blur-md transition-all duration-150 hover:bg-black/80 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-lg"
               >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </button>
-          )}
-        </div>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
 
         {!(revision.length > 0 && revision[0].status === "completed") && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
