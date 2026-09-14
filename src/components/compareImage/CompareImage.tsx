@@ -29,12 +29,28 @@ export default function CompareImage({
 }: CompareImageProps) {
   const [sliderPosition, setSliderPosition] = useState(initialSliderPosition);
   const [isDragging, setIsDragging] = useState(false);
+  const [inputLoaded, setInputLoaded] = useState(!inputImage);
+  const [outputLoaded, setOutputLoaded] = useState(!outputImage);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
-
   const resolvedInputImage = inputImage || undefined;
   const resolvedOutputImage = outputImage || undefined;
+
+  useEffect(() => {
+    setInputLoaded(!inputImage);
+  }, [inputImage]);
+
+  useEffect(() => {
+    setOutputLoaded(!outputImage);
+  }, [outputImage]);
+
+  const isImagesLoading =
+    (!inputLoaded && !!resolvedInputImage) ||
+    (!outputLoaded && !!resolvedOutputImage) ||
+    (!resolvedInputImage && !resolvedOutputImage);
+
   const updatePosition = useCallback((clientX: number, targetElem: HTMLElement | null) => {
     if (!targetElem) return;
     const rect = targetElem.getBoundingClientRect();
@@ -95,8 +111,18 @@ export default function CompareImage({
       <div
         ref={containerRef}
         onPointerDown={handlePointerDown}
-        className="group relative aspect-[16/10] sm:aspect-[16/9] w-full cursor-ew-resize overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-950 shadow-sm dark:border-zinc-800"
+        className="group relative aspect-[16/10] sm:aspect-[16/9] w-full cursor-ew-resize overflow-hidden rounded-xl border border-zinc-200/80 bg-zinc-950 shadow-sm dark:border-zinc-800 touch-none"
       >
+        {/* Loading Overlay */}
+        {isImagesLoading && (
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-zinc-950/75 backdrop-blur-sm transition-opacity duration-200">
+            <div className="flex flex-col items-center gap-2.5">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-emerald-500" />
+              <span className="text-xs font-medium text-white/90">Loading comparison images...</span>
+            </div>
+          </div>
+        )}
+
         {/* Left Side Label (Generated proposal) */}
         <div className="pointer-events-none absolute left-3 top-3 z-30 flex items-center rounded-md bg-[#222b35]/85 px-2.5 py-1 text-xs font-medium text-white shadow-sm backdrop-blur-sm">
           {outputLabel}
@@ -114,7 +140,11 @@ export default function CompareImage({
           alt={inputLabel}
           loading="lazy"
           decoding="async"
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover select-none"
+          onLoad={() => setInputLoaded(true)}
+          onError={() => setInputLoaded(true)}
+          className={`pointer-events-none absolute inset-0 h-full w-full object-cover select-none transition-opacity duration-300 ${
+            inputLoaded ? "opacity-100" : "opacity-0"
+          }`}
         />
 
         {/* Foreground Image: Generated proposal (clipped to sliderPosition on left side) */}
@@ -130,7 +160,11 @@ export default function CompareImage({
             alt={outputLabel}
             loading="lazy"
             decoding="async"
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover select-none"
+            onLoad={() => setOutputLoaded(true)}
+            onError={() => setOutputLoaded(true)}
+            className={`pointer-events-none absolute inset-0 h-full w-full object-cover select-none transition-opacity duration-300 ${
+              outputLoaded ? "opacity-100" : "opacity-0"
+            }`}
           />
         </div>
 

@@ -651,10 +651,11 @@ export default function ChatWindow() {
   const taskStatus = latestEnterpriseEntry?.status;
   const pollRef = useRef<number | null>(null);
   const pollCountRef = useRef(0);
+  const isFetchingRef = useRef(false);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current !== null) {
-      window.clearInterval(pollRef.current);
+      window.clearTimeout(pollRef.current);
       pollRef.current = null;
     }
   }, []);
@@ -698,8 +699,9 @@ export default function ChatWindow() {
     [revisionKey, clearTypingTimeout, dispatch]
   );
 
-  const getStatus = useCallback(async () => {
-    if (!taskId || taskId.startsWith("pending-revision-")) return;
+  const getStatus = useCallback(async (): Promise<boolean> => {
+    if (!taskId || taskId.startsWith("pending-revision-") || isFetchingRef.current) return false;
+    isFetchingRef.current = true;
     try {
       const res = await dispatch(fetchEnterpriseStatus(taskId)).unwrap();
       // Reset error counter on any successful response.
@@ -717,7 +719,9 @@ export default function ChatWindow() {
             toast.error(res.error ?? "Design generation failed. Please try again.");
           }
         }
+        return true;
       }
+      return false;
     } catch (error) {
       // Transient failure (network blip / proxy 5xx). Keep polling — the task
       // may still complete. Only surface a toast after 3 consecutive failures
@@ -740,39 +744,42 @@ export default function ChatWindow() {
           setPendingRevisionGenerate(null);
           toast.error(msg);
         }
+        return true;
       }
+      return false;
+    } finally {
+      isFetchingRef.current = false;
     }
   }, [taskId, dispatch, stopPolling, entries, messages, revisionKey, handleRevisionFailure]);
 
-  // Kick off polling 3s after a task_id lands; clear on unmount / task change.
-  // Fast-poll every 3s for MAX_POLLS, then fall back to a slow background poll
-  // (SLOW_POLL_MS) so a long-running task still lands in Redux when it completes.
+  // Kick off sequential polling 3s after a task_id lands; clear on unmount / task change.
+  // Fast-poll every 3s after previous response returns for MAX_POLLS, then fall back
+  // to a slow background poll (SLOW_POLL_MS) so a long-running task still lands in Redux.
   useEffect(() => {
     // Do not poll for locally-generated placeholder IDs — they are not real
     // backend task IDs and will 404 the status endpoint.
     if (!taskId || taskId.startsWith("pending-revision-")) return;
+    let isCancelled = false;
     pollCountRef.current = 0;
-    const startTimer = window.setTimeout(() => {
-      const tick = async () => {
+
+    const scheduleNext = (delay: number) => {
+      if (isCancelled) return;
+      pollRef.current = window.setTimeout(async () => {
+        if (isCancelled) return;
         pollCountRef.current += 1;
-        if (pollCountRef.current > MAX_POLLS) {
-          // Fast budget exhausted — the task may still be generating. Switch
-          // to the slow cadence instead of giving up (giving up leaves Redux
-          // stuck on a stale status while the API eventually completes).
-          stopPolling();
-          pollRef.current = window.setInterval(
-            () => void getStatus(),
-            SLOW_POLL_MS
-          );
-          return;
-        }
-        await getStatus();
-      };
-      void tick();
-      pollRef.current = window.setInterval(() => void tick(), POLL_MS);
-    }, POLL_START_MS);
+
+        const isDone = await getStatus();
+        if (isCancelled || isDone) return;
+
+        const nextDelay = pollCountRef.current >= MAX_POLLS ? SLOW_POLL_MS : POLL_MS;
+        scheduleNext(nextDelay);
+      }, delay);
+    };
+
+    scheduleNext(POLL_START_MS);
+
     return () => {
-      window.clearTimeout(startTimer);
+      isCancelled = true;
       stopPolling();
     };
   }, [taskId, getStatus, stopPolling]);
