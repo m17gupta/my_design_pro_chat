@@ -1,0 +1,60 @@
+{
+  "projectId": 138711,
+  "watermark": "https://mydesigns.pro/img/luna-logo.png",
+  "work_type": "front_yard",
+  "image_url": "https://dzinlyv2.s3.us-east-2.amazonaws.com/luna-ai/138711/premium_design_acf5edf5-550b-4f19-a4cf-ec1cfd9b0bee.png",
+  "value": "",
+  "user_type": "",
+  "dc_name": "",
+  "role": null,
+  "original": {
+    "project_goals_or_brief_description": {
+      "name": "Project Goals/Brief Description",
+      "question": "<p>In a few sentences, tell me what you'd love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind.</p>",
+      "answer": "Completely redesign and transform the front-yard landscape to create a more attractive, modern, welcoming, and functional outdoor space. Replace or reconfigure the existing planting beds, lawn areas, edging, walkway surroundings, and entry landscaping where needed. Introduce clearly defined landscape zones, improved plant layering, refreshed hardscape elements, and stronger visual interest around the front of the house. The final design should noticeably change the existing landscape while preserving the house structure and complementing the home's architecture."
+    },
+    "landscape_design_style_preference": {
+      "name": "Landscape Design Style Preference",
+      "question": "<p>Does your client have a preferred style they’re drawn to? For example, clean and modern, classic and timeless, natural and relaxed, or something else?</p><p class='mt-3'>Feel free to upload up to 4 inspirational images that help show the style or look your client has in mind.</p>",
+      "answer": {
+        "files": [],
+        "notes": "Create a clean, modern, professionally landscaped front yard with strong visual organization and clearly defined planting areas. Redesign the existing landscape rather than simply maintaining its current layout. Use clean bed lines, structured plant groupings, layered greenery, ornamental grasses, flowering accents, and intentional focal points near the entry. Reconfigure or replace existing lawn, planting beds, edging, and landscape elements as necessary to produce a visibly refreshed and polished front-yard design."
+      }
+    },
+    "hardscape_material_preferences": {
+      "name": "Hardscape / Material Preferences",
+      "question": "<p>Are there any specific hardscape materials or styles you’d like us to keep in mind for this design?</p><p class='mt-3'>Feel free to upload up to 4 inspirational images that help show the style or look your client has in mind.</p>",
+      "answer": {
+        "files": [],
+        "notes": "Upgrade the front-yard hardscape where appropriate. Replace outdated or visually weak walkway and edging elements with a cleaner modern design using large-format concrete or porcelain pavers, natural stone accents, and crisp landscape edging. Use neutral gray, warm beige, or light natural-stone tones that coordinate with the house. Improve the transitions between the walkway, lawn, planting beds, and front entry, and add or reshape hardscape borders where needed to create a more intentional and professionally designed landscape."
+      }
+    },
+    "softscape_planting_preferences": {
+      "name": "Softscape / Planting Preferences",
+      "question": "<p>Are there any plant styles, colors, or types you’d like us to keep in mind?</p><p class='mt-3'>Feel free to upload up to 4 inspirational images of plants, planting styles, or landscapes that reflect what your client has in mind.</p>",
+      "answer": {
+        "files": [],
+        "notes": "Significantly redesign the existing planting scheme. Remove or replace overgrown, sparse, unhealthy, poorly positioned, or visually inconsistent vegetation and introduce a new layered planting composition. Use a balanced mix of evergreen foundation shrubs, ornamental grasses, flowering perennials, low groundcovers, and a few small ornamental or accent trees where space allows. Create organized plant groupings with varied heights and textures instead of isolated plants. Use fresh green foliage with white, lavender, and subtle seasonal flowering accents. Expand or reshape planting beds where beneficial and reduce unnecessary open lawn areas if doing so improves the overall composition. The final landscape should look clearly different from the existing yard while remaining refined, low-maintenance, and appropriate for the home's architecture."
+      }
+    },
+    "budget": {
+      "name": "Budget",
+      "question": "<p>What investment range feels most comfortable for this project?</p>",
+      "answer": "$150,000+"
+    },
+    "important_proprty_information": {
+      "name": "Important Property Information",
+      "question": "<p>Is there anything else that comes to mind on this property we should know before we wrap up?</p>",
+      "answer": {
+        "value": [
+          "Septic field"
+        ],
+        "notes": "Keep the septic field accessible and avoid major permanent structures, deep-rooted trees, or heavy hardscape directly over the septic area. The surrounding landscape may still be redesigned using appropriate shallow-rooted planting and lawn treatments."
+      }
+    }
+  },
+  "revision_comment": {
+    "files": [],
+    "notes": ""
+  }
+}

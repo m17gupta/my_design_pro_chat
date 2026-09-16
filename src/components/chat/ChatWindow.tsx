@@ -700,7 +700,16 @@ export default function ChatWindow() {
   );
 
   const getStatus = useCallback(async (): Promise<boolean> => {
-    if (!taskId || taskId.startsWith("pending-revision-") || isFetchingRef.current) return false;
+    if (
+      !taskId ||
+      taskId.startsWith("pending-revision-") ||
+      isFetchingRef.current ||
+      taskStatus === "completed" ||
+      taskStatus === "failed" ||
+      Boolean(latestEnterpriseEntry?.url)
+    ) {
+      return !taskId || taskId.startsWith("pending-revision-") ? false : true;
+    }
     isFetchingRef.current = true;
     try {
       const res = await dispatch(fetchEnterpriseStatus(taskId)).unwrap();
@@ -750,15 +759,22 @@ export default function ChatWindow() {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [taskId, dispatch, stopPolling, entries, messages, revisionKey, handleRevisionFailure]);
+  }, [taskId, taskStatus, latestEnterpriseEntry?.url, dispatch, stopPolling, entries, messages, revisionKey, handleRevisionFailure]);
 
   // Kick off sequential polling 3s after a task_id lands; clear on unmount / task change.
   // Fast-poll every 3s after previous response returns for MAX_POLLS, then fall back
   // to a slow background poll (SLOW_POLL_MS) so a long-running task still lands in Redux.
   useEffect(() => {
-    // Do not poll for locally-generated placeholder IDs — they are not real
-    // backend task IDs and will 404 the status endpoint.
-    if (!taskId || taskId.startsWith("pending-revision-")) return;
+    // Do not poll for locally-generated placeholder IDs or already-finished tasks.
+    if (
+      !taskId ||
+      taskId.startsWith("pending-revision-") ||
+      taskStatus === "completed" ||
+      taskStatus === "failed" ||
+      Boolean(latestEnterpriseEntry?.url)
+    ) {
+      return;
+    }
     let isCancelled = false;
     pollCountRef.current = 0;
 
@@ -782,18 +798,26 @@ export default function ChatWindow() {
       isCancelled = true;
       stopPolling();
     };
-  }, [taskId, getStatus, stopPolling]);
+  }, [taskId, taskStatus, latestEnterpriseEntry?.url, getStatus, stopPolling]);
 
   // When the user returns to the tab, immediately re-check the latest task so
   // a design that completed while the tab was backgrounded reaches Redux.
   useEffect(() => {
-    if (!taskId || taskId.startsWith("pending-revision-")) return;
+    if (
+      !taskId ||
+      taskId.startsWith("pending-revision-") ||
+      taskStatus === "completed" ||
+      taskStatus === "failed" ||
+      Boolean(latestEnterpriseEntry?.url)
+    ) {
+      return;
+    }
     const onVisible = () => {
       if (document.visibilityState === "visible") void getStatus();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [taskId, getStatus]);
+  }, [taskId, taskStatus, latestEnterpriseEntry?.url, getStatus]);
 
   // get status 
 
@@ -1335,9 +1359,44 @@ export default function ChatWindow() {
 
                   // Extract already-uploaded image URLs from Redux so UserAnswerBubble
                   // can render thumbnails for the user's submitted answer.
-                  // Covers: string[] (upload-only), { files, notes } (text+upload answers).
+                  // Covers: string[] (upload-only), { files, notes } (text+upload answers),
+                  // as well as revision comments from entries or revision_comment.
                   const answerImageUrls: string[] = (() => {
                     if (m.role !== 'user') return [];
+
+                    // Handle revision user messages (where files are in enterprise entries or revision_comment)
+                    if (isRevisionUserMsg || messageEpisodes[m.id] === revisionKey) {
+                      let round = 1;
+                      if (m.id.startsWith(`m-restored-ep-${revisionKey}`)) {
+                        const parsed = parseInt(m.id.replace(`m-restored-ep-${revisionKey}-`, ''), 10);
+                        round = Number.isFinite(parsed) ? parsed : 1;
+                      } else if (i > 0 && messages[i - 1]?.id.startsWith(`ep-${revisionKey}`)) {
+                        const prevId = messages[i - 1].id;
+                        const parsed = parseInt(prevId.replace(`ep-${revisionKey}-`, ''), 10);
+                        round = Number.isFinite(parsed) ? parsed : 1;
+                      } else {
+                        const revUserMsgs = messages.slice(0, i + 1).filter(
+                          (msg) =>
+                            msg.role === 'user' &&
+                            (messageEpisodes[msg.id] === revisionKey || msg.id.includes(`ep-${revisionKey}`))
+                        );
+                        round = Math.max(1, revUserMsgs.length);
+                      }
+
+                      const revEntries = entries.filter((e) => e.type === 'revision');
+                      const revEntry = revEntries[round - 1];
+                      const entryFiles = revEntry?.questions?.[0]?.answer?.files;
+                      if (Array.isArray(entryFiles) && entryFiles.length > 0) {
+                        return entryFiles;
+                      }
+
+                      if (Array.isArray(revisionComment?.files) && revisionComment.files.length > 0) {
+                        return revisionComment.files;
+                      }
+
+                      return [];
+                    }
+
                     const epKey = messageEpisodes[m.id];
                     if (!epKey) return [];
                     const item = briefPayload.original[epKey];

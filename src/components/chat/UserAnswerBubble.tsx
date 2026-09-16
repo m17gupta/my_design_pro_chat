@@ -65,15 +65,18 @@ function UserAnswerBubble({
 
   const itemUrlsList = item ? itemUrls(item) : [];
   const finalImageUrls = itemUrlsList.length > 0 ? itemUrlsList : imageUrls;
-  const finalContent = item ? answerToText(item) : content;
+  const rawContent = item ? answerToText(item) : content;
 
   const editRef = useRef<HTMLTextAreaElement>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const isOptionEdit = Boolean(editing && editOptions?.length);
   const hasImages = finalImageUrls.length > 0;
-  const isUploadSummaryText = /^\d+ files? uploaded$/i.test(finalContent.trim());
-  const hasText = finalContent.trim().length > 0 && (!hasImages || !isUploadSummaryText);
+  const finalContent = hasImages
+    ? rawContent.replace(/^\d+ files? uploaded\n?/i, "").trim()
+    : rawContent.trim();
+  const isUploadSummaryText = /^\d+ files? uploaded$/i.test(finalContent);
+  const hasText = finalContent.length > 0 && (!hasImages || !isUploadSummaryText);
   // Auto-resize textarea
   useEffect(() => {
     if (editing && editRef.current) {
