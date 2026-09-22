@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { uploadFile, type UploadResult } from "../../lib/upload";
 import { useAppSelector } from "../../store/hooks";
+import { ExcelIcon } from "./ExcelIcon";
 import type { UploadSpec } from "./types";
 
 const ALLOWED_EXTENSIONS = [
@@ -17,6 +18,9 @@ const ALLOWED_EXTENSIONS = [
   ".pdf",
   ".doc",
   ".docx",
+  ".xls",
+  ".xlsx",
+  ".csv",
 ];
 
 const ACCEPT_FORMATS = ALLOWED_EXTENSIONS.join(",") + ",image/*";
@@ -29,13 +33,14 @@ function getFileExt(nameOrUrl: string): string {
   return "." + parts.pop()!.toLowerCase();
 }
 
-type FileCategory = "image" | "pdf" | "doc" | "cad" | "other";
+type FileCategory = "image" | "pdf" | "doc" | "excel" | "cad" | "other";
 
 function getFileCategory(nameOrUrl: string): FileCategory {
   const ext = getFileExt(nameOrUrl);
   if ([".jpg", ".jpeg", ".png", ".gif", ".webp"].includes(ext)) return "image";
   if (ext === ".pdf") return "pdf";
   if ([".doc", ".docx"].includes(ext)) return "doc";
+  if ([".xls", ".xlsx", ".csv"].includes(ext)) return "excel";
   if ([".dwg", ".rvt", ".skp"].includes(ext)) return "cad";
   return "other";
 }
@@ -314,6 +319,13 @@ function UploadZone({
                           {file.name}
                         </span>
                       </div>
+                    ) : category === "excel" ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-emerald-50 dark:bg-emerald-950/30">
+                        <ExcelIcon className="h-9 w-9 mb-1 drop-shadow-sm" />
+                        <span className="w-full truncate text-[10px] font-medium leading-tight text-emerald-950 dark:text-emerald-200 px-1">
+                          {file.name}
+                        </span>
+                      </div>
                     ) : (
                       <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                         <i className="bi bi-file text-3xl mb-1" />
@@ -409,6 +421,13 @@ function UploadZone({
                           {fileName}
                         </span>
                       </div>
+                    ) : category === "excel" ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-emerald-50 dark:bg-emerald-950/30">
+                        <ExcelIcon className="h-9 w-9 mb-1 drop-shadow-sm" />
+                        <span className="w-full truncate text-[10px] font-medium leading-tight text-emerald-950 dark:text-emerald-200 px-1">
+                          {fileName}
+                        </span>
+                      </div>
                     ) : (
                       <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                         <i className="bi bi-file text-3xl mb-1" />
@@ -494,6 +513,8 @@ function UploadZone({
                   <i className="bi bi-file-earmark-pdf text-base text-red-500 shrink-0" />
                 ) : category === "doc" ? (
                   <i className="bi bi-file-earmark-word text-base text-blue-600 shrink-0" />
+                ) : category === "excel" ? (
+                  <ExcelIcon className="h-4 w-4 shrink-0" />
                 ) : category === "cad" ? (
                   <i className="bi bi-file text-base text-zinc-500 shrink-0" />
                 ) : (

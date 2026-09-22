@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { summaryCopyForWorkType } from "../types";
 import { buildEpisodesFromContext } from "../flow";
+import { ExcelIcon } from "../ExcelIcon";
 
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -12,7 +13,7 @@ import { isAnswerEmpty, answerToText } from "@/lib/briefDisplay";
 import { selectQuestionnaireSequence } from "@/store/questionnaires/questionnaireSlice";
 
 // ── File-type helpers ─────────────────────────────────────────────────────────
-type FileCategory = "image" | "pdf" | "doc" | "cad" | "other";
+type FileCategory = "image" | "pdf" | "doc" | "excel" | "cad" | "other";
 
 function getFileExt(nameOrUrl: string): string {
   if (!nameOrUrl) return "";
@@ -27,15 +28,17 @@ function getFileCategory(nameOrUrl: string): FileCategory {
   if ([".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"].includes(ext)) return "image";
   if (ext === ".pdf") return "pdf";
   if ([".doc", ".docx"].includes(ext)) return "doc";
+  if ([".xls", ".xlsx", ".csv"].includes(ext)) return "excel";
   if ([".dwg", ".rvt", ".skp"].includes(ext)) return "cad";
   return "other";
 }
 
 const FILE_ICON: Record<Exclude<FileCategory, "image">, { icon: string; bg: string; text: string; label: string }> = {
-  pdf:   { icon: "bi bi-file-earmark-pdf-fill", bg: "bg-red-50 dark:bg-red-950/40",       text: "text-red-500 dark:text-red-400",       label: "PDF"  },
-  doc:   { icon: "bi bi-file-earmark-word-fill",bg: "bg-blue-50 dark:bg-blue-950/40",     text: "text-blue-500 dark:text-blue-400",     label: "DOC"  },
-  cad:   { icon: "bi bi-rulers",                bg: "bg-violet-50 dark:bg-violet-950/40", text: "text-violet-500 dark:text-violet-400", label: "CAD"  },
-  other: { icon: "bi bi-file-earmark-fill",     bg: "bg-zinc-100 dark:bg-zinc-800",       text: "text-zinc-500 dark:text-zinc-400",     label: "File" },
+  pdf:   { icon: "bi bi-file-earmark-pdf-fill",   bg: "bg-red-50 dark:bg-red-950/40",       text: "text-red-500 dark:text-red-400",       label: "PDF"   },
+  doc:   { icon: "bi bi-file-earmark-word-fill",  bg: "bg-blue-50 dark:bg-blue-950/40",     text: "text-blue-500 dark:text-blue-400",     label: "DOC"   },
+  excel: { icon: "bi bi-file-earmark-excel-fill", bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-600 dark:text-emerald-400", label: "XLS" },
+  cad:   { icon: "bi bi-rulers",                  bg: "bg-violet-50 dark:bg-violet-950/40", text: "text-violet-500 dark:text-violet-400", label: "CAD"   },
+  other: { icon: "bi bi-file-earmark-fill",       bg: "bg-zinc-100 dark:bg-zinc-800",       text: "text-zinc-500 dark:text-zinc-400",     label: "File"  },
 };
 
 // ── Image modal (portal — escapes overflow/transform parents) ────────────────
@@ -149,6 +152,8 @@ function FileThumbnail({ url, idx, onImageClick }: { url: string; idx: number; o
     >
       {downloading ? (
         <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent opacity-60" />
+      ) : category === "excel" ? (
+        <ExcelIcon className="h-5 w-5 drop-shadow-sm" />
       ) : (
         <>
           <i className={`${cfg.icon} ${cfg.text} text-[15px] leading-none`} />

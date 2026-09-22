@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useAppSelector } from "../../store/hooks";
 import { selectBriefPayload } from "../../store/briefSlice";
 import { answerToText, itemUrls } from "../../lib/briefDisplay";
+import { ExcelIcon } from "./ExcelIcon";
 
 function getFileExt(nameOrUrl: string): string {
   if (!nameOrUrl) return "";
@@ -14,13 +15,14 @@ function getFileExt(nameOrUrl: string): string {
   return "." + parts.pop()!.toLowerCase();
 }
 
-type FileCategory = "image" | "pdf" | "doc" | "cad" | "other";
+type FileCategory = "image" | "pdf" | "doc" | "excel" | "cad" | "other";
 
 function getFileCategory(nameOrUrl: string): FileCategory {
   const ext = getFileExt(nameOrUrl);
   if ([".jpg", ".jpeg", ".png", ".gif", ".webp"].includes(ext)) return "image";
   if (ext === ".pdf") return "pdf";
   if ([".doc", ".docx"].includes(ext)) return "doc";
+  if ([".xls", ".xlsx", ".csv"].includes(ext)) return "excel";
   if ([".dwg", ".rvt", ".skp"].includes(ext)) return "cad";
   return "other";
 }
@@ -238,7 +240,7 @@ function UserAnswerBubble({
                         );
                       }
 
-                      // Non-image file rendering (PDF, Word, CAD, etc.)
+                      // Non-image file rendering (PDF, Word, Excel, CAD, etc.)
                       const iconClass =
                         category === "pdf"
                           ? "bi bi-file-earmark-pdf text-red-400 text-2xl"
@@ -255,7 +257,11 @@ function UserAnswerBubble({
                           title={`Open ${fileName}`}
                           className="group relative flex h-16 w-16 flex-col items-center justify-center rounded-xl border border-white/20 bg-black/30 p-1 transition-transform hover:scale-105 hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                         >
-                          <i className={`${iconClass} transition-transform group-hover:scale-110`} />
+                          {category === "excel" ? (
+                            <ExcelIcon className="h-7 w-7 transition-transform group-hover:scale-110 drop-shadow" />
+                          ) : (
+                            <i className={`${iconClass} transition-transform group-hover:scale-110`} />
+                          )}
                           <span className="w-full truncate text-[9px] font-medium leading-tight text-white/90 text-center px-0.5 mt-0.5">
                             {fileName}
                           </span>

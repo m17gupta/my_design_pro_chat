@@ -960,7 +960,7 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
             title: cardTitle,
             description: displayDetails,
             fields: [
-              { kind: "upload-grid", count: q.max_files ?? 4, accept: ".jpg,.jpeg,.png,.gif,.webp,.dwg,.rvt,.skp,.pdf,.doc,.docx,image/*" },
+              { kind: "upload-grid", count: q.max_files ?? 4, accept: ".jpg,.jpeg,.png,.gif,.webp,.dwg,.rvt,.skp,.pdf,.doc,.docx,.xls,.xlsx,.csv,image/*" },
             ],
           },
           api: api("urls"),
@@ -1048,8 +1048,9 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
                 kind: "textarea",
                 placeholder: q.placeholder || "Share your thoughts",
                 rows: 3,
+                required: q.required ?? true,
               },
-              { kind: "upload-grid", count: q.max_files ?? 4, accept: ".jpg,.jpeg,.png,.gif,.webp,.dwg,.rvt,.skp,.pdf,.doc,.docx,image/*" },
+              { kind: "upload-grid", count: q.max_files ?? 4, accept: ".jpg,.jpeg,.png,.gif,.webp,.dwg,.rvt,.skp,.pdf,.doc,.docx,.xls,.xlsx,.csv,image/*" },
             ],
           },
           api: api("files-notes"),
@@ -1245,7 +1246,17 @@ export function buildEpisodesFromContext(
           apiKey: ep.apiKey === "revision_comments" ? "revision" : ep.apiKey,
           revisionStep: true,
           api: undefined,
-          ...(ep.card ? { card: { ...ep.card, title: "" } } : {}),
+          ...(ep.card
+            ? {
+                card: {
+                  ...ep.card,
+                  title: "",
+                  fields: ep.card.fields.map((f) =>
+                    f.kind === "textarea" ? { ...f, required: true } : f
+                  ),
+                },
+              }
+            : {}),
         });
       }
     }

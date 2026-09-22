@@ -81,6 +81,7 @@ interface MessageBubbleProps {
   apiKey?: string
   editingNextMessage?: boolean
   onOptionEditSave?: (text: string) => void
+  isRevisionCard?: boolean
 }
 
 /**
@@ -244,6 +245,7 @@ export const MessageBubble = ({
   editingNextMessage = false,
   onOptionEditSave,
   workType,
+  isRevisionCard = false,
 }: MessageBubbleProps) => {
   const isUser = message.role === 'user'
   const reduceMotion = useReducedMotion() ?? false
@@ -493,6 +495,13 @@ export const MessageBubble = ({
                         initialAnswer={initialAnswer ?? message.initialAnswer}
                         disabled={disabled}
                         showHeader={false}
+                        isRevision={
+                          isRevisionCard ||
+                          message.id === 'ep-revision' ||
+                          message.id.startsWith('ep-revision-') ||
+                          message.id.startsWith('ep-revision_comments') ||
+                          Boolean(message.card && (message.card.title?.toLowerCase().includes('revision') || message.card.description?.toLowerCase().includes('revision')))
+                        }
                         onSubmit={onCardSubmit ?? (() => {})}
                         onCancel={onCardCancel}
                       />

@@ -26,6 +26,8 @@ interface QuestionCardProps {
   /** Hide the title/description block when Luna already typed it in a bubble. */
   showHeader?: boolean;
   onCancel?: () => void;
+  /** When true (e.g. revision comment step), text is compulsory and image upload is optional. */
+  isRevision?: boolean;
 }
 
 function QuestionCard({
@@ -36,6 +38,7 @@ function QuestionCard({
   onSubmit,
   showHeader = true,
   onCancel,
+  isRevision = false,
 }: QuestionCardProps) {
 
   // console.log("spec--",spec)
@@ -169,7 +172,7 @@ function QuestionCard({
       const hasTextarea = spec.fields.some((f) => f.kind === "textarea");
       const hasUploadGrid = spec.fields.some((f) => f.kind === "upload-grid");
 
-      // 3. Combined Textarea + Upload-Grid fields: if user gives answer to EITHER text OR upload image, Next button is active!
+      // 3. Combined Textarea + Upload-Grid fields:
       if (hasTextarea && hasUploadGrid) {
         const hasText = spec.fields.some(
           (f, i) => f.kind === "textarea" && (textByField[i] ?? "").trim().length > 0
@@ -177,6 +180,22 @@ function QuestionCard({
         const hasUpload = Object.values(urlsByField).some(
           (slotMap) => Object.keys(slotMap ?? {}).length > 0
         );
+
+        // For revision case or when a textarea is explicitly required:
+        // text is compulsory, image upload is optional. Disable Next until text is typed.
+        const isRevisionCard =
+          isRevision ||
+          spec.title?.toLowerCase().includes("revision") ||
+          spec.description?.toLowerCase().includes("revision");
+
+        const textareaRequired =
+          isRevisionCard ||
+          spec.fields.some((f) => f.kind === "textarea" && f.required === true);
+
+        if (textareaRequired) {
+          return hasText;
+        }
+
         if (hasText || hasUpload) return true;
         return !isRequired;
       }

@@ -1305,9 +1305,11 @@ export default function ChatWindow() {
                       ? m.id
                       : episodeApiKey;
                   // Only editable episodes get an edit icon on their user answer
-                  // (overview / photos are marked non-editable).
+                  // (overview / photos are marked non-editable, and revision answers cannot be edited from chat).
                   const isRevisionUserMsg = m.role === "user" && (
                     messageEpisodes[m.id] === revisionKey ||
+                    m.id.startsWith(`m-restored-ep-${revisionKey}`) ||
+                    m.id.includes(`ep-${revisionKey}`) ||
                     (i > 0 && messages[i - 1]?.id.startsWith(`ep-${revisionKey}`))
                   );
                   const msgEpId = messageEpisodes[m.id] ?? (isRevisionUserMsg || m.id.startsWith(`ep-${revisionKey}`) ? revisionKey : undefined);
@@ -1319,19 +1321,16 @@ export default function ChatWindow() {
                     ? episodes.some((e) => e.apiKey === msgEpId)
                     : false;
 
-                  const msgRevisionEntries = entries.filter(
-                    (entry) => entry.type === "revision"
-                  );
-                  const hideRevisionEdit =
-                    (msgEpId === revisionKey || isRevisionUserMsg) &&
-                    msgRevisionEntries.length > 0 &&
-                    msgRevisionEntries.every(e => e.status === "completed");
+                  const isRevision =
+                    isRevisionUserMsg ||
+                    msgEpId === revisionKey ||
+                    Boolean(msgEpisode?.revisionStep);
 
                   const canEdit =
                     m.role === "user" &&
+                    !isRevision &&
                     (msgEpisode?.editable ?? true) &&
-                    (!isFlowChat || !hasCompletedEntry) &&
-                    !hideRevisionEdit;
+                    (!isFlowChat || !hasCompletedEntry);
 
                 
                   // Key by message id only (stable) so editing-state changes don't
@@ -1434,6 +1433,9 @@ export default function ChatWindow() {
                        onOption={isCurrent ? advance : undefined}
                        answerImageUrls={answerImageUrls}
                        editingNextMessage={editingNextMessage}
+                       isRevisionCard={
+                         m.id.startsWith(`ep-${revisionKey}`) && !isRevisionSummary
+                       }
                        onOptionEditSave={
                          editingNextMessage && nextMsg
                            ? (text) => handleEditSave(nextMsg.id, text)
