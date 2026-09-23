@@ -6,6 +6,7 @@ import { useAppSelector } from "../../store/hooks";
 import { selectBriefPayload } from "../../store/briefSlice";
 import { answerToText, itemUrls } from "../../lib/briefDisplay";
 import { ExcelIcon } from "./ExcelIcon";
+import { CadIcon } from "./CadIcon";
 
 function getFileExt(nameOrUrl: string): string {
   if (!nameOrUrl) return "";
@@ -23,7 +24,7 @@ function getFileCategory(nameOrUrl: string): FileCategory {
   if (ext === ".pdf") return "pdf";
   if ([".doc", ".docx"].includes(ext)) return "doc";
   if ([".xls", ".xlsx", ".csv"].includes(ext)) return "excel";
-  if ([".dwg", ".rvt", ".skp"].includes(ext)) return "cad";
+  if ([".dwg", ".dxf", ".rvt", ".skp"].includes(ext)) return "cad";
   return "other";
 }
 
@@ -259,6 +260,8 @@ function UserAnswerBubble({
                         >
                           {category === "excel" ? (
                             <ExcelIcon className="h-7 w-7 transition-transform group-hover:scale-110 drop-shadow" />
+                          ) : category === "cad" ? (
+                            <CadIcon className="h-7 w-7 transition-transform group-hover:scale-110 drop-shadow" />
                           ) : (
                             <i className={`${iconClass} transition-transform group-hover:scale-110`} />
                           )}

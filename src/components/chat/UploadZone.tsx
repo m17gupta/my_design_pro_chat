@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import { uploadFile, type UploadResult } from "../../lib/upload";
 import { useAppSelector } from "../../store/hooks";
 import { ExcelIcon } from "./ExcelIcon";
+import { CadIcon } from "./CadIcon";
 import type { UploadSpec } from "./types";
 
 const ALLOWED_EXTENSIONS = [
@@ -13,6 +14,7 @@ const ALLOWED_EXTENSIONS = [
   ".gif",
   ".webp",
   ".dwg",
+  ".dxf",
   ".rvt",
   ".skp",
   ".pdf",
@@ -41,7 +43,7 @@ function getFileCategory(nameOrUrl: string): FileCategory {
   if (ext === ".pdf") return "pdf";
   if ([".doc", ".docx"].includes(ext)) return "doc";
   if ([".xls", ".xlsx", ".csv"].includes(ext)) return "excel";
-  if ([".dwg", ".rvt", ".skp"].includes(ext)) return "cad";
+  if ([".dwg", ".dxf", ".rvt", ".skp"].includes(ext)) return "cad";
   return "other";
 }
 
@@ -326,6 +328,13 @@ function UploadZone({
                           {file.name}
                         </span>
                       </div>
+                    ) : category === "cad" ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-violet-50 dark:bg-violet-950/30">
+                        <CadIcon className="h-9 w-9 mb-1 drop-shadow-sm" />
+                        <span className="w-full truncate text-[10px] font-medium leading-tight text-violet-950 dark:text-violet-200 px-1">
+                          {file.name}
+                        </span>
+                      </div>
                     ) : (
                       <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                         <i className="bi bi-file text-3xl mb-1" />
@@ -428,6 +437,13 @@ function UploadZone({
                           {fileName}
                         </span>
                       </div>
+                    ) : category === "cad" ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-violet-50 dark:bg-violet-950/30">
+                        <CadIcon className="h-9 w-9 mb-1 drop-shadow-sm" />
+                        <span className="w-full truncate text-[10px] font-medium leading-tight text-violet-950 dark:text-violet-200 px-1">
+                          {fileName}
+                        </span>
+                      </div>
                     ) : (
                       <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                         <i className="bi bi-file text-3xl mb-1" />
@@ -516,7 +532,7 @@ function UploadZone({
                 ) : category === "excel" ? (
                   <ExcelIcon className="h-4 w-4 shrink-0" />
                 ) : category === "cad" ? (
-                  <i className="bi bi-file text-base text-zinc-500 shrink-0" />
+                  <CadIcon className="h-4 w-4 shrink-0" />
                 ) : (
                   <i className="bi bi-file-earmark-image text-base text-emerald-500 shrink-0" />
                 )}

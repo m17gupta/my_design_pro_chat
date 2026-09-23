@@ -960,7 +960,7 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
             title: cardTitle,
             description: displayDetails,
             fields: [
-              { kind: "upload-grid", count: q.max_files ?? 4, accept: ".jpg,.jpeg,.png,.gif,.webp,.dwg,.rvt,.skp,.pdf,.doc,.docx,.xls,.xlsx,.csv,image/*" },
+              { kind: "upload-grid", count: q.max_files ?? 4, accept: ".jpg,.jpeg,.png,.gif,.webp,.dwg,.dxf,.rvt,.skp,.pdf,.doc,.docx,.xls,.xlsx,.csv,image/*" },
             ],
           },
           api: api("urls"),
@@ -1050,7 +1050,7 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
                 rows: 3,
                 required: q.required ?? true,
               },
-              { kind: "upload-grid", count: q.max_files ?? 4, accept: ".jpg,.jpeg,.png,.gif,.webp,.dwg,.rvt,.skp,.pdf,.doc,.docx,.xls,.xlsx,.csv,image/*" },
+              { kind: "upload-grid", count: q.max_files ?? 4, accept: ".jpg,.jpeg,.png,.gif,.webp,.dwg,.dxf,.rvt,.skp,.pdf,.doc,.docx,.xls,.xlsx,.csv,image/*" },
             ],
           },
           api: api("files-notes"),

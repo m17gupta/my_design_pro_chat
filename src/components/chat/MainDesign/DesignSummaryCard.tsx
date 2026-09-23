@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { summaryCopyForWorkType } from "../types";
 import { buildEpisodesFromContext } from "../flow";
 import { ExcelIcon } from "../ExcelIcon";
+import { CadIcon } from "../CadIcon";
 
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -29,7 +30,7 @@ function getFileCategory(nameOrUrl: string): FileCategory {
   if (ext === ".pdf") return "pdf";
   if ([".doc", ".docx"].includes(ext)) return "doc";
   if ([".xls", ".xlsx", ".csv"].includes(ext)) return "excel";
-  if ([".dwg", ".rvt", ".skp"].includes(ext)) return "cad";
+  if ([".dwg", ".dxf", ".rvt", ".skp"].includes(ext)) return "cad";
   return "other";
 }
 
@@ -154,6 +155,8 @@ function FileThumbnail({ url, idx, onImageClick }: { url: string; idx: number; o
         <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent opacity-60" />
       ) : category === "excel" ? (
         <ExcelIcon className="h-5 w-5 drop-shadow-sm" />
+      ) : category === "cad" ? (
+        <CadIcon className="h-5 w-5 drop-shadow-sm" />
       ) : (
         <>
           <i className={`${cfg.icon} ${cfg.text} text-[15px] leading-none`} />
