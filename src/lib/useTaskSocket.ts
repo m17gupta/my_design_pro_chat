@@ -108,6 +108,11 @@ export function useTaskSocket(
     });
 
     socket.on("task:status", (data: TaskStatusPayload) => {
+      // If task has already finished, ignore any late-arriving events
+      if (doneRef.current) {
+        return;
+      }
+
       console.log(
         `[useTaskSocket] task:status task=${data.task_id} status=${data.status}`,
       );
@@ -115,11 +120,10 @@ export function useTaskSocket(
 
       if (TERMINAL.has(data.status)) {
         doneRef.current = true;
-        // Give the UI a moment to process the final event before
-        // tearing down the connection.
-        setTimeout(() => {
-          socket.disconnect();
-        }, 500);
+        // Stop the websocket immediately once completed/failed
+        socket.emit("task:unsubscribe", taskId);
+        socket.disconnect();
+        socketRef.current = null;
       }
     });
 
