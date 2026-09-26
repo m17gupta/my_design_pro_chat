@@ -67,7 +67,49 @@ const enterpriseSlice = createSlice({
       );
       state.lifecycle = "idle";
       state.error = null;
-    }
+    },
+    /**
+     * Apply a task status update received via WebSocket (task:status event).
+     * This mirrors the fetchEnterpriseStatus.fulfilled logic but is dispatched
+     * synchronously by the useTaskSocket hook — no HTTP round-trip needed.
+     */
+    applyWsTaskStatus(
+      state,
+      action: PayloadAction<{
+        task_id: string;
+        status: string;
+        result: {
+          generated_image_url?: string;
+          [key: string]: unknown;
+        } | null;
+        error: string | null;
+      }>
+    ) {
+      const { task_id, status: taskStatus, result, error } = action.payload;
+      const entryIdx = state.entries.findIndex((e) => e.id === task_id);
+      if (entryIdx >= 0) {
+        const entry = state.entries[entryIdx];
+        if (taskStatus === "failed") {
+          if (entry.type === "revision") {
+            state.entries.splice(entryIdx, 1);
+          } else {
+            entry.status = "failed";
+          }
+        } else {
+          entry.status = taskStatus;
+          if (taskStatus === "completed" && result?.generated_image_url) {
+            entry.url = result.generated_image_url;
+          }
+        }
+      }
+      if (taskStatus === "completed") {
+        state.error = null;
+        state.lifecycle = "succeeded";
+      } else if (taskStatus === "failed") {
+        state.error = error ?? "Design generation failed";
+        state.lifecycle = "failed";
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -209,5 +251,5 @@ const enterpriseSlice = createSlice({
   },
 });
 
-export const { resetEnterprise, setEntries, setEditId, resetEditId, removeFailedRevision } = enterpriseSlice.actions;
+export const { resetEnterprise, setEntries, setEditId, resetEditId, removeFailedRevision, applyWsTaskStatus } = enterpriseSlice.actions;
 export default enterpriseSlice.reducer;

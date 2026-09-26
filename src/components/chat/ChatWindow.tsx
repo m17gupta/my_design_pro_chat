@@ -47,6 +47,7 @@ import {
   resetEnterprise,
   selectLatestEnterpriseEntry,
   setEditId,
+  applyWsTaskStatus,
 } from "../../store/enterprise/enterpriseSlice";
 import {
   fetchEnterpriseStatus,
@@ -56,6 +57,8 @@ import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { buildApiPayload } from "@/lib/apiBrief";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import { useTaskSocket } from "@/lib/useTaskSocket";
+import type { TaskStatusPayload } from "@/lib/useTaskSocket";
 
 import {
   selectQuestionnairesData,
@@ -699,6 +702,9 @@ export default function ChatWindow() {
     [revisionKey, clearTypingTimeout, dispatch]
   );
 
+  /*
+  // ─── HTTP Polling (Commented out in favor of WebSocket - useTaskSocket) ───
+  // Kept here for reference / fallback if ever needed.
   const getStatus = useCallback(async (): Promise<boolean> => {
     if (
       !taskId ||
@@ -818,6 +824,43 @@ export default function ChatWindow() {
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [taskId, taskStatus, latestEnterpriseEntry?.url, getStatus]);
+  */
+
+  // ─── WebSocket real-time task updates ──────────────────────────
+  // When a task:status event arrives via WS, dispatch it into Redux
+  // and stop polling — the WS push is the source of truth.
+  const handleWsTaskStatus = useCallback(
+    (data: TaskStatusPayload) => {
+      dispatch(applyWsTaskStatus(data));
+
+      if (data.status === "completed" || data.status === "failed") {
+        stopPolling();
+        setPendingRevisionGenerate(null);
+
+        if (data.status === "failed") {
+          const isRevision = entries.some(
+            (e) => e.id === data.task_id && e.type === "revision"
+          );
+          if (isRevision) {
+            const revRound = countRevisionRounds(messages, revisionKey);
+            handleRevisionFailure(
+              revRound || 1,
+              data.error ?? "Design generation failed. Please try again."
+            );
+          } else {
+            toast.error(
+              data.error ?? "Design generation failed. Please try again."
+            );
+          }
+        }
+      }
+    },
+    [dispatch, stopPolling, entries, messages, revisionKey, handleRevisionFailure]
+  );
+
+  // Connect to WebSocket for the active task — the hook auto-disconnects
+  // once the task reaches a terminal state or the component unmounts.
+  useTaskSocket(taskId, null, handleWsTaskStatus);
 
   // get status 
 
