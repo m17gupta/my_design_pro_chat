@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
         cache: "no-store",
       }
     );
-    console.log("Fast api response", res.status, res.statusText);
+    // console.log("Fast api response", res.status, res.statusText);
 
     if (res.ok) {
       const data = await res.json();

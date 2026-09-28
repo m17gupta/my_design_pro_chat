@@ -176,22 +176,24 @@ export function useLineByLineTypewriter(
       const isSpace = char === ' '
       const isPunct = /[!?,.:;/—–•*]/.test(char)
 
+      const minCharDelay = Math.max(3, Math.floor(speedMs * 0.3))
+
       // Base delay per character type
       let delay = isSpace || isPunct
-        ? Math.max(40, Math.floor(speedMs * 0.4))  // spaces/punct are quick
-        : speedMs                                   // normal chars use full speedMs
+        ? Math.max(minCharDelay, Math.floor(speedMs * 0.4))  // spaces/punct are quick
+        : speedMs                                            // normal chars use full speedMs
 
       // ±25% random jitter so it feels human
       delay = Math.floor(delay * (0.75 + Math.random() * 0.5))
 
-      // Natural pause after the PREVIOUS character is sentence-ending punctuation
+      // Natural pause after the PREVIOUS character is sentence-ending punctuation (scales with speedMs)
       if (/[.!?]/.test(prevChar)) {
-        delay += 300 + Math.floor(Math.random() * 300) // 300–600 ms breath
+        delay += Math.floor(speedMs * (2.5 + Math.random() * 1.5))
       } else if (/[,;/]/.test(prevChar)) {
-        delay += 80 + Math.floor(Math.random() * 100)  // 80–180 ms comma pause
+        delay += Math.floor(speedMs * (1.2 + Math.random() * 0.8))
       }
 
-      return Math.max(30, delay)
+      return Math.max(minCharDelay, delay)
     }
 
     /** Recursively schedule the next character. */
@@ -225,10 +227,14 @@ export function useLineByLineTypewriter(
       }, delay)
     }
 
-    // "Thinking" pause before Luna starts typing each new line
+    // "Thinking" pause before Luna starts typing each new line (scales with lineDelayMs)
+    const preLinePause = Math.max(
+      10,
+      Math.floor(lineDelayMs * 0.25 + Math.random() * (lineDelayMs * 0.15))
+    )
     timeoutId = setTimeout(
       scheduleNext,
-      200 + Math.floor(Math.random() * 150)
+      preLinePause
     )
 
     /*

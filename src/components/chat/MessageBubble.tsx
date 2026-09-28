@@ -41,6 +41,7 @@ interface MessageBubbleProps {
   uploadTotal?: number
   onSummaryGenerate?: () => void
   onSummaryChanges?: () => void
+  onSummaryEditQuestion?: (key: string) => void
   /** True for the post-revision summary message — renders the Revision Summary card. */
   isRevisionSummary?: boolean
   /** Backend task lifecycle (queued | processing) for the loader status text. */
@@ -151,9 +152,9 @@ function useCharTypewriter(
         delay += typingConfig.commaPauseMin + Math.random() * (typingConfig.commaPauseMax - typingConfig.commaPauseMin)
       }
 
-      // Thinking micro-pause
+      // Thinking micro-pause (scales with active typing profile)
       if (Math.random() < typingConfig.thinkPauseChance) {
-        delay += 120 + Math.random() * 150
+        delay += typingConfig.sentencePauseMin + Math.random() * (typingConfig.sentencePauseMax - typingConfig.sentencePauseMin)
       }
 
       // Jitter
@@ -216,6 +217,7 @@ export const MessageBubble = ({
   uploadTotal = 0,
   onSummaryGenerate,
   onSummaryChanges,
+  onSummaryEditQuestion,
   isRevisionSummary = false,
   designStatus = '',
   onDesignAllINeed,
@@ -403,6 +405,12 @@ export const MessageBubble = ({
                 >
                   <p className='whitespace-pre-wrap break-words'>
                     {renderInline(typed)}
+                    {isTyping && (
+                      <span
+                        aria-hidden='true'
+                        className='caret-blink ml-px inline-block h-[1.1em] w-[2px] rounded-[1px] bg-zinc-400 align-middle dark:bg-zinc-500'
+                      />
+                    )}
                   </p>
 
                   {sequenceLabel && (
@@ -563,6 +571,7 @@ export const MessageBubble = ({
                 summaryText={message.content}
                 onGenerate={onSummaryGenerate ?? (() => {})}
                 onChanges={onSummaryChanges ?? (() => {})}
+                onEditQuestion={onSummaryEditQuestion}
               />
               <DesignGeneratingCard status={designStatus} />
               {originalEntry?.url && (

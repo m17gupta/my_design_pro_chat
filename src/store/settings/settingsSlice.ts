@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "../index";
 
-export type TypingSpeed = "slow" | "normal" | "fast";
+export type TypingSpeed = "slow" | "normal" | "fast" | "really_fast";
 
 export interface TypingConfig {
   charBurstMin: number;
@@ -81,6 +81,25 @@ export const TYPING_SPEED_CONFIGS: Record<TypingSpeed, TypingConfig> = {
     checklistBubbleSpeedMs: 30,
     checklistBubbleLineDelayMs: 500,
   },
+  really_fast: {
+    charBurstMin: 4,
+    charBurstMax: 8,
+    charNormalMin: 6,
+    charNormalMax: 12,
+    sentencePauseMin: 35,
+    sentencePauseMax: 70,
+    commaPauseMin: 20,
+    commaPauseMax: 35,
+    thinkPauseChance: 0.005,
+    initialDelayMin: 15,
+    initialDelayMax: 30,
+    minDelay: 4,
+    typingIndicatorMs: 200,
+    checklistSpeedMs: 4,
+    checklistLineDelayMs: 120,
+    checklistBubbleSpeedMs: 10,
+    checklistBubbleLineDelayMs: 150,
+  },
 };
 
 export interface SettingsState {
@@ -91,14 +110,19 @@ const getInitialTypingSpeed = (): TypingSpeed => {
   if (typeof window !== "undefined") {
     try {
       const stored = localStorage.getItem("luna_typing_speed");
-      if (stored === "slow" || stored === "normal" || stored === "fast") {
+      if (
+        stored === "slow" ||
+        stored === "normal" ||
+        stored === "fast" ||
+        stored === "really_fast"
+      ) {
         return stored;
       }
     } catch {
       // Ignore storage errors in private browsing/sandboxed iframes
     }
   }
-  return "normal";
+  return "really_fast";
 };
 
 const initialState: SettingsState = {
@@ -125,11 +149,11 @@ export const settingsSlice = createSlice({
 export const { setTypingSpeed } = settingsSlice.actions;
 
 export const selectTypingSpeed = (state: RootState): TypingSpeed =>
-  state.settings?.typingSpeed ?? "normal";
+  state.settings?.typingSpeed ?? "really_fast";
 
 export const selectTypingConfig = (state: RootState): TypingConfig => {
-  const speed = state.settings?.typingSpeed ?? "normal";
-  return TYPING_SPEED_CONFIGS[speed] ?? TYPING_SPEED_CONFIGS.normal;
+  const speed = state.settings?.typingSpeed ?? "really_fast";
+  return TYPING_SPEED_CONFIGS[speed] ?? TYPING_SPEED_CONFIGS.really_fast;
 };
 
 export default settingsSlice.reducer;

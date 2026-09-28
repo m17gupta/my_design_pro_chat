@@ -47,6 +47,8 @@ import {
   resetEnterprise,
   selectLatestEnterpriseEntry,
   setEditId,
+  resetEditId,
+  selectEditId,
 } from "../../store/enterprise/enterpriseSlice";
 import {
   fetchEnterpriseStatus,
@@ -286,7 +288,7 @@ export default function ChatWindow() {
         rating,
         action:"custom",
       };
-      console.log("hit action cutsom", data)
+      // console.log("hit action cutsom", data)
       postToHost({ action: HOST_ACTION_CUSTOM_PROJECT, data });
       if (action === "engage_designer") {
         setIsEngagingDesigner(true);
@@ -546,6 +548,14 @@ export default function ChatWindow() {
       }
 
       setEditingId(nextCardToEdit);
+      dispatch(resetEditId());
+      if (!nextCardToEdit) {
+        window.setTimeout(() => {
+          document
+            .getElementById("design-summary-card")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
     },
     [messageEpisodes, briefPayload, dispatch, episodes, messages]
   );
@@ -604,11 +614,25 @@ export default function ChatWindow() {
       }
 
       setEditingId(null);
+      dispatch(resetEditId());
+      window.setTimeout(() => {
+        document
+          .getElementById("design-summary-card")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     },
     [dispatch, revisionKey]
   );
 
-  const handleEditCancel = useCallback(() => setEditingId(null), []);
+  const handleEditCancel = useCallback(() => {
+    setEditingId(null);
+    dispatch(resetEditId());
+    window.setTimeout(() => {
+      document
+        .getElementById("design-summary-card")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  }, [dispatch]);
 
   /** POST the assembled brief payload to the FastAPI design backend. */
   const handleGenerate = useCallback(async () => {
@@ -960,8 +984,8 @@ export default function ChatWindow() {
       if (event.data?.action === HOST_ACTION_CANCEL_ALL_NEED) {
         handleCancelAllNeed();
       } else if (event.data?.action === HOST_ACTION_ENGAGE_DESIGNER_THANK_YOU) {
-        console.log("handleEngageDesignerThankYou--->",event?.data)
-         console.log("handleEngageDesignerThankYou---nannbsb>",event)
+        // console.log("handleEngageDesignerThankYou--->",event?.data)
+        //  console.log("handleEngageDesignerThankYou---nannbsb>",event)
         const msg =
           typeof event.data?.message === "string"
             ? event.data.message
@@ -978,7 +1002,7 @@ export default function ChatWindow() {
   }, [handleCancelAllNeed, handleEngageDesignerThankYou]);
 
 
-  /** "This is All I Need" — the initial render is approved as-is. */
+  /** "This is All I Need for Now" — the initial render is approved as-is. */
   const handleDesignAllINeed = useCallback(() => {
     const originalEntry = entries.find((entry) => entry.type === "original");
     submitLunaProject("this_is_all_i_need", ratings[originalEntry?.id ?? ""] ?? 0);
@@ -1183,8 +1207,64 @@ export default function ChatWindow() {
       }
       setEditingId(editingId === targetId ? null : targetId);
     },
-    [editingId, messageEpisodes, messages, handleMakeChanges, episodes, revisionKey]
+    [editingId, messageEpisodes, messages, handleMakeChanges, episodes, revisionKey, dispatch]
   );
+
+  const handleEditQuestion = useCallback(
+    (apiKey: string) => {
+      const ep = episodes.find((e) => e.apiKey === apiKey);
+      const isCard = ep?.kind === "card";
+
+      let targetId: string | null = null;
+      if (isCard) {
+        const cardMsg = messages.find(
+          (m) => m.id === `ep-${apiKey}` || m.id.startsWith(`ep-${apiKey}-`)
+        );
+        if (cardMsg) {
+          targetId = cardMsg.id;
+        }
+      }
+
+      if (!targetId) {
+        const userMsg = messages.find(
+          (m) => m.role === "user" && messageEpisodes[m.id] === apiKey
+        );
+        if (userMsg) {
+          targetId = userMsg.id;
+        }
+      }
+
+      if (!targetId) {
+        const fallbackMsg = messages.find(
+          (m) => m.id === `ep-${apiKey}` || m.id.includes(apiKey)
+        );
+        if (fallbackMsg) {
+          targetId = fallbackMsg.id;
+        }
+      }
+
+      if (targetId) {
+        dispatch(setEditId(apiKey));
+        setEditingId(targetId);
+        window.setTimeout(() => {
+          document
+            .getElementById(`msg-${targetId}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 80);
+      } else {
+        toast.error("Could not find this question in chat.");
+      }
+    },
+    [dispatch, episodes, messageEpisodes, messages]
+  );
+
+  const reduxEditId = useAppSelector(selectEditId);
+
+  useEffect(() => {
+    if (reduxEditId && !editingId) {
+      handleEditQuestion(reduxEditId);
+    }
+  }, [reduxEditId, editingId, handleEditQuestion]);
 
 
   // The latest revision-summary message is the *current* round; earlier rounds
@@ -1483,6 +1563,7 @@ export default function ChatWindow() {
                       generating={generating}
                       onSummaryGenerate={isCurrent ? handleGenerate : undefined}
                       onSummaryChanges={isCurrent ? goBackToQuestions : undefined}
+                      onSummaryEditQuestion={handleEditQuestion}
                       isRevisionSummary={isRevisionSummary}
                       isCurrentRevision={isCurrentRevision}
                       revisionNotes={revisionComment.notes}

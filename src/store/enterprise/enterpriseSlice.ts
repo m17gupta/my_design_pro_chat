@@ -210,4 +210,7 @@ const enterpriseSlice = createSlice({
 });
 
 export const { resetEnterprise, setEntries, setEditId, resetEditId, removeFailedRevision } = enterpriseSlice.actions;
+
+export const selectEditId = (state: { enterprise: EnterpriseState }) => state.enterprise.editId;
+
 export default enterpriseSlice.reducer;

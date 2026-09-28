@@ -26,6 +26,7 @@ const SPEED_OPTIONS: Array<{
   title: string;
   desc: string;
   recommended?: boolean;
+  badge?: string;
 }> = [
   {
     id: "slow",
@@ -36,12 +37,17 @@ const SPEED_OPTIONS: Array<{
     id: "normal",
     title: "Normal",
     desc: "A natural conversation pace",
-    recommended: true,
   },
   {
     id: "fast",
     title: "Fast",
     desc: "Quicker responses with less waiting",
+  },
+  {
+    id: "really_fast",
+    title: "Really Fast",
+    desc: "Lightning fast responses with near-instant speed",
+    badge: "Default",
   },
 ];
 
@@ -149,8 +155,8 @@ export default function SettingsMenu({
                     <p className="text-[11px] font-semibold  tracking-wider text-zinc-400 dark:text-zinc-500">
                     Choose luna’s typing speed
                     </p>
-                    <span className="text-[11px] font-medium capitalize text-emerald-600 dark:text-emerald-400">
-                      {currentSpeed}
+                    <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                      {SPEED_OPTIONS.find((opt) => opt.id === currentSpeed)?.title ?? currentSpeed}
                     </span>
                   </div>
 
@@ -168,11 +174,11 @@ export default function SettingsMenu({
                               : "border border-zinc-100 bg-zinc-50/50 hover:bg-zinc-100/80 text-zinc-700 dark:border-zinc-800/60 dark:bg-zinc-800/40 dark:hover:bg-zinc-800/80 dark:text-zinc-300"
                           }`}
                         >
-                          <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                          <div className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
                             isSelected
-                              ? 'border-emerald-600 bg-emerald-600 text-white dark:border-emerald-400 dark:bg-emerald-400'
-                              : 'border-zinc-300 dark:border-zinc-600'
-                          }">
+                              ? "border-emerald-600 bg-emerald-600 text-white dark:border-emerald-400 dark:bg-emerald-400"
+                              : "border-zinc-300 dark:border-zinc-600"
+                          }`}>
                             {isSelected && (
                               <div className="h-1.5 w-1.5 rounded-full bg-white dark:bg-zinc-900" />
                             )}
@@ -183,11 +189,11 @@ export default function SettingsMenu({
                               <span className="text-xs font-semibold leading-none">
                                 {opt.title}
                               </span>
-                              {opt.recommended && (
+                              {/* {(opt.badge || opt.recommended) && (
                                 <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 text-[9.5px] font-medium text-emerald-700 dark:text-emerald-300 leading-none">
-                                  Recommended
+                                  {opt.badge ?? "Recommended"}
                                 </span>
-                              )}
+                              )} */}
                             </div>
                             <p className="mt-1 text-[11px] leading-tight text-zinc-500 dark:text-zinc-400">
                               {opt.desc}

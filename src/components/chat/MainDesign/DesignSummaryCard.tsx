@@ -8,10 +8,11 @@ import { buildEpisodesFromContext } from "../flow";
 import { ExcelIcon } from "../ExcelIcon";
 import { CadIcon } from "../CadIcon";
 
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { isAnswerEmpty, answerToText } from "@/lib/briefDisplay";
 import { selectQuestionnaireSequence } from "@/store/questionnaires/questionnaireSlice";
+import { setEditId } from "@/store/enterprise/enterpriseSlice";
 
 // ── File-type helpers ─────────────────────────────────────────────────────────
 type FileCategory = "image" | "pdf" | "doc" | "excel" | "cad" | "other";
@@ -189,6 +190,7 @@ interface DesignSummaryCardProps {
   summaryText?: string;
   onGenerate: () => void;
   onChanges: () => void;
+  onEditQuestion?: (key: string) => void;
 }
 
 export default function DesignSummaryCard({
@@ -202,14 +204,28 @@ export default function DesignSummaryCard({
   summaryText,
   onGenerate,
   onChanges,
+  onEditQuestion,
 }: DesignSummaryCardProps) {
+  const dispatch = useDispatch();
 
   const { original, work_type, role, user_type, question_sets } = useSelector((state: RootState) => state.chat);
   const { data: questionnaire } = useSelector((state: RootState) => state.questionnaires);
   const questionnaireSequence = useSelector(selectQuestionnaireSequence);
 
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-   const {dc_name}= useSelector((state:RootState)=>state.chat)
+  const { dc_name } = useSelector((state: RootState) => state.chat);
+  const { entries = [] } = useSelector((state: RootState) => state.enterprise || {});
+
+  const isOriginalCompleted =
+    entries[0]?.status === "completed" ||
+    entries.some((e) => e.type === "original" && e.status === "completed");
+  const hideEditIcon = isOriginalCompleted || disabled;
+
+  const handleEditClick = (key: string) => {
+    if (hideEditIcon || generating) return;
+    dispatch(setEditId(key));
+    onEditQuestion?.(key);
+  };
   const orderedKeys = useMemo(() => {
     if (!original || Object.keys(original).length === 0) return [];
     
@@ -252,108 +268,135 @@ export default function DesignSummaryCard({
       )}
 
       <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-      className="w-full rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
-    >
-      <h3 className="text-base font-semibold tracking-tight text-emerald-700 dark:text-emerald-400">
-        {title}
-      </h3>
-      {/* <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
-        {description}
-      </p> */}
+        id="design-summary-card"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+        className="w-full rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900"
+      >
+        <h3 className="text-base font-semibold tracking-tight text-emerald-700 dark:text-emerald-400">
+          {title}
+        </h3>
+        {/* <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+          {description}
+        </p> */}
 
-      <div className="mt-4 overflow-scroll max-h-[calc(100vh-330px)] rounded-xl border border-zinc-200/80 dark:border-zinc-800">
+        <div className="mt-4 overflow-scroll max-h-[calc(100vh-330px)] rounded-xl border border-zinc-200/80 dark:border-zinc-800">
 
-        { orderedKeys.length > 0 &&
-          orderedKeys.map((key, i) => {
-            const item = original[key];
-        
-            if (!item) return null;
-            const { answer, name } = item;
-            
-            const isArray = Array.isArray(answer);
-            const isObject = typeof answer === "object" && answer !== null && !isArray;
-            const isEmpty = isAnswerEmpty(answer);
-            
-            return (
-              <div
-                key={key}
-                className={`flex items-center gap-3 px-3.5 py-2.5 ${
-                  i > 0 ? "border-t border-zinc-200/80 dark:border-zinc-800" : ""
-                }`}
-              >
-               
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  className="shrink-0 text-emerald-500"
+          { orderedKeys.length > 0 &&
+            orderedKeys.map((key, i) => {
+              const item = original[key];
+          
+              if (!item) return null;
+              const { answer, name } = item;
+              
+              const isArray = Array.isArray(answer);
+              const isObject = typeof answer === "object" && answer !== null && !isArray;
+              const isEmpty = isAnswerEmpty(answer);
+              
+              return (
+                <div
+                  key={key}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 ${
+                    i > 0 ? "border-t border-zinc-200/80 dark:border-zinc-800" : ""
+                  }`}
                 >
-                  <path d="M3 10.5L12 3l9 7.5" />
-                  <path d="M5 9.5V21h14V9.5" />
-                </svg>
-                <div className="min-w-0 flex-1 max-w-[30%]">
-                  <p className="text-sm  font-semibold text-zinc-500 dark:text-zinc-400">
-                    {name}
-                  </p>
-                 </div>
-               
-                {isEmpty ? (
-                  <p className="min-w-0 max-w-[60%] text-right text-sm text-zinc-800 dark:text-zinc-100">
-                    <span className="italic text-zinc-400 dark:text-zinc-500">
-                      Not answered
-                    </span>
-                  </p>
-                ) : typeof answer === "string" ? (
-                  <p className="min-w-0 max-w-[60%] text-left text-sm text-zinc-800 dark:text-zinc-100 whitespace-pre-wrap break-words" title={answer}>
-                    {answer}
-                  </p>
-                ) : isArray ? (
-                  <div className="flex flex-wrap gap-1 justify-start max-w-[50%]">
-                    {answer.map((url, idx) => (
-                      <FileThumbnail key={idx} url={url} idx={idx} onImageClick={setLightboxUrl} />
-                    ))}
-                  </div>
-                ) : isObject ? (
-                  (() => {
-                    const notes = "notes" in answer ? answer.notes : "";
-                    const files = "files" in answer ? answer.files : [];
-                    const value = "value" in answer ? answer.value : [];
-                    return (
-                      <div className="flex flex-col gap-1 max-w-[60%]">
-                        {notes.trim() && (
-                          <p className="text-left text-sm text-zinc-800 dark:text-zinc-100 w-full whitespace-pre-wrap break-words" title={notes}>
-                            {notes}
-                          </p>
-                        )}
-                        {value.length > 0 && (
-                          <p className="text-left text-xs text-zinc-500 dark:text-zinc-400  w-full" title={value.join(", ")}>
-                            {value.join(", ")}
-                          </p>
-                        )}
-                        {files.length > 0 && (
-                          <div className="flex flex-wrap gap-1 justify-start">
-                            {files.map((url, idx) => (
-                              <FileThumbnail key={idx} url={url} idx={idx} onImageClick={setLightboxUrl} />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()
-                ) : null}
-              </div>
-            );
-          })
-        }
+                 
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className="shrink-0 text-emerald-500"
+                  >
+                    <path d="M3 10.5L12 3l9 7.5" />
+                    <path d="M5 9.5V21h14V9.5" />
+                  </svg>
+                  <div className="min-w-0 flex-1 max-w-[30%]">
+                    <p className="text-sm  font-semibold text-zinc-500 dark:text-zinc-400">
+                      {name}
+                    </p>
+                   </div>
+                 
+                  {isEmpty ? (
+                    <p className="min-w-0 max-w-[55%] text-left text-sm text-zinc-800 dark:text-zinc-100">
+                      <span className="italic text-zinc-400 dark:text-zinc-500">
+                        Not answered
+                      </span>
+                    </p>
+                  ) : typeof answer === "string" ? (
+                    <p className="min-w-0 max-w-[55%] text-left text-sm text-zinc-800 dark:text-zinc-100 whitespace-pre-wrap break-words" title={answer}>
+                      {answer}
+                    </p>
+                  ) : isArray ? (
+                    <div className="flex flex-wrap gap-1 justify-start max-w-[50%]">
+                      {answer.map((url, idx) => (
+                        <FileThumbnail key={idx} url={url} idx={idx} onImageClick={setLightboxUrl} />
+                      ))}
+                    </div>
+                  ) : isObject ? (
+                    (() => {
+                      const notes = "notes" in answer ? answer.notes : "";
+                      const files = "files" in answer ? answer.files : [];
+                      const value = "value" in answer ? answer.value : [];
+                      return (
+                        <div className="flex flex-col gap-1 max-w-[55%]">
+                          {notes.trim() && (
+                            <p className="text-left text-sm text-zinc-800 dark:text-zinc-100 w-full whitespace-pre-wrap break-words" title={notes}>
+                              {notes}
+                            </p>
+                          )}
+                          {value.length > 0 && (
+                            <p className="text-left text-xs text-zinc-500 dark:text-zinc-400  w-full" title={value.join(", ")}>
+                              {value.join(", ")}
+                            </p>
+                          )}
+                          {files.length > 0 && (
+                            <div className="flex flex-wrap gap-1 justify-start">
+                              {files.map((url, idx) => (
+                                <FileThumbnail key={idx} url={url} idx={idx} onImageClick={setLightboxUrl} />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : null}
+
+                  {!hideEditIcon && (
+                    <button
+                      type="button"
+                      onClick={() => handleEditClick(key)}
+                      disabled={generating}
+                      title={`Edit ${name}`}
+                      aria-label={`Edit ${name}`}
+                      className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          }
         {uploadTotal > 0 && (
           <div className="flex items-center gap-3 border-t border-zinc-200/80 px-3.5 py-2.5 dark:border-zinc-800">
             <svg
