@@ -49,7 +49,7 @@ const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "https://ws.dzinlynxt.com";
 /** Terminal states — once reached the socket can disconnect. */
 const TERMINAL = new Set(["completed", "failed"]);
 
-export function ÒuseTaskSocket(
+export function useTaskSocket(
   taskId: string | null | undefined,
   token: string | null | undefined,
   onStatus: (data: TaskStatusPayload) => void,
