@@ -1379,7 +1379,7 @@ export default function ChatWindow() {
           <div
             role="log"
             aria-label="Chat with Luna"
-            className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 py-6 sm:px-6"
+            className="mx-auto flex w-full max-w-[832px] flex-col gap-4 px-4 py-6 sm:px-6"
           >
               <AnimatePresence initial={false}>
                 {messages.map((m, i) => {
