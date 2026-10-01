@@ -65,7 +65,12 @@ export function stateFromPayload (
     )
   ).forEach(q => {
     const item = payload.original[q.apiKey]
-    if (item && !isAnswerEmpty(item.answer)) {
+    if (
+      item &&
+      (!isAnswerEmpty(item.answer) ||
+        ((q.apiKey === 'additional_images_upload' || q.apiKey === 'supporting_files_upload') &&
+          Array.isArray(item.answer)))
+    ) {
       original[q.apiKey] = item
     }
   })

@@ -1537,7 +1537,7 @@ export function buildRestoredTranscript(
     Boolean(revisionComment?.notes) ||
     (Array.isArray(revisionComment?.files) && revisionComment.files.length > 0);
   const anyAnswered = Object.values(original).some(
-    (item) => item !== undefined && !isAnswerEmpty(item.answer)
+    (item) => item !== undefined && (!isAnswerEmpty(item.answer) || Array.isArray(item.answer))
   );
 
   if (!anyAnswered && !hasEntries && !hasPendingComment) {
@@ -1581,7 +1581,7 @@ export function buildRestoredTranscript(
         .map((e) => e.apiKey);
 
       const photoUploaded = isAnswered("additional_images_upload");
-      const passedPhotos = photoUploaded || subSeqKeys.some(isAnswered);
+      const passedPhotos = photoUploaded || "additional_images_upload" in original || subSeqKeys.some(isAnswered);
 
       if (passedPhotos) {
         mark(ep, photoUploaded ? "Yes I do" : "No I don't");
@@ -1597,7 +1597,7 @@ export function buildRestoredTranscript(
         .map((e) => e.apiKey);
 
       const filesUploaded = isAnswered("supporting_files_upload");
-      const passedFiles = filesUploaded || subSeqKeys.some(isAnswered);
+      const passedFiles = filesUploaded || "supporting_files_upload" in original || subSeqKeys.some(isAnswered);
 
       if (passedFiles) {
         mark(ep, filesUploaded ? "Yes I do" : "No I don't");

@@ -342,6 +342,12 @@ export default function ChatWindow() {
       if (ep.api && structuredAnswer !== undefined) {
         dispatch(answerQuestion({ apiKey: ep.apiKey, answer: structuredAnswer, questionnaires }));
       }
+      if (ep.apiKey === "photos" && userText.startsWith("No")) {
+        dispatch(answerQuestion({ apiKey: "additional_images_upload", answer: [], questionnaires }));
+      }
+      if (ep.apiKey === "files" && userText.startsWith("No")) {
+        dispatch(answerQuestion({ apiKey: "supporting_files_upload", answer: [], questionnaires }));
+      }
       if (filesByField) {
         // Revision rounds are keyed by their round-specific message id so each
         // loop's uploaded files never leak into the next round's comments card.
@@ -527,6 +533,7 @@ export default function ChatWindow() {
             if (cardIdx >= 0) {
               newMessages = newMessages.filter((m, i) => i !== cardIdx && i !== cardIdx + 1);
             }
+            dispatch(answerQuestion({ apiKey: nextEpId, answer: [], questionnaires }));
             const userMsgIdx = newMessages.findIndex((m) => m.id === messageId);
             if (userMsgIdx >= 0 && userMsgIdx === newMessages.length - 1) {
               const followUpEpKey = nextEpisodeId(epId, text, episodes);
@@ -1240,6 +1247,21 @@ export default function ChatWindow() {
         );
         if (fallbackMsg) {
           targetId = fallbackMsg.id;
+        }
+      }
+
+      if (!targetId && (apiKey === "additional_images_upload" || apiKey === "supporting_files_upload")) {
+        const promptEpKey = apiKey === "additional_images_upload" ? "photos" : "files";
+        const promptUserMsg = messages.find(
+          (m) => m.role === "user" && messageEpisodes[m.id] === promptEpKey
+        );
+        if (promptUserMsg) {
+          targetId = promptUserMsg.id;
+        } else {
+          const promptAssistantMsg = messages.find((m) => m.id === `ep-${promptEpKey}`);
+          if (promptAssistantMsg) {
+            targetId = promptAssistantMsg.id;
+          }
         }
       }
 

@@ -323,7 +323,11 @@ export default function DesignSummaryCard({
                     </p>
                    </div>
                  
-                  {isEmpty ? (
+                  {isArray && answer.length === 0 ? (
+                    <p className="min-w-0 max-w-[55%] text-left text-sm text-zinc-800 dark:text-zinc-100">
+                      No Upload
+                    </p>
+                  ) : isEmpty ? (
                     <p className="min-w-0 max-w-[55%] text-left text-sm text-zinc-800 dark:text-zinc-100">
                       <span className="italic text-zinc-400 dark:text-zinc-500">
                         Not answered

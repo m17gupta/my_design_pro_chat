@@ -148,8 +148,9 @@ export function buildApiPayload (
 ): ApiBriefPayload {
   const original: Record<string, ApiBriefItem> = {}
   questions.forEach(q => {
+    const explicitlyProvided = q.apiKey in items && items[q.apiKey] !== undefined
     const item = items[q.apiKey] ?? buildQuestionItem(q)
-    if (Array.isArray(item.answer) && item.answer.length === 0) return
+    if (!explicitlyProvided && Array.isArray(item.answer) && item.answer.length === 0) return
     original[q.apiKey] = item
   })
 

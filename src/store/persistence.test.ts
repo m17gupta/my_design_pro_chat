@@ -78,4 +78,27 @@ describe("persistence round-trip", () => {
     expect(newState.dc_name).toBe("Brooke Edwards");
     expect(newState.id).toBe(406);
   });
+
+  it("stateFromPayload preserves additional_images_upload and supporting_files_upload when answer is empty array", () => {
+    const state = stateFromPayload({
+      ...SAVED,
+      original: {
+        additional_images_upload: {
+          name: "Additional House Photos (Optional)",
+          question: "<p>Photos</p>",
+          answer: [],
+        },
+        supporting_files_upload: {
+          name: "Supporting Files Upload (Optional)",
+          question: "<p>Files</p>",
+          answer: [],
+        },
+      },
+    });
+
+    expect(state.original.additional_images_upload).toBeDefined();
+    expect(state.original.additional_images_upload.answer).toEqual([]);
+    expect(state.original.supporting_files_upload).toBeDefined();
+    expect(state.original.supporting_files_upload.answer).toEqual([]);
+  });
 });
