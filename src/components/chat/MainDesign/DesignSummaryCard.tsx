@@ -345,9 +345,28 @@ export default function DesignSummaryCard({
                     </div>
                   ) : isObject ? (
                     (() => {
-                      const notes = "notes" in answer ? answer.notes : "";
-                      const files = "files" in answer ? answer.files : [];
-                      const value = "value" in answer ? answer.value : [];
+                      const ansObj = answer as Record<string, unknown>;
+                      const notes = "notes" in ansObj && typeof ansObj.notes === "string" ? ansObj.notes : "";
+                      const files = "files" in ansObj && Array.isArray(ansObj.files) ? (ansObj.files as string[]) : [];
+                      const value = "value" in ansObj && Array.isArray(ansObj.value) ? (ansObj.value as string[]) : [];
+                      const hasStandardFields = notes.trim().length > 0 || files.length > 0 || value.length > 0;
+
+                      if (!hasStandardFields && typeof ansObj === "object" && ansObj !== null) {
+                        const entries = Object.entries(ansObj);
+                        return (
+                          <div className="flex flex-col gap-1 max-w-[55%]">
+                            {entries.map(([k, v], idx) => {
+                              const text = Array.isArray(v) ? v.join(", ") : String(v ?? "");
+                              return (
+                                <p key={idx} className="text-left text-xs text-zinc-600 dark:text-zinc-300 w-full" title={text}>
+                                  {text}
+                                </p>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+
                       return (
                         <div className="flex flex-col gap-1 max-w-[55%]">
                           {notes.trim() && (
@@ -362,7 +381,7 @@ export default function DesignSummaryCard({
                           )}
                           {files.length > 0 && (
                             <div className="flex flex-wrap gap-1 justify-start">
-                              {files.map((url, idx) => (
+                              {files.map((url: string, idx: number) => (
                                 <FileThumbnail key={idx} url={url} idx={idx} onImageClick={setLightboxUrl} />
                               ))}
                             </div>

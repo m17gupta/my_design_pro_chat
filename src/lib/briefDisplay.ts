@@ -5,10 +5,10 @@ export function isAnswerEmpty(answer: ApiBriefItem["answer"] | undefined): boole
   if (answer === undefined) return true;
   if (typeof answer === "string") return answer.trim().length === 0;
   if (Array.isArray(answer)) return answer.length === 0;
-  if ("notes" in answer) {
+  if ("notes" in answer && typeof answer.notes === "string") {
     return (
-      ("files" in answer ? answer.files.length === 0 : true) &&
-      ("value" in answer ? answer.value.length === 0 : true) &&
+      ("files" in answer && Array.isArray(answer.files) ? answer.files.length === 0 : true) &&
+      ("value" in answer && Array.isArray(answer.value) ? answer.value.length === 0 : true) &&
       answer.notes.trim().length === 0
     );
   }
@@ -33,12 +33,16 @@ export function answerToText(item: ApiBriefItem): string {
       .join("\n");
   }
   const parts: string[] = [];
-  if ("files" in a && a.files.length > 0) {
+  if ("files" in a && Array.isArray(a.files) && a.files.length > 0) {
     parts.push(`${a.files.length} file${a.files.length > 1 ? "s" : ""} uploaded`);
   }
-  if ("value" in a && a.value.length > 0) parts.push(a.value.join(", "));
-  const notes = a.notes.trim();
-  if (notes) parts.push(notes);
+  if ("value" in a && Array.isArray(a.value) && a.value.length > 0) {
+    parts.push(a.value.join(", "));
+  }
+  if ("notes" in a && typeof a.notes === "string") {
+    const notes = a.notes.trim();
+    if (notes) parts.push(notes);
+  }
   return parts.join("\n") || "No answer";
 }
 
@@ -46,7 +50,7 @@ export function answerToText(item: ApiBriefItem): string {
 export function itemUrls(item: ApiBriefItem): string[] {
   const a = item.answer;
   if (Array.isArray(a)) return a;
-  if (a && typeof a === "object" && "files" in a) return a.files;
+  if (a && typeof a === "object" && "files" in a && Array.isArray(a.files)) return a.files;
   return [];
 }
 

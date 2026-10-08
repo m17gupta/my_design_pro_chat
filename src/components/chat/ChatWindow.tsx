@@ -626,11 +626,13 @@ export default function ChatWindow() {
         }
         if (baseEpId === revisionKey) {
           const ans = result.answer;
-          if (ans && typeof ans === "object" && "notes" in ans) {
+          if (ans && typeof ans === "object" && !Array.isArray(ans) && "notes" in ans) {
+            const files = "files" in ans && Array.isArray(ans.files) ? (ans.files as string[]) : [];
+            const notes = typeof ans.notes === "string" ? ans.notes : "";
             dispatch(
               setRevision({
-                files: "files" in ans && ans.files ? ans.files : [],
-                notes: ans.notes,
+                files,
+                notes,
               })
             );
           }

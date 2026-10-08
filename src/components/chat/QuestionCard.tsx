@@ -76,7 +76,7 @@ function QuestionCard({
       const idx = spec.fields.findIndex((f) => f.kind === "textarea");
       if (idx >= 0) map[idx] = initialAnswer;
     } else if (typeof initialAnswer === "object" && !Array.isArray(initialAnswer)) {
-      if ("notes" in initialAnswer) {
+      if ("notes" in initialAnswer && typeof initialAnswer.notes === "string") {
         const idx = spec.fields.findIndex((f) => f.kind === "textarea");
         if (idx >= 0) map[idx] = initialAnswer.notes;
       }
@@ -140,8 +140,13 @@ function QuestionCard({
     return map;
   }, [initialAnswer, spec.fields]);
 
-  const initNotes = useMemo(() => {
-    if (typeof initialAnswer === "object" && !Array.isArray(initialAnswer) && "notes" in initialAnswer) {
+  const initNotes = useMemo((): string => {
+    if (
+      typeof initialAnswer === "object" &&
+      !Array.isArray(initialAnswer) &&
+      "notes" in initialAnswer &&
+      typeof initialAnswer.notes === "string"
+    ) {
       return initialAnswer.notes;
     }
     return "";
@@ -151,13 +156,16 @@ function QuestionCard({
     const map: Record<number, Record<string, UploadResult>> = {};
     if (!initialAnswer) return map;
 
-    const urls = Array.isArray(initialAnswer)
+    const urls: string[] = Array.isArray(initialAnswer)
       ? initialAnswer
-      : typeof initialAnswer === "object" && "files" in initialAnswer
-      ? initialAnswer.files
+      : typeof initialAnswer === "object" &&
+        !Array.isArray(initialAnswer) &&
+        "files" in initialAnswer &&
+        Array.isArray(initialAnswer.files)
+      ? (initialAnswer.files as string[])
       : [];
 
-    urls.forEach((url, i) => {
+    urls.forEach((url: string, i: number) => {
       const slot = i % 4; // Distribute across slots
       if (!map[slot]) {
         map[slot] = {};
@@ -176,7 +184,7 @@ function QuestionCard({
   const [textByField, setTextByField] = useState<Record<number, string>>(initTextByField);
   const [radioByField, setRadioByField] = useState<Record<number, string>>(initRadioByField);
   const [checksByField, setChecksByField] = useState<Record<number, Set<string>>>(initChecksByField);
-  const [notes, setNotes] = useState(initNotes);
+  const [notes, setNotes] = useState<string>(initNotes);
   const [uploadingSlots, setUploadingSlots] = useState<Record<number, boolean>>({});
   const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
 

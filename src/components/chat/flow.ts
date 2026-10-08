@@ -8,6 +8,7 @@ import {
   type EpisodeKind,
   type Message,
   type QuestionCardSpec,
+  type QuestionField,
 } from "./types";
 import type { EnterpriseEntry } from "../../store/enterprise/enterpriseType";
 import questionsJson from "../../docs/Questions.json";
@@ -791,6 +792,7 @@ export type Question = {
   placeholder?: string;
   options?: string[] | Record<string, string>;
   is_ai_design?: boolean;
+  is_property_address?: boolean;
   example?: string;
   multi_questions?: Question[];
 };
