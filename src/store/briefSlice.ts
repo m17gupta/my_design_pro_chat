@@ -14,9 +14,12 @@ import {
   type ApiBriefPayload,
   type BriefContext,
   type RevisionComment,
-  type QuestionSets
+  type QuestionSets,
+  type ProjectAddress
 } from '../lib/apiBrief'
 import { isAnswerEmpty } from '../lib/briefDisplay'
+
+export type { ProjectAddress }
 
 /**
  * Brief state mirrors the schema.md payload: one fully-assembled item
@@ -37,6 +40,7 @@ export interface BriefState {
   original: Record<string, ApiBriefItem>
   revision_comment: RevisionComment
   question_sets?: QuestionSets | null
+  project_address?: ProjectAddress | null
 }
 
 /**
@@ -87,6 +91,7 @@ export function stateFromPayload (
     role: payload?.role ?? null,
     custom_engage_designer: payload?.custom_engage_designer ?? null,
     question_sets: payload?.question_sets ?? null,
+    project_address: payload?.project_address ?? null,
   }
 }
 
@@ -126,6 +131,7 @@ export function payloadFromState (
       value: state.value ?? "",
       revision: state.revision_comment,
       question_sets: state.question_sets ?? undefined,
+      project_address: state.project_address ?? undefined,
     }
   )
 }
@@ -142,7 +148,8 @@ const initialState: BriefState = {
   value: null,
   original: {},
   revision_comment: { files: [], notes: '' },
-  question_sets: null
+  question_sets: null,
+  project_address: null
 }
 
 const briefSlice = createSlice({
@@ -217,6 +224,12 @@ const briefSlice = createSlice({
       if (action.payload.value !== undefined) state.value = action.payload.value
       if (action.payload.question_sets !== undefined)
         state.question_sets = action.payload.question_sets
+      if (action.payload.project_address !== undefined)
+        state.project_address = action.payload.project_address
+    },
+    /** Set/update project address directly. */
+    setProjectAddress (state, action: PayloadAction<ProjectAddress | null>) {
+      state.project_address = action.payload
     },
     /** Record the revision comments (files + notes) from the feedback step. */
     setRevision (state, action: PayloadAction<RevisionComment>) {
@@ -241,6 +254,7 @@ const briefSlice = createSlice({
 export const {
   answerQuestion,
   setContext,
+  setProjectAddress,
   setRevision,
   resetBrief,
   setBriefState,
@@ -269,3 +283,7 @@ export const selectBriefPayload = createSelector(
   ],
   (brief, questionnaires): ApiBriefPayload => payloadFromState(brief, questionnaires)
 )
+
+export const selectProjectAddress = (state: BriefSliceState | { chat: BriefState }) =>
+  state?.chat?.project_address ?? null
+

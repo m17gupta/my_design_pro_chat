@@ -5,11 +5,14 @@ export function isAnswerEmpty(answer: ApiBriefItem["answer"] | undefined): boole
   if (answer === undefined) return true;
   if (typeof answer === "string") return answer.trim().length === 0;
   if (Array.isArray(answer)) return answer.length === 0;
-  return (
-    ("files" in answer ? answer.files.length === 0 : true) &&
-    ("value" in answer ? answer.value.length === 0 : true) &&
-    answer.notes.trim().length === 0
-  );
+  if ("notes" in answer) {
+    return (
+      ("files" in answer ? answer.files.length === 0 : true) &&
+      ("value" in answer ? answer.value.length === 0 : true) &&
+      answer.notes.trim().length === 0
+    );
+  }
+  return Object.keys(answer).length === 0;
 }
 
 /** Human-readable answer text for Handoff / summary display. */
@@ -20,6 +23,14 @@ export function answerToText(item: ApiBriefItem): string {
     return a.length === 0
       ? "No files uploaded"
       : `${a.length} file${a.length > 1 ? "s" : ""} uploaded`;
+  }
+  if (!("notes" in a)) {
+    const entries = Object.entries(a);
+    if (entries.length === 0) return "No answer";
+    return entries
+      .map(([k, v]) => Array.isArray(v) ? v.join(", ") : String(v))
+      .filter(Boolean)
+      .join("\n");
   }
   const parts: string[] = [];
   if ("files" in a && a.files.length > 0) {

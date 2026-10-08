@@ -240,7 +240,7 @@ export default function DesignResultCard({
         )}
 
         {!(revision.length > 0 && revision[0].status === "completed") && (
-          <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className={`mt-4 flex flex-wrap items-center gap-3 ${isEnterpriseClient ? "justify-center" : ""}`}>
             <motion.button
               type="button"
               onClick={onAllINeed}

@@ -22,6 +22,12 @@ interface ClientParams {
     original?: string[];
     revision?: string[];
   };
+  project_address?: {
+    address?: string | null;
+    city?: string | null;
+    state?: string | null;
+    zip_code?: string | null;
+  };
 }
 
 /** URL-safe base64 → JSON object; returns undefined when absent/malformed. */
@@ -55,7 +61,7 @@ const GetAllProjectData = ({ defaultRole }: GetAllProjectDataProps = {}) => {
     const storageKey = defaultRole ? `dzinly_chat_params_${defaultRole}` : "dzinly_chat_params";
     const rawParams = searchParams.get("params");
     let params = decodeClientParams(rawParams);
-
+      console.log("params---",params)
     if (rawParams) {
       try {
         sessionStorage.setItem(storageKey, rawParams);
@@ -86,7 +92,8 @@ const GetAllProjectData = ({ defaultRole }: GetAllProjectDataProps = {}) => {
           dc_name: params.dc_name,
           role: params.role ?? defaultRole ?? null,
           custom_engage_designer: params.custom_engage_designer,
-          question_sets: params.question_sets
+          question_sets: params.question_sets,
+          project_address: params.project_address
         })
       );
       const incomingProjectId = params.id ? String(params.id) : "";

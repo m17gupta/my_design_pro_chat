@@ -1231,7 +1231,7 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
     expect(summaryEp?.content).not.toContain("Based on your answers");
   });
 
-  it("flattens multi_questions into child episodes", () => {
+  it("groups multi_questions into a single card episode with multiple fields", () => {
     const eps = buildEpisodesFromContext(
       {
         role: "enterprise-client",
@@ -1241,13 +1241,26 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
       MOCK_QUESTIONNAIRES
     );
     const keys = eps.map((e) => e.apiKey);
-    expect(keys).toContain("ai_site_assessment_existing_conditions");
-    expect(keys).toContain("ai_site_assessment_opportunities");
-    expect(keys).toContain("ai_site_assessment_potential_constraints");
-    const child = eps.find((e) => e.apiKey === "ai_site_assessment_opportunities");
-    expect(child?.api?.answerShape).toBe("value-notes");
-    expect(child?.card?.description).toBeTruthy();
-    expect(child?.checklistId).toBe("ai_site_assessment");
+    expect(keys).toContain("ai_site_assessment");
+    const parentEp = eps.find((e) => e.apiKey === "ai_site_assessment");
+    expect(parentEp?.api?.answerShape).toBe("value-notes");
+    expect(parentEp?.checklistId).toBe("ai_site_assessment");
+    expect(parentEp?.card?.fields).toHaveLength(3);
+    expect(parentEp?.card?.fields[0]).toMatchObject({
+      id: "ai_site_assessment_existing_conditions",
+      kind: "checkbox",
+      label: "Existing Conditions",
+    });
+    expect(parentEp?.card?.fields[1]).toMatchObject({
+      id: "ai_site_assessment_opportunities",
+      kind: "checkbox",
+      label: "Opportunities",
+    });
+    expect(parentEp?.card?.fields[2]).toMatchObject({
+      id: "ai_site_assessment_potential_constraints",
+      kind: "checkbox",
+      label: "Potential Constraints",
+    });
   });
 
   it("marks revision-phase episodes and keeps the canonical revision card id", () => {

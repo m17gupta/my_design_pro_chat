@@ -32,7 +32,7 @@ const UpdateProjectData = () => {
         if (timerRef.current) clearTimeout(timerRef.current)
         timerRef.current = setTimeout(() => {
             timerRef.current = null
-            const { id, watermark, work_type, image_url, value, original, revision_comment, user_type, dc_name, role, custom_engage_designer, question_sets } = chatRef.current
+            const { id, watermark, work_type, image_url, value, original, revision_comment, user_type, dc_name, role, custom_engage_designer, question_sets, project_address } = chatRef.current
             if (original == null || Object.keys(original).length === 0) return
             void dispatch(
                 saveProject({
@@ -50,6 +50,7 @@ const UpdateProjectData = () => {
                         original,
                         revision_comment,
                         question_sets: question_sets ?? undefined,
+                        project_address: project_address ?? undefined,
                     },
                     designData: entriesRef.current,
                 })

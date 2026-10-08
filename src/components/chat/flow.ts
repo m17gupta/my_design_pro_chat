@@ -979,8 +979,10 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
+            id: q.id,
             title: cardTitle,
             description: displayDetails,
+            is_property_address: q.is_property_address,
             fields: [
               { kind: "upload-grid", count: q.max_files ?? 4, accept: ".jpg,.jpeg,.png,.gif,.webp,.dwg,.dxf,.rvt,.skp,.pdf,.doc,.docx,.xls,.xlsx,.csv,image/*" },
             ],
@@ -993,8 +995,10 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
+            id: q.id,
             title: cardTitle,
             description: displayDetails,
+            is_property_address: q.is_property_address,
             fields: [
               {
                 kind: "textarea",
@@ -1011,8 +1015,10 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
+            id: q.id,
             title: cardTitle,
             description: displayDetails,
+            is_property_address: q.is_property_address,
             fields: [
               {
                 kind: "radio",
@@ -1028,8 +1034,10 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
+            id: q.id,
             title: cardTitle,
             description: displayDetails,
+            is_property_address: q.is_property_address,
             fields: [
               {
                 kind: "checkbox",
@@ -1045,8 +1053,10 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
+            id: q.id,
             title: cardTitle,
             description: displayDetails,
+            is_property_address: q.is_property_address,
             fields: [
               {
                 kind: "checkbox",
@@ -1063,8 +1073,10 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
         {
           ...base,
           card: {
+            id: q.id,
             title: cardTitle,
             description: displayDetails,
+            is_property_address: q.is_property_address,
             fields: [
               {
                 kind: "textarea",
@@ -1079,24 +1091,50 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
         },
       ];
     case "multi_questions": {
-      const parentDetails = (q.details ?? "").trim();
-      const parentClean = parentDetails.replace(/<\/?p>/gi, "").trim();
-      return (q.multi_questions ?? []).flatMap((child) => {
-        const childTitle = (child.name || child.label || formatQuestionIdAsName(child.id)).trim();
-        const childDetails = child.details?.trim() || (
-          parentClean
-            ? `<p>${parentClean} <b>${childTitle}</b></p>`
-            : childTitle
-        );
-        return questionToEpisodes(
-          {
-            ...child,
-            name: childTitle,
-            details: childDetails,
-          },
-          checklistId ?? q.id
-        );
+      const fields: QuestionField[] = (q.multi_questions ?? []).map((child) => {
+        const childLabel = (child.name || child.label || formatQuestionIdAsName(child.id)).trim();
+        if (child.type === "radio") {
+          return {
+            id: child.id,
+            label: childLabel,
+            kind: "radio" as const,
+            options: normalizeOptions(child.options),
+            required: child.required ?? true,
+          };
+        }
+        if (child.type === "textarea") {
+          return {
+            id: child.id,
+            label: childLabel,
+            kind: "textarea" as const,
+            placeholder: child.placeholder || "Share your thoughts",
+            rows: 3,
+            required: child.required ?? true,
+          };
+        }
+        return {
+          id: child.id,
+          label: childLabel,
+          kind: "checkbox" as const,
+          options: normalizeOptions(child.options),
+          required: child.required ?? true,
+        };
       });
+
+      return [
+        {
+          ...base,
+          card: {
+            id: q.id,
+            title: cardTitle,
+            description: displayDetails,
+            is_property_address: q.is_property_address,
+            required: q.required ?? true,
+            fields,
+          },
+          api: api("value-notes"),
+        },
+      ];
     }
     case "display":
       return [];

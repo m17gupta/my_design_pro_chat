@@ -78,6 +78,7 @@ export const hydrateProject = createAsyncThunk<
             image_url: project.chats.image_url,
             value: project.chats.value,
             question_sets: project.chats.question_sets,
+            project_address: project.chats.project_address,
           })
         );
       }

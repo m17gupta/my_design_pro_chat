@@ -253,6 +253,14 @@ export const MessageBubble = ({
   const reduceMotion = useReducedMotion() ?? false
   const typingConfig = useSelector(selectTypingConfig)
   const { entries } = useSelector((state: RootState) => state.enterprise)
+  const projectAddress = useSelector((state: RootState) => state.chat.project_address)
+  const isPropertyVerified =
+    apiKey === 'property_verified' ||
+    apiKey?.startsWith('property_verified') ||
+    message.id === 'ep-property_verified' ||
+    message.id.startsWith('ep-property_verified') ||
+    message.card?.id === 'property_verified' ||
+    Boolean(message.card?.is_property_address)
   const originalEntry = entries.find((entry) => entry.type === "original")
   const originalPending = Boolean(
     originalEntry &&
@@ -414,8 +422,55 @@ export const MessageBubble = ({
                     )}
                   </p>
 
+                  {isPropertyVerified && (
+                    <div className='mt-3 rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3 sm:p-3.5 dark:border-zinc-800 dark:bg-zinc-950/50'>
+                      <div className='flex items-start gap-3'>
+                        <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-200/60 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'>
+                          <svg
+                            xmlns='http://www.w3.org/2000/svg'
+                            viewBox='0 0 24 24'
+                            fill='none'
+                            stroke='currentColor'
+                            strokeWidth='2'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                            className='h-5 w-5'
+                          >
+                            <path d='M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z' />
+                            <circle cx='12' cy='10' r='3' />
+                          </svg>
+                        </div>
+                        <div className='min-w-0 flex-1'>
+                          <span className='block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400'>
+                            Property Address
+                          </span>
+                          {projectAddress?.address ? (
+                            <p className='mt-0.5 text-sm font-semibold capitalize text-zinc-900 dark:text-zinc-100'>
+                              {projectAddress.address}
+                            </p>
+                          ) : null}
+                          {(projectAddress?.city || projectAddress?.state || projectAddress?.zip_code) ? (
+                            <p className='text-xs text-zinc-600 capitalize dark:text-zinc-400'>
+                              {[
+                                projectAddress.city,
+                                [projectAddress.state, projectAddress.zip_code].filter(Boolean).join(' '),
+                              ]
+                                .filter(Boolean)
+                                .join(', ')}
+                            </p>
+                          ) : null}
+                          {!projectAddress?.address && !projectAddress?.city && !projectAddress?.state && !projectAddress?.zip_code && (
+                            <p className='mt-0.5 text-sm italic text-zinc-500 dark:text-zinc-400'>
+                              No address provided
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {sequenceLabel && (
-                    <div className='mt-1 flex justify-end'>
+                    <div className='mt-2 flex justify-end'>
                       <span className='text-[11.5px] font-medium text-zinc-400 dark:text-zinc-500 select-none'>
                         {sequenceLabel}
                       </span>
@@ -500,6 +555,7 @@ export const MessageBubble = ({
                       <QuestionCard
                         key={`${message.id}-${disabled ? 'disabled' : 'editing'}`}
                         spec={message.card}
+                        questionId={apiKey ?? message.card.id ?? (message.id.startsWith('ep-') ? message.id.replace(/^ep-/, '') : message.id)}
                         filesByField={filesByField}
                         initialAnswer={initialAnswer ?? message.initialAnswer}
                         disabled={disabled}

@@ -14,6 +14,13 @@ export interface QuestionSets {
   revision?: string[]
 }
 
+export interface ProjectAddress {
+  address?: string | null
+  city?: string | null
+  state?: string | null
+  zip_code?: string | null
+}
+
 export interface BriefContext {
   /** Job id from the host app / API (used by setContext for internal state). */
   id?: number
@@ -29,6 +36,7 @@ export interface BriefContext {
   custom_engage_designer?: boolean
   revision?: RevisionComment
   question_sets?: QuestionSets
+  project_address?: ProjectAddress | null
 }
 
 export interface ApiBriefItem {
@@ -39,6 +47,7 @@ export interface ApiBriefItem {
     | string[]
     | { files: string[]; notes: string }
     | { value: string[]; notes: string }
+    | Record<string, string | string[]>
 }
 
 /** Revision comments collected after an initial design render. */
@@ -61,6 +70,7 @@ export interface ApiBriefPayload {
   original: Record<string, ApiBriefItem>
   revision_comment: RevisionComment
   question_sets?: QuestionSets
+  project_address?: ProjectAddress | null
 }
 
 export const DEFAULT_WATERMARK = 'http://mydesigns.pro/img/luna-logo.png'
@@ -110,6 +120,15 @@ export function normalizeAnswer (
         notes: notesOf(raw)
       }
     case 'value-notes':
+      if (
+        raw &&
+        typeof raw === 'object' &&
+        !('value' in raw) &&
+        !('notes' in raw) &&
+        !Array.isArray(raw)
+      ) {
+        return raw as ApiBriefItem['answer']
+      }
       return {
         value:
           raw && typeof raw === 'object' && 'value' in raw
@@ -167,6 +186,7 @@ export function buildApiPayload (
     custom_engage_designer: context.custom_engage_designer ?? undefined,
     original,
     revision_comment: context.revision ?? { files: [], notes: '' },
-    question_sets: context.question_sets
+    question_sets: context.question_sets,
+    project_address: context.project_address ?? undefined
   }
 }

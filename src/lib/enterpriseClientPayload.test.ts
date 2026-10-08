@@ -290,4 +290,29 @@ describe("buildEnterpriseClientPayload", () => {
     });
     expect(result.original.direct_question).toBe("Hello");
   });
+
+  it("preserves unified multi_questions dictionary answers on original", () => {
+    const payload = {
+      role: "enterprise-client",
+      user_type: "landscape-design",
+      original: {
+        ai_site_assessment: {
+          name: "AI Site Assessment",
+          question: "Luna analyzes",
+          answer: {
+            ai_site_assessment_existing_conditions: ["Sun/shade observations"],
+            ai_site_assessment_opportunities: ["Lighting opportunities"],
+            ai_site_assessment_potential_constraints: ["Space limitations"],
+          },
+        },
+      },
+    };
+
+    const result = buildEnterpriseClientPayload(payload);
+    expect(result.original.ai_site_assessment).toEqual({
+      ai_site_assessment_existing_conditions: ["Sun/shade observations"],
+      ai_site_assessment_opportunities: ["Lighting opportunities"],
+      ai_site_assessment_potential_constraints: ["Space limitations"],
+    });
+  });
 });

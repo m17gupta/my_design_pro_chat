@@ -381,7 +381,7 @@ const handleDownload = async () => {
 
         {/* Three actions — the only exit points from the revision loop. */}
         {!hideButtons && (
-          <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className={`mt-4 flex flex-wrap items-center gap-3 ${isEnterpriseClient ? "justify-center" : ""}`}>
             <motion.button
               type="button"
               onClick={() => onAllINeed(rating)}
@@ -490,7 +490,7 @@ const handleDownload = async () => {
         )}
 
         {!hideButtons && regenerateDisabled && interactive && (
-          <p className="mt-2.5 text-xs text-amber-600 dark:text-amber-400">
+          <p className={`mt-2.5 text-xs text-amber-600 dark:text-amber-400 ${isEnterpriseClient ? "text-center" : ""}`}>
             You&apos;ve reached the revision limit — engage your designer for
             further changes.
           </p>

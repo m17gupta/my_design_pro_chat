@@ -101,4 +101,21 @@ describe("persistence round-trip", () => {
     expect(state.original.supporting_files_upload).toBeDefined();
     expect(state.original.supporting_files_upload.answer).toEqual([]);
   });
+
+  it("preserves project_address through stateFromPayload and payloadFromState", () => {
+    const address = {
+      address: "mohan nagar jaipur",
+      city: "jaipur",
+      state: "Rajasthan",
+      zip_code: "20802",
+    };
+    const state = stateFromPayload({
+      ...SAVED,
+      project_address: address,
+    });
+    expect(state.project_address).toEqual(address);
+
+    const payload = payloadFromState(state);
+    expect(payload.project_address).toEqual(address);
+  });
 });

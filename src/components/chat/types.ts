@@ -21,6 +21,8 @@ export interface UploadGridField {
 
 /** A free-text textarea. */
 export interface TextareaField {
+  id?: string;
+  label?: string;
   kind: "textarea";
   placeholder: string;
   rows?: number;
@@ -30,6 +32,8 @@ export interface TextareaField {
 
 /** Single-select radio pill row. */
 export interface RadioField {
+  id?: string;
+  label?: string;
   kind: "radio";
   options: string[];
   required?: boolean;
@@ -37,6 +41,8 @@ export interface RadioField {
 
 /** Multi-select checkbox pills with optional notes field. */
 export interface CheckboxField {
+  id?: string;
+  label?: string;
   kind: "checkbox";
   options: string[];
   notesPlaceholder?: string;
@@ -50,7 +56,8 @@ export type AnswerValue =
   | string
   | string[]
   | { files: string[]; notes: string }
-  | { value: string[]; notes: string };
+  | { value: string[]; notes: string }
+  | Record<string, string | string[]>;
 
 /** How a question's answer is serialized for the design API. */
 export type ApiAnswerShape = "urls" | "text" | "files-notes" | "value-notes";
@@ -102,10 +109,12 @@ export interface ApiQuestionMeta {
 
 /** One intake question card (transcribed from design.md). */
 export interface QuestionCardSpec {
+  id?: string;
   title: string;
   description: string;
   fields: QuestionField[];
   required?: boolean;
+  is_property_address?: boolean;
 }
 
 /**
