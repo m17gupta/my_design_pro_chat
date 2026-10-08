@@ -363,7 +363,20 @@ export default function ChatWindow() {
         const urls = urlsByField
           ? Object.values(urlsByField).flatMap((byKey) => Object.values(byKey))
           : [];
-        dispatch(setRevision({ files: urls, notes: userText }));
+        if (ep.apiKey === "revision" || ep.apiKey === "revision_comments") {
+          dispatch(setRevision({ files: urls, notes: userText }));
+        } else {
+          const qName = ep.api?.name || ep.card?.title || ep.apiKey;
+          const entry = `${qName}: ${userText}`;
+          const currentNotes = revisionComment.notes?.trim() ?? "";
+          const newNotes = currentNotes ? `${currentNotes}\n${entry}` : entry;
+          dispatch(
+            setRevision({
+              files: Array.from(new Set([...(revisionComment.files ?? []), ...urls])),
+              notes: newNotes,
+            })
+          );
+        }
       }
 
       const nextEpisode = nextEpisodeId(ep.apiKey, userText, episodes);
@@ -399,14 +412,21 @@ export default function ChatWindow() {
           });
           setCurrentId(nextEpisode);
 
-          if (ep.revisionStep) {
+          if (
+            ep.revisionStep &&
+            (nextEpisode === "revision-summary" ||
+              ep.apiKey === "revision" ||
+              ep.apiKey === "revision_comments")
+          ) {
             const round = revRound ?? countRevisionRounds(messages, revisionKey);
             const urls = urlsByField
               ? Object.values(urlsByField).flatMap((byKey) => Object.values(byKey))
               : [];
             handleRevisionGenerateRef.current?.(round, {
-              files: urls,
-              notes: userText,
+              files: urls.length > 0 ? urls : (revisionComment.files ?? []),
+              notes: revisionComment.notes
+                ? `${revisionComment.notes}\n${userText}`
+                : userText,
             });
           }
         }
@@ -422,6 +442,7 @@ export default function ChatWindow() {
       clearTypingTimeout,
       custom_engage_designer,
       work_type,
+      revisionComment,
       typingConfig.typingIndicatorMs,
     ]
   );

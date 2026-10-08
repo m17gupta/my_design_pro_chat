@@ -245,33 +245,59 @@ export function summaryCopyForWorkType(
     .replace(/-/g, "_");
   const fallback = SUMMARY_COPY[normalized] ?? SUMMARY_COPY.front_yard;
 
-  if (role && (role === "enterprise" || role === "enterprise-client") && questionnaire && userType && workType) {
+  if (role && (role === "enterprise" || role === "enterprise-client") && questionnaire && userType) {
     const roleBase = questionnaire[role];
     if (roleBase && typeof roleBase === "object") {
       const roleMap = roleBase as Record<string, unknown>;
-      const phases =
-        role === "enterprise-client"
-          ? roleMap[userType]
-          : (roleMap[userType] as Record<string, unknown> | undefined)?.[workType];
+      const normUserType = userType.trim().toLowerCase().replace(/_/g, "-");
+      const userSection = (roleMap[normUserType] ?? roleMap[userType]) as Record<string, unknown> | undefined;
+
+      let phases: unknown;
+      if (role === "enterprise-client") {
+        phases = userSection;
+      } else if (userSection && typeof userSection === "object") {
+        phases = workType ? userSection[workType] ?? userSection[workType.replace(/_/g, "-")] : undefined;
+        if (!phases && Object.keys(userSection).some((k) => k.startsWith("phase_"))) {
+          phases = userSection;
+        }
+      }
+
       if (phases && typeof phases === "object") {
         const phaseMap = phases as Record<
           string,
-          { title?: string; questions?: { details?: string }[] }
+          { title?: string; questions?: { id?: string; details?: string; example?: string }[] }
         >;
-        const phaseKey =phaseMap["phase_2"] ;
-        // const phase = phaseKey ? phaseMap[phaseKey] : undefined;
-        // console.log("phaseKey--",phaseKey)
-        if (phaseKey && Array.isArray(phaseKey.questions) && phaseKey.questions.length > 0) {
-          const details = phaseKey.questions[0]?.details;
-          // console.log("details---",details)
-          if (details) {
+
+        const allowedPhases =
+          questionSets?.original && questionSets.original.length > 0
+            ? questionSets.original.map((k) => phaseMap[k]).filter(Boolean)
+            : role === "enterprise-client"
+            ? []
+            : Object.values(phaseMap);
+
+        // Look for design_summary only across allowed phases
+        for (const phase of allowedPhases) {
+          const summaryQ = phase?.questions?.find((q) => q.id === "design_summary");
+          if (summaryQ && (summaryQ.details || summaryQ.example)) {
             return {
-              title: fallback.title,
-              description: details,
+              title: phase.title || fallback.title,
+              description: [summaryQ.details, summaryQ.example].filter(Boolean).join("\n\n"),
             };
           }
         }
+        if (role === "enterprise-client") {
+          return {
+            title: "Design Summary",
+            description: "",
+          };
+        }
       }
+    }
+    if (role === "enterprise-client") {
+      return {
+        title: "Design Summary",
+        description: "",
+      };
     }
   }
 

@@ -12,7 +12,7 @@ const page = () => {
         </div>
       }
     >
-      <GetAllProjectData defaultRole="enterprise" />
+      <GetAllProjectData defaultRole="enterprise-client" />
       <UpdateProjectData />
       <ChatWindow />
     </Suspense>

@@ -79,7 +79,8 @@ export default function RevisionResultCard({
   const done = entry.status === "completed" || hasImage;
   const failed = entry.status === "failed";
   const { entries } = useSelector((state: RootState) => state.enterprise);
-  const { image_url } = useSelector((state: RootState) => state.chat);
+  const { image_url, role } = useSelector((state: RootState) => state.chat);
+  const isEnterpriseClient = (role ?? "").trim().toLowerCase() === "enterprise-client";
   const getRevison = entries.filter((item) => item.type === "revision");
 
   const originalEntry = entries.find((entry) => entry.type === "original");
@@ -434,55 +435,57 @@ const handleDownload = async () => {
               Regenerate With Comments
             </motion.button>
 
-            <motion.button
-              type="button"
-              onClick={() => onEngageDesigner(rating)}
-              disabled={!interactive || isEngagingDesigner}
-              whileHover={interactive && !isEngagingDesigner ? { scale: 1.03 } : undefined}
-              whileTap={interactive && !isEngagingDesigner ? { scale: 0.95 } : undefined}
-              className={BUTTON_CLASS}
-            >
-              {isEngagingDesigner ? (
-                <svg
-                  className="h-3.5 w-3.5 animate-spin text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
+            {!isEnterpriseClient && (
+              <motion.button
+                type="button"
+                onClick={() => onEngageDesigner(rating)}
+                disabled={!interactive || isEngagingDesigner}
+                whileHover={interactive && !isEngagingDesigner ? { scale: 1.03 } : undefined}
+                whileTap={interactive && !isEngagingDesigner ? { scale: 0.95 } : undefined}
+                className={BUTTON_CLASS}
+              >
+                {isEngagingDesigner ? (
+                  <svg
+                    className="h-3.5 w-3.5 animate-spin text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
                     stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              )}
-              {isEngagingDesigner ? "Engaging Designer..." : "Engage Designer"}
-            </motion.button>
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                )}
+                {isEngagingDesigner ? "Engaging Designer..." : "Engage Designer"}
+              </motion.button>
+            )}
           </div>
         )}
 

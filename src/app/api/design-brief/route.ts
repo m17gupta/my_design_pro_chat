@@ -1,5 +1,7 @@
 export const runtime = "nodejs";
 
+import { buildEnterpriseClientPayload } from "@/lib/enterpriseClientPayload";
+
 const DESIGN_API_URL = process.env.DESIGN_API_URL ?? "";
 const DESIGN_API_KEY = process.env.DESIGN_API_KEY ?? "";
 
@@ -23,13 +25,50 @@ export async function POST(request: Request) {
     // Normalize the base URL so a trailing slash never produces a double
     // slash (e.g. `https://api.dzinlynxt.com/` + `/api/v1/…` → 404).
     const base = DESIGN_API_URL.replace(/\/+$/, "");
-    res = await fetch(`${base}/api/v1/luna/enterprise-design`, {
+
+    const rawRole = String(
+      (payload && typeof payload === "object" && "role" in payload
+        ? (payload as { role?: unknown }).role
+        : "") ?? ""
+    )
+      .trim()
+      .toLowerCase();
+
+    const rawUserType = String(
+      (payload && typeof payload === "object" && "user_type" in payload
+        ? (payload as { user_type?: unknown }).user_type
+        : "") ?? ""
+    )
+      .trim()
+      .toLowerCase();
+
+    let endpointPath = "/api/v1/luna/enterprise-design";
+    let outgoingBody: unknown = payload;
+
+    const incomingQuestionnaires =
+      payload && typeof payload === "object" && "questionnaires" in payload
+        ? ((payload as { questionnaires?: unknown }).questionnaires as Record<string, unknown> | null)
+        : null;
+
+    if (rawRole === "enterprise-client") {
+      if (rawUserType === "landscape-design" || rawUserType === "landscape_design") {
+        console.log("calling client landscape-design");
+        endpointPath = "/api/v1/luna/landscape-design";
+        outgoingBody = buildEnterpriseClientPayload(payload as Record<string, unknown>, incomingQuestionnaires);
+      } else if (rawUserType === "color-material" || rawUserType === "color_material") {
+        console.log("calling client color-material");
+        endpointPath = "/api/v1/luna/color-material";
+        outgoingBody = buildEnterpriseClientPayload(payload as Record<string, unknown>, incomingQuestionnaires);
+      }
+    }
+
+    res = await fetch(`${base}${endpointPath}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-API-Key": DESIGN_API_KEY,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(outgoingBody),
     });
   } catch {
     return Response.json(

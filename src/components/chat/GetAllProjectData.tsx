@@ -36,7 +36,11 @@ function decodeClientParams(raw: string | null): ClientParams | undefined {
   }
 }
 
-const GetAllProjectData = () => {
+interface GetAllProjectDataProps {
+  defaultRole?: string;
+}
+
+const GetAllProjectData = ({ defaultRole }: GetAllProjectDataProps = {}) => {
   const searchParams = useSearchParams();
 
   const dispatch = useAppDispatch();
@@ -48,18 +52,20 @@ const GetAllProjectData = () => {
 
     dispatch(fetchQuestionnaires());
 
+    const storageKey = defaultRole ? `dzinly_chat_params_${defaultRole}` : "dzinly_chat_params";
     const rawParams = searchParams.get("params");
     let params = decodeClientParams(rawParams);
-  // console.log("parmas", params)
+
     if (rawParams) {
       try {
+        sessionStorage.setItem(storageKey, rawParams);
         sessionStorage.setItem("dzinly_chat_params", rawParams);
       } catch {
         // ignore
       }
     } else if (!params) {
       try {
-        const cached = sessionStorage.getItem("dzinly_chat_params");
+        const cached = sessionStorage.getItem(storageKey) || sessionStorage.getItem("dzinly_chat_params");
         if (cached) {
           params = decodeClientParams(cached);
         }
@@ -78,7 +84,7 @@ const GetAllProjectData = () => {
           value: params.value,
           user_type: params?.user_type ?? "",
           dc_name: params.dc_name,
-          role: params.role,
+          role: params.role ?? defaultRole ?? null,
           custom_engage_designer: params.custom_engage_designer,
           question_sets: params.question_sets
         })
@@ -90,10 +96,24 @@ const GetAllProjectData = () => {
         // No project id — nothing to restore.
         dispatch(hydrationSkipped());
       }
+    } else if (defaultRole) {
+      // Direct access fallback without URL params
+      dispatch(
+        setContext({
+          role: defaultRole,
+          user_type: "landscape-design",
+          work_type: defaultRole === "enterprise" ? "front_yard" : undefined,
+          question_sets: {
+            original: ["phase_1", "phase_2"],
+            revision: ["phase_5"],
+          },
+        })
+      );
+      dispatch(hydrationSkipped());
     } else {
       dispatch(hydrationSkipped());
     }
-  }, [searchParams, dispatch]);
+  }, [searchParams, dispatch, defaultRole]);
 
   return null;
 };

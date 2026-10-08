@@ -770,7 +770,7 @@ function normalizeRole(role: string | null | undefined): string {
 }
 
 function normalizeUserType(userType: string | null | undefined): string {
-  return (userType ?? "").trim().toLowerCase();
+  return (userType ?? "").trim().toLowerCase().replace(/_/g, "-");
 }
 
 /** Default user_type key for a work_type when the host didn't send one. */
@@ -828,17 +828,40 @@ export function resolveAllQuestionFlow(
   let phases: Record<string, QuestionPhase> | undefined;
 
   if (role === "enterprise-client") {
-    // enterprise-client sections are user_type → phase (no work_type level).
-    const section = userType ? roleMap[userType] : undefined;
+    // enterprise-client sections are typically user_type → phase (no work_type level).
+    let section = userType ? roleMap[userType] : undefined;
+    if (!section && userType) {
+      section = roleMap[userType.replace(/-/g, "_")];
+    }
     if (section && typeof section === "object") {
-      phases = section as Record<string, QuestionPhase>;
+      const sectionObj = section as Record<string, unknown>;
+      // If section directly contains phase_* keys (standard enterprise-client)
+      if (Object.keys(sectionObj).some((k) => k.startsWith("phase_"))) {
+        phases = sectionObj as Record<string, QuestionPhase>;
+      } else {
+        // Fallback: check if nested under work_type
+        const workTypeKey = normalizeWorkType(ctx.work_type ?? "front_yard");
+        let workSection = sectionObj[workTypeKey];
+        if (!workSection || typeof workSection !== "object") {
+          workSection = sectionObj[workTypeKey.replace(/_/g, "-")];
+        }
+        if (workSection && typeof workSection === "object") {
+          phases = workSection as Record<string, QuestionPhase>;
+        }
+      }
     }
   } else {
     const userTypeKey = userType || userTypeForWorkType(ctx.work_type ?? undefined);
-    const userSection = roleMap[userTypeKey];
+    let userSection = roleMap[userTypeKey];
+    if (!userSection && userTypeKey) {
+      userSection = roleMap[userTypeKey.replace(/-/g, "_")];
+    }
     if (userSection && typeof userSection === "object") {
       const workTypeKey = normalizeWorkType(ctx.work_type ?? "front_yard");
       let workSection = (userSection as Record<string, unknown>)[workTypeKey];
+      if (!workSection || typeof workSection !== "object") {
+        workSection = (userSection as Record<string, unknown>)[workTypeKey.replace(/_/g, "-")];
+      }
       if (!workSection || typeof workSection !== "object") {
         if (Object.keys(userSection).some((k) => k.startsWith("phase_"))) {
           workSection = userSection;
@@ -922,8 +945,7 @@ function normalizeOptions(options: unknown): string[] {
 }
 
 /** Default summary text when the JSON has no design_summary display question. */
-const DEFAULT_SUMMARY_TEXT =
-  "manish";
+const DEFAULT_SUMMARY_TEXT = "";
 
 /**
  * Convert one AllQuestion.json question into one or more episodes. The card
@@ -1056,11 +1078,26 @@ function questionToEpisodes(q: Question, checklistId?: string): Episode[] {
           api: api("files-notes"),
         },
       ];
-    case "multi_questions":
-      // Each child gets its own checklistId (its apiKey) by default.
-      return (q.multi_questions ?? []).flatMap((child) =>
-        questionToEpisodes(child)
-      );
+    case "multi_questions": {
+      const parentDetails = (q.details ?? "").trim();
+      const parentClean = parentDetails.replace(/<\/?p>/gi, "").trim();
+      return (q.multi_questions ?? []).flatMap((child) => {
+        const childTitle = (child.name || child.label || formatQuestionIdAsName(child.id)).trim();
+        const childDetails = child.details?.trim() || (
+          parentClean
+            ? `<p>${parentClean} <b>${childTitle}</b></p>`
+            : childTitle
+        );
+        return questionToEpisodes(
+          {
+            ...child,
+            name: childTitle,
+            details: childDetails,
+          },
+          checklistId ?? q.id
+        );
+      });
+    }
     case "display":
       return [];
     default:
@@ -1124,7 +1161,8 @@ export function buildEpisodesFromContext(
     const isAllQuestionCtx =
       role === "enterprise" ||
       role === "enterprise-client" ||
-      Boolean(ctx.question_sets?.original?.length);
+      Boolean(ctx.question_sets?.original?.length) ||
+      Boolean(ctx.question_sets);
 
     if (isAllQuestionCtx) {
       return [{
@@ -1187,9 +1225,29 @@ export function buildEpisodesFromContext(
     }
   }
 
+  const isEnterpriseClient = normalizeRole(ctx.role) === "enterprise-client";
+  const hasExplicitQuestionSets = Boolean(ctx.question_sets?.original?.length);
+
+  // If original phases (e.g. ['phase_1', 'phase_2']) did not include the summary phase,
+  // do NOT reach outside into phase_3 or other non-intake phases when explicit
+  // question_sets or enterprise-client is used.
+  if (!isEnterpriseClient && !hasExplicitQuestionSets && summaryParts.length === 0) {
+    for (const phase of Object.values(phases)) {
+      const q = phase.questions?.find((item) => item.id === "design_summary");
+      if (q) {
+        if (q.details) summaryParts.push(q.details);
+        if (q.example) summaryParts.push(q.example);
+        break;
+      }
+    }
+  }
+
   // Gate the two upload cards behind the legacy Yes/No intro questions
-  // (photos / files) whenever the flow contains them — any work type.
-  insertUploadGates(episodes);
+  // (photos / files) whenever the flow contains them — skip for enterprise-client
+  // so no static gates are injected.
+  if (!isEnterpriseClient) {
+    insertUploadGates(episodes);
+  }
 
   const isCustomEngage =
     Boolean(ctx.engageDesigner) &&
@@ -1430,13 +1488,13 @@ export function nextEpisodeId(
 /** Build the assistant Message for an episode. */
 export function buildMessage(episode: Episode): Message {
   const cardTitle = episode.card?.title?.trim() ?? "";
-  const cardDesc = episode.card?.description ?? "";
+  const cardDesc = episode.card?.description?.trim() ?? "";
   return {
     id: `ep-${episode.apiKey}`,
     role: "assistant",
     content:
       episode.kind === "card" && episode.card
-        ? cardTitle || cardDesc
+        ? cardDesc || cardTitle || episode.content || ""
         : episode.content ?? "",
     kind: episode.kind,
     options: episode.options,

@@ -1487,47 +1487,7 @@
           }
         ]
       },
-      "phase_3": {
-        "title": "DESIGN BRIEF APPROVAL",
-        "questions": [
-          {
-            "id": "design_summary",
-            "name": "Design Summary",
-            "details": "Based on your answers, Luna will create a design featuring:",
-            "example": "<ul><li>Style Direction</li><li>Desired Feelings</li><li>Primary Activities</li><li>Must-Have Features</li><li>Material Preferences</li><li>Landscape Strategy</li><li>Privacy Strategy</li><li>Lighting Strategy</li></ul>"
-          },
-          {
-            "id": "design_direction_approval",
-            "name": "Design Direction Approval",
-            "details": "Does this design direction accurately reflect your vision?",
-            "type": "radio",
-            "required": true,
-            "options": {
-              "generate_design": "Yes, Generate My Design",
-              "make_changes": "I'd Like To Make Changes"
-            }
-          }
-        ]
-      },
-      "phase_4": {
-        "title": "RENDERING REVIEW",
-        "questions": [
-          {
-            "id": "render_satisfaction",
-            "name": "Initial Reaction",
-            "details": "Overall, how satisfied are you with this concept?",
-            "label": "",
-            "is_ai_design": true,
-            "type": "radio",
-            "required": true,
-            "options": [
-              "Love It",
-              "Mostly Like It",
-              "Needs Changes"
-            ]
-          }
-        ]
-      },
+     
       "phase_5": {
         "title": "Revision Requests",
         "questions": [

@@ -266,10 +266,11 @@ export const MessageBubble = ({
   const summaryDisabled =
     originalEntry !== undefined && originalEntry.status !== "failed"
 
-  const cardDescText = message.card?.description ?? ""
+  const cardDescText = message.card?.description?.trim() ?? ""
+  const cardTitleText = message.card?.title?.trim() ?? ""
   const displayText =
     message.kind === "card" && message.card
-      ? cardDescText
+      ? cardDescText || cardTitleText || message.content
       : message.content
 
   // The revision summary renders as a card instead of a typed bubble, so the
@@ -363,7 +364,7 @@ export const MessageBubble = ({
               onEditCancel={onEditCancel}
               isRestored={message.isRestored}
             />
-          ) : (
+          ) : !isRevisionSummary && (message.kind !== 'summary' || displayText.trim().length > 0) ? (
             /* ── Assistant message ── */
             <motion.div
               initial={
@@ -518,7 +519,7 @@ export const MessageBubble = ({
                 )}
               </div>
             </motion.div>
-          )}
+          ) : null}
         </>
       )}
 

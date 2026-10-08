@@ -968,7 +968,20 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
         phase_2: {
           title: "SUMMARY",
           questions: [
-            { id: "summary", type: "display", name: "Summary" },
+            { id: "primary_uses", type: "checkbox", name: "Primary Uses" },
+          ],
+        },
+        phase_3: {
+          title: "DESIGN BRIEF APPROVAL",
+          questions: [
+            {
+              id: "design_summary",
+              type: "display",
+              name: "Design Summary",
+              details: "Based on your answers, Luna will create a design featuring:",
+              example: "<ul><li>Style Direction</li></ul>",
+            },
+            { id: "design_direction_approval", type: "radio", name: "Approval" },
           ],
         },
         phase_5: {
@@ -1210,6 +1223,12 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
     expect(keys).toContain("architecture_changes");
     expect(keys).toContain("revision-summary");
     expect(keys).not.toContain("revision_approval");
+    expect(keys).not.toContain("design_direction_approval");
+    expect(keys).not.toContain("design_summary");
+    const summaryEp = eps.find((e) => e.apiKey === "summary");
+    expect(summaryEp?.content).toBe("");
+    expect(summaryEp?.content).not.toContain("Style Direction");
+    expect(summaryEp?.content).not.toContain("Based on your answers");
   });
 
   it("flattens multi_questions into child episodes", () => {
@@ -1227,6 +1246,8 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
     expect(keys).toContain("ai_site_assessment_potential_constraints");
     const child = eps.find((e) => e.apiKey === "ai_site_assessment_opportunities");
     expect(child?.api?.answerShape).toBe("value-notes");
+    expect(child?.card?.description).toBeTruthy();
+    expect(child?.checklistId).toBe("ai_site_assessment");
   });
 
   it("marks revision-phase episodes and keeps the canonical revision card id", () => {
@@ -1255,6 +1276,20 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
       "material_changes",
       "other_revision_notes",
     ]);
+  });
+
+  it("normalizes user_type with underscores (e.g. landscape_design)", () => {
+    const eps = buildEpisodesFromContext(
+      {
+        role: "enterprise-client",
+        user_type: "landscape_design",
+        question_sets: { original: ["phase_1"], revision: ["phase_5"] },
+      },
+      MOCK_QUESTIONNAIRES
+    );
+    const keys = eps.map((e) => e.apiKey);
+    expect(keys).toContain("property_verified");
+    expect(keys).toContain("architecture_changes");
   });
 
   it("applies the engage-designer variant only on the enterprise custom flow", () => {

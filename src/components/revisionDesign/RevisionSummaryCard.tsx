@@ -49,19 +49,24 @@ export default function RevisionSummaryCard ({
   const { data: questionaire } = useAppSelector(state => state.questionnaires)
 
   const revisionnSummaryDescription = useMemo(() => {
-    if (!questionaire || !user_type || !role || !work_type) return ''
+    if (!questionaire || !user_type || !role || (role !== 'enterprise-client' && !work_type)) return ''
     const roleBase = questionaire[role]
     if (!roleBase || typeof roleBase !== 'object') return ''
     const roleMap = roleBase as Record<string, unknown>
+    const normalizedUserType = user_type.replace(/_/g, '-')
+    const userSection =
+      roleMap[normalizedUserType] ??
+      roleMap[user_type] ??
+      roleMap[user_type.replace(/-/g, '_')]
     const phases =
       role === 'enterprise-client'
-        ? roleMap[user_type]
-        : (roleMap[user_type] as Record<string, unknown> | undefined)?.[work_type]
+        ? userSection
+        : (work_type ? (userSection as Record<string, unknown> | undefined)?.[work_type] : undefined)
     if (!phases || typeof phases !== 'object') return ''
     const phaseMap = phases as Record<string, { title?: string; questions?: { details?: string }[] }>
     const phaseKey =
       question_sets?.revision?.[0] ??
-      (phaseMap['phase_4'] ? 'phase_4' : Object.keys(phaseMap).at(-1))
+      (phaseMap['phase_5'] ? 'phase_5' : phaseMap['phase_4'] ? 'phase_4' : Object.keys(phaseMap).at(-1))
     const phase = phaseKey ? phaseMap[phaseKey] : undefined
     if (!phase || !Array.isArray(phase.questions) || phase.questions.length === 0) return ''
     return phase.questions[1]?.details ?? phase.questions[0]?.details ?? ''
