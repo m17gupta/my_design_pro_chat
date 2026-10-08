@@ -986,6 +986,8 @@ export default function ChatWindow() {
 
 
   const handleCancelAllNeed = useCallback(() => {
+    const currentEntries = entriesRef.current;
+    console.log("handle cancel all need called ----> entries count:", currentEntries.length);
     setIsEngagingDesigner(false);
     setSubmittedAction(null);
   }, []);

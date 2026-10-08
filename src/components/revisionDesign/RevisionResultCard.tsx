@@ -385,9 +385,9 @@ const handleDownload = async () => {
             <motion.button
               type="button"
               onClick={() => onAllINeed(rating)}
-              disabled={!interactive}
-              whileHover={interactive ? { scale: 1.03 } : undefined}
-              whileTap={interactive ? { scale: 0.95 } : undefined}
+              disabled={!interactive || entries.length <= 1}
+              whileHover={interactive && entries.length > 1 ? { scale: 1.03 } : undefined}
+              whileTap={interactive && entries.length > 1 ? { scale: 0.95 } : undefined}
               className={BUTTON_CLASS}
             >
               <svg

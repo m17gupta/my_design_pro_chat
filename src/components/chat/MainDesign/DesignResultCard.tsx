@@ -244,10 +244,10 @@ export default function DesignResultCard({
             <motion.button
               type="button"
               onClick={onAllINeed}
-              whileHover={interactive ? { scale: 1.03 } : undefined}
-              whileTap={interactive ? { scale: 0.95 } : undefined}
+              whileHover={interactive && entries.length === 1 ? { scale: 1.03 } : undefined}
+              whileTap={interactive && entries.length === 1 ? { scale: 0.95 } : undefined}
               className={BUTTON_CLASS}
-              disabled={hasRevisionComment || !interactive}
+              disabled={hasRevisionComment || !interactive || entries.length > 1}
             >
               <svg
                 width="14"
