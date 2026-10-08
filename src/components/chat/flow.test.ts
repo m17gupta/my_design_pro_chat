@@ -786,6 +786,25 @@ describe("buildRestoredTranscript", () => {
     expect(ids).not.toContain("ep-revision-summary-2");
   });
 
+  it("does not add a pending round for multi-step labeled revision comments matching completed round", () => {
+    const multiNotesWithLabels =
+      "architecture_changes: Porch\nhardscape_changes: Walkways\nlandscape_changes: Shrubs\nmaterial_changes: Wood\nother_revision_notes: ccdss";
+    const multiNotesWithoutSomeLabels =
+      "architecture_changes: Porch\nhardscape_changes: Walkways\nlandscape_changes: Shrubs\nmaterial_changes: Wood\nccdss";
+
+    const t = buildRestoredTranscript(
+      fullIntake(),
+      [revisionEntry(multiNotesWithoutSomeLabels)],
+      undefined,
+      { files: [], notes: multiNotesWithLabels }
+    );
+    const ids = t.messages.map((m) => m.id);
+    expect(ids).toContain("ep-revision");
+    expect(ids).toContain("ep-revision-summary");
+    expect(ids).not.toContain("ep-revision-2");
+    expect(ids).not.toContain("ep-revision-summary-2");
+  });
+
   it("adds a pending round after completed rounds when the comment is new", () => {
     const t = buildRestoredTranscript(
       fullIntake(),

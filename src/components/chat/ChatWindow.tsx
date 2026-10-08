@@ -357,22 +357,28 @@ export default function ChatWindow() {
         setUploads((prev) => ({ ...prev, [key]: filesByField }));
       }
 
+      let latestRevisionNotes = userText;
+      let latestRevisionFiles: string[] = [];
       // Revision feedback stores `{ files: [uploaded URLs], notes: text }` in
       // the brief payload so the regeneration POST carries the changes.
       if (ep.revisionStep) {
         const urls = urlsByField
           ? Object.values(urlsByField).flatMap((byKey) => Object.values(byKey))
           : [];
+        latestRevisionFiles = Array.from(new Set([...(revisionComment.files ?? []), ...urls]));
         if (ep.apiKey === "revision" || ep.apiKey === "revision_comments") {
-          dispatch(setRevision({ files: urls, notes: userText }));
+          latestRevisionNotes = userText;
+          latestRevisionFiles = urls.length > 0 ? urls : (revisionComment.files ?? []);
+          dispatch(setRevision({ files: latestRevisionFiles, notes: latestRevisionNotes }));
         } else {
           const qName = ep.api?.name || ep.card?.title || ep.apiKey;
           const entry = `${qName}: ${userText}`;
           const currentNotes = revisionComment.notes?.trim() ?? "";
           const newNotes = currentNotes ? `${currentNotes}\n${entry}` : entry;
+          latestRevisionNotes = newNotes;
           dispatch(
             setRevision({
-              files: Array.from(new Set([...(revisionComment.files ?? []), ...urls])),
+              files: latestRevisionFiles,
               notes: newNotes,
             })
           );
@@ -419,14 +425,9 @@ export default function ChatWindow() {
               ep.apiKey === "revision_comments")
           ) {
             const round = revRound ?? countRevisionRounds(messages, revisionKey);
-            const urls = urlsByField
-              ? Object.values(urlsByField).flatMap((byKey) => Object.values(byKey))
-              : [];
             handleRevisionGenerateRef.current?.(round, {
-              files: urls.length > 0 ? urls : (revisionComment.files ?? []),
-              notes: revisionComment.notes
-                ? `${revisionComment.notes}\n${userText}`
-                : userText,
+              files: latestRevisionFiles,
+              notes: latestRevisionNotes,
             });
           }
         }

@@ -1772,11 +1772,27 @@ export function buildRestoredTranscript(
     // round's answer (e.g. an edit of that round, not a new one).
     if (hasPendingComment) {
       const lastAnswer = revisionEntries[revisionEntries.length - 1]?.questions[0]?.answer;
-      const alreadyCaptured =
-        lastAnswer !== undefined &&
-        lastAnswer.notes === revisionComment.notes &&
-        JSON.stringify(lastAnswer.files ?? []) ===
-          JSON.stringify(revisionComment.files ?? []);
+      const lastNotes = (lastAnswer?.notes ?? "").trim();
+      const currentNotes = (revisionComment.notes ?? "").trim();
+
+      const stripLabels = (s: string) =>
+        s
+          .split("\n")
+          .map((line) => line.replace(/^[^:]+:\s*/, "").trim())
+          .filter(Boolean)
+          .join("\n");
+
+      const notesMatch =
+        lastNotes === currentNotes ||
+        (lastNotes.length > 0 &&
+          currentNotes.length > 0 &&
+          stripLabels(lastNotes) === stripLabels(currentNotes));
+
+      const filesMatch =
+        JSON.stringify(lastAnswer?.files ?? []) ===
+        JSON.stringify(revisionComment.files ?? []);
+
+      const alreadyCaptured = lastAnswer !== undefined && notesMatch && filesMatch;
       if (!alreadyCaptured) {
         pushRevisionRound(revisionEntries.length + 1, revisionComment.notes);
       }
