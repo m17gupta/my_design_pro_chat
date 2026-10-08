@@ -124,7 +124,7 @@ export default function ChatWindow() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<number | null>(null);
-  const {watermark, image_url, work_type, projectId: id, original:chat_original, user_type, dc_name, role, custom_engage_designer, question_sets} = briefPayload;
+  const {watermark, image_url, work_type, projectId: id, original:chat_original, user_type, dc_name, role, custom_engage_designer, question_sets,project_address:userAddress} = briefPayload;
   const busyRef = useRef(false);
   const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>({});
 
@@ -969,6 +969,7 @@ export default function ChatWindow() {
         id,
         original: chat_original,
         design: entries,
+        project_adress:userAddress,
         rating,
         action,
       };
@@ -979,7 +980,7 @@ export default function ChatWindow() {
         setSubmittedAction(action);
       }
     },
-    [id, chat_original, entries]
+    [id, chat_original, entries,userAddress]
   );
 
 
