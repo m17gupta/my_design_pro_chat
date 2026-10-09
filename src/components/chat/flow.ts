@@ -1249,11 +1249,18 @@ export function buildEpisodesFromContext(
     editable: false,
   }];
   const summaryParts: string[] = [];
+  const isEnterpriseClient = normalizeRole(ctx.role) === "enterprise-client";
 
   for (const phaseKey of originalPhases) {
     const phase = phases[phaseKey];
     if (!phase) continue;
     for (const q of phase.questions) {
+      if (
+        (q.id === "property_verified" || q.id.startsWith("property_verified")) &&
+        episodes.some((e) => e.apiKey === "property_verified")
+      ) {
+        continue;
+      }
       if (q.id === "design_summary") {
         if (q.details) summaryParts.push(q.details);
         if (q.example) summaryParts.push(q.example);
@@ -1261,11 +1268,17 @@ export function buildEpisodesFromContext(
       }
       if (q.id === "design_direction_approval") continue;
       if (q.is_ai_design) continue; // post-design review — rendered by result cards
+      if (
+        isEnterpriseClient &&
+        (q.id === "assessment_confirmation" ||
+          q.id.startsWith("assessment_confirmation"))
+      ) {
+        continue;
+      }
       episodes.push(...questionToEpisodes(q));
     }
   }
 
-  const isEnterpriseClient = normalizeRole(ctx.role) === "enterprise-client";
   const hasExplicitQuestionSets = Boolean(ctx.question_sets?.original?.length);
 
   // If original phases (e.g. ['phase_1', 'phase_2']) did not include the summary phase,

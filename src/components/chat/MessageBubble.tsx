@@ -356,6 +356,23 @@ export const MessageBubble = ({
     checklistItem && checklist?.length && !isSuppressedUploadCard
       ? `${checklistItem.number} of ${checklist.length}`
       : null
+
+  const isEnterpriseClient = (role ?? "").trim().toLowerCase() === "enterprise-client";
+  const isAssessmentConfirmation =
+    apiKey === "assessment_confirmation" ||
+    apiKey?.startsWith("assessment_confirmation") ||
+    message.id === "ep-assessment_confirmation" ||
+    message.id.startsWith("ep-assessment_confirmation") ||
+    message.card?.id === "assessment_confirmation" ||
+    message.card?.id?.startsWith("assessment_confirmation") ||
+    Boolean(displayText?.includes("Does this assessment look accurate?")) ||
+    Boolean(message.content?.includes("Does this assessment look accurate?")) ||
+    Boolean(message.card?.title?.toLowerCase().includes("assessment confirmation"));
+
+  if (isEnterpriseClient && isAssessmentConfirmation) {
+    return null;
+  }
+
   return (
     <div className='w-full'>
       {!isRevisionSummary && (

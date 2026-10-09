@@ -972,6 +972,7 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
           questions: [
             { id: "property_verified", type: "radio", name: "Verify Property" },
             { id: "primary_uses", type: "checkbox", name: "Primary Uses" },
+            { id: "assessment_confirmation", type: "radio", name: "Assessment Confirmation" },
             {
               id: "ai_site_assessment",
               type: "multi_questions",
@@ -1244,6 +1245,7 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
     expect(keys).not.toContain("revision_approval");
     expect(keys).not.toContain("design_direction_approval");
     expect(keys).not.toContain("design_summary");
+    expect(keys).not.toContain("assessment_confirmation");
     const summaryEp = eps.find((e) => e.apiKey === "summary");
     expect(summaryEp?.content).toBe("");
     expect(summaryEp?.content).not.toContain("Style Direction");
