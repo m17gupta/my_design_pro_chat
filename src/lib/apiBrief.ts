@@ -23,9 +23,9 @@ export interface ProjectAddress {
 
 export interface BriefContext {
   /** Job id from the host app / API (used by setContext for internal state). */
-  id?: number
+  id?: number | string
   /** Project id on the brief payload (mirrors schema.md's projectId). */
-  projectId?: number
+  projectId?: string
   user_type?: string | null,
   dc_name?: string | null,
   watermark?: string
@@ -58,7 +58,7 @@ export interface RevisionComment {
 
 /** The exact payload shape the design API expects (see schema.md). */
 export interface ApiBriefPayload {
-  projectId: number
+  projectId: string
   user_type?: string | null
   dc_name?: string | null
   role?: string | null
@@ -174,7 +174,7 @@ export function buildApiPayload (
   })
 
   return {
-    projectId: context.projectId ?? context.id ?? 0,
+    projectId: context.projectId != null ? String(context.projectId) : context.id != null ? String(context.id) : '',
     // `||` (not `??`) so an empty-string context value means "not set" → default.
     watermark: context.watermark || DEFAULT_WATERMARK,
     work_type: context.work_type || DEFAULT_WORK_TYPE,

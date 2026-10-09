@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-import { buildEnterpriseClientPayload } from "@/lib/enterpriseClientPayload";
+import { buildEnterpriseClientPayload, DesignPayloadError, unwrapDesignBrief } from "../../../lib/enterpriseClientPayload";
 
 const DESIGN_API_URL = process.env.DESIGN_API_URL ?? "";
 const DESIGN_API_KEY = process.env.DESIGN_API_KEY ?? "";
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
 
   let res: Response;
   try {
+    payload = unwrapDesignBrief(payload);
     // Normalize the base URL so a trailing slash never produces a double
     // slash (e.g. `https://api.dzinlynxt.com/` + `/api/v1/…` → 404).
     const base = DESIGN_API_URL.replace(/\/+$/, "");
@@ -70,7 +71,10 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify(outgoingBody),
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof DesignPayloadError) {
+      return Response.json({ error: error.message }, { status: 422 });
+    }
     return Response.json(
       { error: "Network error — could not reach the design API" },
       { status: 502 }

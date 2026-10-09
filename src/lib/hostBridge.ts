@@ -7,11 +7,12 @@ export const HOST_ACTION_ENGAGE_DESIGNER_THANK_YOU = "engageDesignerThankYou" as
 
 /** Payload of the chat → host submit message (schema-shaped brief + design history). */
 export interface SubmitLunaProjectData {
-  id: number | null;
+  id: string | number | null;
   original: Record<string, unknown>;
   design: unknown[];
   rating: number;
   action: string;
+  project_address?: unknown;
 }
 
 export type HostMessage =

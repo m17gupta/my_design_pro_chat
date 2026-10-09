@@ -28,7 +28,8 @@ export type { ProjectAddress }
  * selector fills them with empty defaults so all 8 keys are always present.
  */
 export interface BriefState {
-  id: number | null
+  id: string | number | null
+  projectId?: string | null
   user_type?: string | null
   dc_name?: string | null
   role?: string | null
@@ -79,7 +80,8 @@ export function stateFromPayload (
     }
   })
   return {
-    id: payload.projectId,
+    id: payload.projectId ? String(payload.projectId) : null,
+    projectId: payload.projectId ? String(payload.projectId) : null,
     original,
     watermark: payload.watermark,
     work_type: toWorkType(payload.work_type),
@@ -120,7 +122,7 @@ export function payloadFromState (
     ),
     state.original,
     {
-      projectId: state.id ?? 0,
+      projectId: state.projectId ?? (state.id != null ? String(state.id) : ""),
       user_type: state.user_type ?? "",
       dc_name: state.dc_name ?? "",
       role: state.role ?? null,
@@ -138,6 +140,7 @@ export function payloadFromState (
 
 const initialState: BriefState = {
   id: null,
+  projectId: null,
   user_type: null,
   dc_name: null,
   role: null,
@@ -208,6 +211,14 @@ const briefSlice = createSlice({
     /** Merge top-level context fields (id / watermark / work_type / image_url / value). */
     setContext (state, action: PayloadAction<BriefContext>) {
       if (action.payload.id !== undefined) state.id = action.payload.id
+      if (action.payload.projectId !== undefined) {
+        state.projectId = action.payload.projectId ? String(action.payload.projectId) : null
+      } else if (action.payload.id !== undefined) {
+        state.projectId = action.payload.id != null ? String(action.payload.id) : null
+      }
+      if (action.payload.id === undefined && action.payload.projectId !== undefined) {
+        state.id = action.payload.projectId
+      }
       if (action.payload.user_type !== undefined)
         state.user_type = action.payload.user_type
       if (action.payload.dc_name !== undefined)

@@ -693,7 +693,7 @@ export default function ChatWindow() {
     } finally {
       setGenerating(false);
     }
-  }, [dispatch, generating, chat_original, watermark, image_url, work_type, revisionComment, user_type, dc_name, role, custom_engage_designer, question_sets]);
+  }, [dispatch, generating, id, episodes, chat_original, watermark, image_url, work_type, revisionComment, user_type, dc_name, role, custom_engage_designer, question_sets]);
 
   /**
    * Status polling: once the POST lands a `task_id` in the store, wait 3s,

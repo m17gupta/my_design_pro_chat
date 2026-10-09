@@ -28,17 +28,19 @@ const UpdateProjectData = () => {
     }, [entries])
 
     useEffect(() => {
-        if (id == null || !isPersistenceConfigured) return
+        const targetId = chat.projectId || (chat.id != null ? String(chat.id) : "")
+        if (!targetId || !isPersistenceConfigured) return
         if (timerRef.current) clearTimeout(timerRef.current)
         timerRef.current = setTimeout(() => {
             timerRef.current = null
-            const { id, watermark, work_type, image_url, value, original, revision_comment, user_type, dc_name, role, custom_engage_designer, question_sets, project_address } = chatRef.current
-            if (original == null || Object.keys(original).length === 0) return
+            const { id, projectId, watermark, work_type, image_url, value, original, revision_comment, user_type, dc_name, role, custom_engage_designer, question_sets, project_address } = chatRef.current
+            const currentProjectId = projectId || (id != null ? String(id) : "")
+            if (original == null || Object.keys(original).length === 0 || !currentProjectId) return
             void dispatch(
                 saveProject({
-                    projectId: String(id),
+                    projectId: currentProjectId,
                     chats: {
-                        projectId: id ?? 0,
+                        projectId: currentProjectId,
                         user_type: user_type ?? "",
                         dc_name: dc_name ?? "",
                         role: role ?? null,

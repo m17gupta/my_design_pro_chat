@@ -88,7 +88,7 @@ function UploadZone({
   const [urls, setUrls] = useState<Record<string, UploadResult>>({});
   const reduceMotion = useReducedMotion();
   // Group every upload of the same project under luna-ai/<projectId>/ in S3.
-  const projectId = useAppSelector((s) => s.chat.id);
+  const projectId = useAppSelector((s) => s.chat.projectId ?? s.chat.id);
 
   useEffect(() => {
     const isUploading = Object.values(status).some((st) => st.state === "uploading");

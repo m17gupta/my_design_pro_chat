@@ -1,4 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import { unwrapDesignBrief } from "../../lib/enterpriseClientPayload";
 import type { ApiBriefPayload } from "../../lib/apiBrief";
 import type { EnterpriseEntry } from "../enterprise/enterpriseType";
 import { setBriefState, setContext, setOriginal, setRevision, stateFromPayload } from "../briefSlice";
@@ -56,6 +57,8 @@ export const hydrateProject = createAsyncThunk<
       // Restore answered questions (original) and design history (design_data)
       // without overwriting top-level brief context.
       if (project.chats && typeof project.chats === "object") {
+        // Reject conflicting saved IDs before replacing the active brief context.
+        unwrapDesignBrief(project);
         const rootState = getState() as { questionnaires?: { data?: Record<string, unknown> | null } };
         const questionnaires = rootState.questionnaires?.data ?? null;
         const restored = stateFromPayload(project.chats, questionnaires);
@@ -69,6 +72,7 @@ export const hydrateProject = createAsyncThunk<
         dispatch(
           setContext({
             id: project.chats.projectId,
+            projectId: project.chats.projectId.toString(),
             work_type: project.chats.work_type,
             user_type: project.chats.user_type,
             dc_name: project.chats.dc_name,

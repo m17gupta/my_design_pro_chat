@@ -9,7 +9,8 @@ import { fetchQuestionnaires } from "../../store/questionnaires/questionnaireThu
 
 /** Decoded shape of the base64 `?params` query string sent from the site. */
 interface ClientParams {
-  id?: number;
+  id?: number | string;
+  projectId?: string;
   work_type?: string;
   image_url?: string;
   watermark?: string;
@@ -84,6 +85,7 @@ const GetAllProjectData = ({ defaultRole }: GetAllProjectDataProps = {}) => {
       dispatch(
         setContext({
           id: params.id,
+          projectId: params.role==="enterprise-client"? `cp-${params.id?.toString()}`:params.id?.toString(),
           work_type: params.work_type,
           image_url: params.image_url,
           watermark: params.watermark,
@@ -96,7 +98,7 @@ const GetAllProjectData = ({ defaultRole }: GetAllProjectDataProps = {}) => {
           project_address: params.project_address
         })
       );
-      const incomingProjectId = params.id ? String(params.id) : "";
+      const incomingProjectId = params.role==="enterprise-client"? `cp-${params.id?.toString()}`:params.id?.toString();  
       if (incomingProjectId) {
         dispatch(hydrateProject({ projectId: incomingProjectId }));
       } else {

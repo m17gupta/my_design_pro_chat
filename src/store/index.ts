@@ -36,7 +36,7 @@ interface PersistAPI {
 }
 
 function projectIdOf(state: RootState): string | null {
-  return state.chat.id != null ? String(state.chat.id) : null;
+  return state.chat.projectId ?? (state.chat.id != null ? String(state.chat.id) : null);
 }
 
 /** Queue an upsert of the current chat payload + design history. */

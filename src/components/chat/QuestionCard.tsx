@@ -1,6 +1,8 @@
 "use client";
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/store";
 import type { UploadResult } from "../../lib/upload";
 import { renderInline } from "./formatText";
 import UploadZone from "./UploadZone";
@@ -30,6 +32,7 @@ interface QuestionCardProps {
   /** When true (e.g. revision comment step), text is compulsory and image upload is optional. */
   isRevision?: boolean;
   questionId?: string;
+  role?: string;
 }
 
 function QuestionCard({
@@ -42,9 +45,20 @@ function QuestionCard({
   onCancel,
   isRevision = false,
   questionId,
+  role,
 }: QuestionCardProps) {
 
   // console.log("spec--",spec)
+
+  const storeRole = useSelector((state: RootState) => state.chat?.role);
+  const effectiveRole = (role ?? storeRole ?? "").trim().toLowerCase();
+  const isEnterpriseClient = effectiveRole === "enterprise-client";
+
+  const isAssessmentConfirmation =
+    questionId === "assessment_confirmation" ||
+    questionId?.startsWith("assessment_confirmation") ||
+    spec.id === "assessment_confirmation" ||
+    spec.id?.startsWith("assessment_confirmation");
 
   const [showAddressModal, setShowAddressModal] = useState(false);
 
@@ -53,20 +67,6 @@ function QuestionCard({
     questionId?.startsWith("property_verified") ||
     spec.id === "property_verified" ||
     Boolean(spec.is_property_address);
-
-  const handleAddressSaved = (_updatedAddress: ProjectAddress) => {
-    // Switch the radio selection to the "Yes" option after address is saved
-    spec.fields.forEach((f, i) => {
-      if (f.kind === "radio") {
-        const yesOption = f.options.find((o) =>
-          o.toLowerCase().startsWith("yes")
-        );
-        if (yesOption) {
-          setRadioByField((prev) => ({ ...prev, [i]: yesOption }));
-        }
-      }
-    });
-  };
 
   // Compute initial states from initialAnswer
   const initTextByField = useMemo(() => {
@@ -324,7 +324,7 @@ function QuestionCard({
    * checkbox → { value, notes }, textarea + upload → { files, notes },
    * multi-field / multi_questions → Record<string, string | string[]>.
    */
-  const buildAnswer = (): AnswerValue => {
+  const buildAnswer = (overrideRadios: Record<number, string> = radioByField): AnswerValue => {
     const allUrls = () =>
       Object.values(urlsByField).flatMap((slotMap) =>
         Object.values(slotMap ?? {}).map((r) => r.url)
@@ -334,7 +334,7 @@ function QuestionCard({
       const field = spec.fields[0];
       if (field.kind === "upload-grid") return allUrls();
       if (field.kind === "textarea") return (textByField[0] ?? "").trim();
-      if (field.kind === "radio") return radioByField[0] ?? "";
+      if (field.kind === "radio") return overrideRadios[0] ?? "";
       if (field.kind === "checkbox")
         return { value: [...(checksByField[0] ?? [])], notes: notes.trim() };
     }
@@ -354,7 +354,7 @@ function QuestionCard({
       if (field.kind === "checkbox") {
         result[key] = Array.from(checksByField[i] ?? []);
       } else if (field.kind === "radio") {
-        result[key] = radioByField[i] ?? "";
+        result[key] = overrideRadios[i] ?? "";
       } else if (field.kind === "textarea") {
         result[key] = (textByField[i] ?? "").trim();
       }
@@ -362,23 +362,8 @@ function QuestionCard({
     return result;
   };
 
-  const submit = () => {
-    if (!canContinue) return;
-
-    // When the question is property_verified and user selected "No",
-    // open the edit address modal instead of proceeding immediately.
-    if (isPropertyVerified) {
-      const isNoOption = Object.values(radioByField).some(
-        (r) =>
-          r?.toLowerCase().includes("no") ||
-          r === "No, this is not the correct property"
-      );
-
-      if (isNoOption) {
-        setShowAddressModal(true);
-        return;
-      }
-    }
+  const doSubmit = (overrideRadios?: Record<number, string>) => {
+    const activeRadios = overrideRadios ?? radioByField;
 
     const parts: string[] = [];
     const uploadTotal = Object.values(urlsByField).reduce(
@@ -394,7 +379,7 @@ function QuestionCard({
         const v = (textByField[i] ?? "").trim();
         if (v) parts.push(isMultiField && fieldTitle ? `${fieldTitle}: ${v}` : v);
       } else if (field.kind === "radio") {
-        const r = radioByField[i];
+        const r = activeRadios[i];
         if (r) parts.push(isMultiField && fieldTitle ? `${fieldTitle}: ${r}` : r);
       } else if (field.kind === "checkbox") {
         const selected = [...(checksByField[i] ?? [])];
@@ -436,9 +421,56 @@ function QuestionCard({
       answerText: answerText || "No answer",
       files: uploads,
       fileUrls,
-      answer: buildAnswer(),
+      answer: buildAnswer(activeRadios),
     });
   };
+
+  const submit = () => {
+    if (!canContinue) return;
+
+    // When the question is property_verified and user selected "No",
+    // open the edit address modal instead of proceeding immediately.
+    if (isPropertyVerified) {
+      const isNoOption = Object.values(radioByField).some(
+        (r) =>
+          typeof r === "string" &&
+          (r.trim().toLowerCase().startsWith("no") ||
+            r.trim().toLowerCase().includes("not the correct") ||
+            r.trim().toLowerCase().includes("not correct"))
+      );
+
+      if (isNoOption) {
+        setShowAddressModal(true);
+        return;
+      }
+    }
+
+    doSubmit();
+  };
+
+  const handleAddressSaved = (_updatedAddress: ProjectAddress) => {
+    setShowAddressModal(false);
+    // Switch the radio selection to the "Yes" option after address is saved
+    const updatedRadios: Record<number, string> = { ...radioByField };
+    spec.fields.forEach((f, i) => {
+      if (f.kind === "radio") {
+        const yesOption = f.options.find((o) =>
+          o.toLowerCase().startsWith("yes")
+        );
+        if (yesOption) {
+          updatedRadios[i] = yesOption;
+        }
+      }
+    });
+    setRadioByField(updatedRadios);
+
+    // Automatically submit with updated "Yes" answer to advance to next question
+    doSubmit(updatedRadios);
+  };
+
+  if (isEnterpriseClient && isAssessmentConfirmation) {
+    return null;
+  }
 
   return (
     <div className="w-full rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">

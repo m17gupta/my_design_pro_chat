@@ -268,6 +268,7 @@ describe("buildEnterpriseClientPayload", () => {
     };
 
     const payload = {
+      projectId: "cp-138963",
       role: "enterprise-client",
       user_type: "landscape-design",
       original: {
@@ -293,6 +294,7 @@ describe("buildEnterpriseClientPayload", () => {
 
   it("preserves unified multi_questions dictionary answers on original", () => {
     const payload = {
+      projectId: "cp-138963",
       role: "enterprise-client",
       user_type: "landscape-design",
       original: {

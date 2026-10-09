@@ -37,7 +37,7 @@ function AdditionalImagesUploadCard({
   onSubmit,
   onCancel,
 }: AdditionalImagesUploadCardProps) {
-  const projectId = useAppSelector((s) => s.chat.id);
+  const projectId = useAppSelector((s) => s.chat.projectId ?? s.chat.id);
   const addMoreInputRef = useRef<HTMLInputElement | null>(null);
   const slotInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 

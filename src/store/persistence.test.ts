@@ -5,7 +5,7 @@ import type { ApiBriefPayload } from "../lib/apiBrief";
 
 /** The exact shape the persistence middleware saves / hydrate restores. */
 const SAVED: ApiBriefPayload = {
-  projectId: 42,
+  projectId: "42",
   watermark: "https://wm.example/logo.png",
   work_type: "front_yard",
   image_url: "https://img.example/home.jpg",
@@ -27,7 +27,7 @@ describe("persistence round-trip", () => {
   it("payloadFromState -> stateFromPayload preserves answered items + context", () => {
     const restored = payloadFromState(stateFromPayload(SAVED));
 
-    expect(restored.projectId).toBe(42);
+    expect(restored.projectId).toBe("42");
     expect(restored.work_type).toBe("front_yard");
     expect(restored.watermark).toBe(SAVED.watermark);
     expect(restored.revision_comment).toEqual(SAVED.revision_comment);
@@ -50,7 +50,7 @@ describe("persistence round-trip", () => {
     });
     expect(state.original).toEqual({});
     // Context still restored.
-    expect(state.id).toBe(42);
+    expect(state.id).toBe("42");
     expect(state.work_type).toBe("front_yard");
   });
 

@@ -151,7 +151,44 @@ function extractQuestionnaireMetadata(
   return { childToParent, dynamicGates };
 }
 
+export class DesignPayloadError extends Error {}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown> : null;
+}
+
+function resolveProjectId(...sources: Record<string, unknown>[]): string {
+  const ids = sources.flatMap((source) =>
+    ["projectId", "project_id"].filter((key) => key in source).map((key) => source[key])
+  );
+  if (!ids.length) throw new DesignPayloadError("projectId is required before generating a design");
+  const values = ids.map((id) => {
+    if ((typeof id !== "string" && typeof id !== "number") ||
+        !/^[A-Za-z0-9_-]+$/.test(String(id))) {
+      throw new DesignPayloadError("projectId must be a nonblank identifier containing letters, numbers, hyphens or underscores");
+    }
+    return String(id);
+  });
+  if (values.some((id) => id !== values[0])) {
+    throw new DesignPayloadError("Conflicting project IDs: project_id and chats.projectId must match");
+  }
+  return values[0];
+}
+
+/** Accept a brief or a saved-project wrapper without inferring IDs from image URLs. */
+export function unwrapDesignBrief(value: unknown): Record<string, unknown> {
+  const payload = asRecord(value);
+  if (!payload) throw new DesignPayloadError("Design request must be a JSON object");
+  if (!("chats" in payload)) return payload;
+  const chats = asRecord(payload.chats);
+  if (!chats) throw new DesignPayloadError("chats must contain a design brief");
+  return { ...chats, projectId: resolveProjectId(payload, chats) };
+}
+
 export interface EnterpriseClientPayload {
+  projectId: string;
+  work_type?: string;
   watermark: string;
   image_url: string;
   original: Record<string, unknown>;
@@ -166,6 +203,8 @@ export function buildEnterpriseClientPayload(
   payload: Record<string, unknown>,
   questionnaires?: Record<string, unknown> | null
 ): EnterpriseClientPayload {
+  payload = unwrapDesignBrief(payload);
+  const projectId = resolveProjectId(payload);
   const role = String(payload.role ?? "enterprise-client");
   const userType = String(payload.user_type ?? "");
 
@@ -243,6 +282,8 @@ export function buildEnterpriseClientPayload(
   }
 
   return {
+    projectId,
+    ...(typeof payload.work_type === "string" ? { work_type: payload.work_type } : {}),
     watermark: typeof payload.watermark === "string" ? payload.watermark : "",
     image_url: typeof payload.image_url === "string" ? payload.image_url : "",
     original,

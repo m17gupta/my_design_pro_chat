@@ -19,7 +19,7 @@ describe("enterpriseSlice extraReducers", () => {
   };
 
   const payload = {
-    projectId: 123,
+    projectId: "123",
     watermark: "",
     work_type: "front_yard",
     image_url: "https://example.com/original.jpg",

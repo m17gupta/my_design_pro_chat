@@ -254,6 +254,7 @@ export const MessageBubble = ({
   const typingConfig = useSelector(selectTypingConfig)
   const { entries } = useSelector((state: RootState) => state.enterprise)
   const projectAddress = useSelector((state: RootState) => state.chat.project_address)
+  const role = useSelector((state: RootState) => state.chat.role)
   const isPropertyVerified =
     apiKey === 'property_verified' ||
     apiKey?.startsWith('property_verified') ||
@@ -556,6 +557,7 @@ export const MessageBubble = ({
                         key={`${message.id}-${disabled ? 'disabled' : 'editing'}`}
                         spec={message.card}
                         questionId={apiKey ?? message.card.id ?? (message.id.startsWith('ep-') ? message.id.replace(/^ep-/, '') : message.id)}
+                        role={role ?? undefined}
                         filesByField={filesByField}
                         initialAnswer={initialAnswer ?? message.initialAnswer}
                         disabled={disabled}
