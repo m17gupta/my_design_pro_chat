@@ -284,22 +284,45 @@ function QuestionCard({
 
   // Stable per-slot handlers (keyed by slot index) so memoized UploadZone
   // instances aren't re-rendered on every keystroke/state change.
+  // const urlsHandlers = useMemo(() => {
+  //   const handlers = new Map<
+  //     number,
+  //     (map: Record<string, UploadResult>) => void
+  //   >();
+  //   spec.fields.forEach((field) => {
+  //     if (field.kind === "upload-grid") {
+  //       Array.from({ length: field.count ?? 4 }).forEach((_, slot) => {
+  //         handlers.set(slot, (map) =>
+  //           setUrlsByField((prev) => ({ ...prev, [slot]: map }))
+  //         );
+  //       });
+  //     }
+  //   });
+  //   return handlers;
+  // }, [spec.fields]);
   const urlsHandlers = useMemo(() => {
-    const handlers = new Map<
-      number,
-      (map: Record<string, UploadResult>) => void
-    >();
-    spec.fields.forEach((field) => {
-      if (field.kind === "upload-grid") {
-        Array.from({ length: field.count ?? 4 }).forEach((_, slot) => {
-          handlers.set(slot, (map) =>
-            setUrlsByField((prev) => ({ ...prev, [slot]: map }))
-          );
-        });
-      }
+  const handlers = new Map<
+    string,
+    (map: Record<string, UploadResult>) => void
+  >();
+
+  spec.fields.forEach((field, fieldIndex) => {
+    if (field.kind !== "upload-grid") return;
+
+    Array.from({ length: field.count ?? 4 }).forEach((_, slot) => {
+      const key = `${fieldIndex}-${slot}`;
+
+      handlers.set(key, (map) => {
+        setUrlsByField((prev) => ({
+          ...prev,
+          [key]: map,
+        }));
+      });
     });
-    return handlers;
-  }, [spec.fields]);
+  });
+
+  return handlers;
+}, [spec.fields, setUrlsByField]);
 
   const uploadingHandlers = useMemo(() => {
     const handlers = new Map<number, (isUploading: boolean) => void>();

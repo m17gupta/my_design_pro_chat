@@ -970,7 +970,7 @@ export default function ChatWindow() {
         id,
         original: chat_original,
         design: entries,
-        project_adress:userAddress,
+        project_address:userAddress,
         rating,
         action,
       };
@@ -1309,11 +1309,20 @@ export default function ChatWindow() {
 
   const reduxEditId = useAppSelector(selectEditId);
 
+  // useEffect(() => {
+  //   if (reduxEditId && !editingId) {
+  //     handleEditQuestion(reduxEditId);
+  //   }
+  // }, [reduxEditId, editingId, handleEditQuestion]);
   useEffect(() => {
-    if (reduxEditId && !editingId) {
-      handleEditQuestion(reduxEditId);
-    }
-  }, [reduxEditId, editingId, handleEditQuestion]);
+  if (!reduxEditId || editingId) return;
+
+  const loadQuestion = async () => {
+    await handleEditQuestion(reduxEditId);
+  };
+
+  loadQuestion();
+}, [reduxEditId, editingId, handleEditQuestion]);
 
 
   // The latest revision-summary message is the *current* round; earlier rounds
