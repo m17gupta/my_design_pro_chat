@@ -1016,7 +1016,11 @@ export default function ChatWindow() {
       postToHost({ action: HOST_ACTION_SUBMIT_PROJECT, data });
       if (action === "engage_designer") {
         setIsEngagingDesigner(true);
-      } else {
+      } 
+      if (action === "ai_concept_skip") {
+         console.log("called skip content")
+      } 
+      else {
         setSubmittedAction(action);
       }
     },
