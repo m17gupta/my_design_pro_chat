@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { renderInline } from "./formatText";
 
 interface OptionButtonsProps {
   options: string[];
@@ -105,10 +106,10 @@ export default function OptionButtons({
             }}
             whileHover={disabled ? undefined : { scale: 1.02, y: -0.5 }}
             whileTap={disabled ? undefined : { scale: 0.97 }}
-            className={className}
+            className={`${className} text-center`}
           >
             {icon}
-            <span>{label}</span>
+            {renderInline(label, "text-center [&_*]:text-center [&_p]:m-0")}
           </motion.button>
         );
       })}

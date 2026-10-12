@@ -9,7 +9,7 @@ import { RootState } from "@/store";
 import CompareImage from "@/components/compareImage/CompareImage";
 
 /** Terminal project actions sent to the host via postMessage. */
-export type SubmitAction = "this_is_all_i_need" | "engage_designer";
+export type SubmitAction = "this_is_all_i_need" | "engage_designer" | "ai_concept_skip";
 
 interface RevisionResultCardProps {
   /** The revision entry this round renders from (id, url, status, questions). */

@@ -49,6 +49,7 @@ import {
   setEditId,
   resetEditId,
   selectEditId,
+  setIsSkipped,
 } from "../../store/enterprise/enterpriseSlice";
 import {
   fetchEnterpriseStatus,
@@ -119,6 +120,7 @@ export default function ChatWindow() {
   const latestEnterpriseEntry = useAppSelector((s) =>
     selectLatestEnterpriseEntry(s.enterprise)
   );
+  const isSkipped = useAppSelector((s) => s.enterprise.isSkipped);
 
   const [generating, setGenerating] = useState(false);
 
@@ -178,6 +180,16 @@ export default function ChatWindow() {
   useEffect(() => {
     entriesRef.current = entries;
   }, [entries]);
+
+  const episodesRef = useRef(episodes);
+  useEffect(() => {
+    episodesRef.current = episodes;
+  }, [episodes]);
+
+  const questionnairesRef = useRef(questionnaires);
+  useEffect(() => {
+    questionnairesRef.current = questionnaires;
+  }, [questionnaires]);
 
   const restoredTranscript = useMemo(
     () =>
@@ -616,15 +628,39 @@ export default function ChatWindow() {
       });
 
       if (baseEpId) {
-        const ep = episodeById(baseEpId, episodes);
-        if (ep.checklistId) {
+        const activeEpisodes =
+          episodesRef.current && episodesRef.current.length > 1
+            ? episodesRef.current
+            : episodes;
+        let ep = activeEpisodes.find((e) => e.apiKey === baseEpId);
+        if (!ep) {
+          const rebuilt = buildEpisodesFromContext(
+            flowContext,
+            questionnaires ?? questionnairesRef.current
+          );
+          ep = rebuilt.find((e) => e.apiKey === baseEpId);
+        }
+        if (!ep) {
+          try {
+            ep = episodeById(baseEpId, activeEpisodes);
+          } catch {
+            ep = undefined;
+          }
+        }
+
+        if (ep?.checklistId) {
           setAnswers((prev) => ({ ...prev, [ep.checklistId as string]: text }));
           setCompleted((prev) => new Set(prev).add(ep.checklistId as string));
         }
-        if (ep.api) {
-          const apiKey = ep.apiKey;
-          dispatch(answerQuestion({ apiKey, answer: result.answer, questionnaires }));
-        }
+
+        const apiKey = ep?.apiKey ?? baseEpId;
+        dispatch(
+          answerQuestion({
+            apiKey,
+            answer: result.answer,
+            questionnaires: questionnaires ?? questionnairesRef.current,
+          })
+        );
         if (baseEpId === revisionKey) {
           const ans = result.answer;
           if (ans && typeof ans === "object" && !Array.isArray(ans) && "notes" in ans) {
@@ -640,7 +676,7 @@ export default function ChatWindow() {
         }
         const filesKey = cardMessageId.startsWith(`ep-${revisionKey}`)
           ? cardMessageId
-          : ep.apiKey;
+          : apiKey;
         setUploads((prev) => ({ ...prev, [filesKey]: result.files }));
       }
 
@@ -652,7 +688,7 @@ export default function ChatWindow() {
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     },
-    [dispatch, revisionKey]
+    [dispatch, revisionKey, episodes, questionnaires, flowContext]
   );
 
   const handleEditCancel = useCallback(() => {
@@ -668,6 +704,7 @@ export default function ChatWindow() {
   /** POST the assembled brief payload to the FastAPI design backend. */
   const handleGenerate = useCallback(async () => {
     if (generating) return;
+    dispatch(setIsSkipped(false));
     setGenerating(true);
     try {
        const payload = buildApiPayload(getApiQuestions(episodes), chat_original, {
@@ -761,7 +798,8 @@ export default function ChatWindow() {
       isFetchingRef.current ||
       taskStatus === "completed" ||
       taskStatus === "failed" ||
-      Boolean(latestEnterpriseEntry?.url)
+      Boolean(latestEnterpriseEntry?.url) ||
+      isSkipped
     ) {
       return !taskId || taskId.startsWith("pending-revision-") ? false : true;
     }
@@ -814,7 +852,7 @@ export default function ChatWindow() {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [taskId, taskStatus, latestEnterpriseEntry?.url, dispatch, stopPolling, entries, messages, revisionKey, handleRevisionFailure]);
+  }, [taskId, taskStatus, latestEnterpriseEntry?.url, dispatch, stopPolling, entries, messages, revisionKey, handleRevisionFailure, isSkipped]);
 
   // Kick off sequential polling 3s after a task_id lands; clear on unmount / task change.
   // Fast-poll every 3s after previous response returns for MAX_POLLS, then fall back
@@ -826,7 +864,8 @@ export default function ChatWindow() {
       taskId.startsWith("pending-revision-") ||
       taskStatus === "completed" ||
       taskStatus === "failed" ||
-      Boolean(latestEnterpriseEntry?.url)
+      Boolean(latestEnterpriseEntry?.url) ||
+      isSkipped
     ) {
       return;
     }
@@ -853,7 +892,7 @@ export default function ChatWindow() {
       isCancelled = true;
       stopPolling();
     };
-  }, [taskId, taskStatus, latestEnterpriseEntry?.url, getStatus, stopPolling]);
+  }, [taskId, taskStatus, latestEnterpriseEntry?.url, getStatus, stopPolling, isSkipped]);
 
   // When the user returns to the tab, immediately re-check the latest task so
   // a design that completed while the tab was backgrounded reaches Redux.
@@ -984,7 +1023,25 @@ export default function ChatWindow() {
     [id, chat_original, entries,userAddress]
   );
 
+  const handleDesignSkip = useCallback(() => {
+    console.log("calling ai skip content")
+    stopPolling();
+    dispatch(setIsSkipped(true));
+    const originalEntry = entries.find((entry) => entry.type === "original");
+    submitLunaProject("ai_concept_skip", ratings[originalEntry?.id ?? ""] ?? 0);
+  }, [dispatch, stopPolling, submitLunaProject, entries, ratings]);
 
+  const handleGoToPortfolio = useCallback(() => {
+    const data = {
+      id,
+      original: chat_original,
+      design: entries,
+      project_address: userAddress,
+      rating: 0,
+      action: "go_to_portfolio",
+    };
+    postToHost({ action: HOST_ACTION_SUBMIT_PROJECT, data });
+  }, [id, chat_original, entries, userAddress]);
 
   const handleCancelAllNeed = useCallback(() => {
     const currentEntries = entriesRef.current;
@@ -1669,6 +1726,8 @@ export default function ChatWindow() {
                           : undefined
                       }
                       designStatus={taskStatus}
+                      onDesignSkip={handleDesignSkip}
+                      onDesignGoToPortfolio={handleGoToPortfolio}
                       onDesignAllINeed={
                         showsResultCard ? handleDesignAllINeed : undefined
                       }

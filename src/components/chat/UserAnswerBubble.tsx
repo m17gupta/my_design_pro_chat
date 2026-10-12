@@ -7,6 +7,7 @@ import { selectBriefPayload } from "../../store/briefSlice";
 import { answerToText, itemUrls } from "../../lib/briefDisplay";
 import { ExcelIcon } from "./ExcelIcon";
 import { CadIcon } from "./CadIcon";
+import { renderInline } from "./formatText";
 
 function getFileExt(nameOrUrl: string): string {
   if (!nameOrUrl) return "";
@@ -281,13 +282,13 @@ function UserAnswerBubble({
 
                 {/* Text content */}
                 {hasText && (
-                  <p
+                  <div
                     className={`whitespace-pre-wrap break-words px-4 py-2.5 text-[15px] leading-relaxed text-white ${
                       hasImages ? 'border-t border-white/10' : ''
                     }`}
                   >
-                    {finalContent}
-                  </p>
+                    {renderInline(finalContent)}
+                  </div>
                 )}
 
                 {/* Image/File fallback label when no text at all */}

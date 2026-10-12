@@ -7,6 +7,7 @@ import { summaryCopyForWorkType } from "../types";
 import { buildEpisodesFromContext } from "../flow";
 import { ExcelIcon } from "../ExcelIcon";
 import { CadIcon } from "../CadIcon";
+import { renderInline } from "../formatText";
 
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -334,9 +335,12 @@ export default function DesignSummaryCard({
                       </span>
                     </p>
                   ) : typeof answer === "string" ? (
-                    <p className="min-w-0 max-w-[55%] text-left text-sm text-zinc-800 dark:text-zinc-100 whitespace-pre-wrap break-words" title={answer}>
-                      {answer}
-                    </p>
+                    <div
+                      className="min-w-0 max-w-[55%] text-left text-sm text-zinc-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed [&_strong]:font-semibold"
+                      title={answer.replace(/<[^>]*>/g, "")}
+                    >
+                      {renderInline(answer)}
+                    </div>
                   ) : isArray ? (
                     <div className="flex flex-wrap gap-1 justify-start max-w-[50%]">
                       {answer.map((url, idx) => (
@@ -358,9 +362,9 @@ export default function DesignSummaryCard({
                             {entries.map(([k, v], idx) => {
                               const text = Array.isArray(v) ? v.join(", ") : String(v ?? "");
                               return (
-                                <p key={idx} className="text-left text-xs text-zinc-600 dark:text-zinc-300 w-full" title={text}>
-                                  {text}
-                                </p>
+                                <div key={idx} className="text-left text-xs text-zinc-600 dark:text-zinc-300 w-full leading-relaxed [&_strong]:font-semibold" title={text.replace(/<[^>]*>/g, "")}>
+                                  {renderInline(text)}
+                                </div>
                               );
                             })}
                           </div>
@@ -370,9 +374,12 @@ export default function DesignSummaryCard({
                       return (
                         <div className="flex flex-col gap-1 max-w-[55%]">
                           {notes.trim() && (
-                            <p className="text-left text-sm text-zinc-800 dark:text-zinc-100 w-full whitespace-pre-wrap break-words" title={notes}>
-                              {notes}
-                            </p>
+                            <div
+                              className="text-left text-sm text-zinc-800 dark:text-zinc-100 w-full whitespace-pre-wrap break-words leading-relaxed [&_strong]:font-semibold"
+                              title={notes.replace(/<[^>]*>/g, "")}
+                            >
+                              {renderInline(notes)}
+                            </div>
                           )}
                           {value.length > 0 && (
                             <p className="text-left text-xs text-zinc-500 dark:text-zinc-400  w-full" title={value.join(", ")}>

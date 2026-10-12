@@ -3,11 +3,15 @@
 import { RootState } from "@/store";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { setIsSkipped } from "@/store/enterprise/enterpriseSlice";
+import AiConceptSkippedCard from "./AiConceptSkippedCard";
 
 interface DesignGeneratingCardProps {
   /** Backend task lifecycle: queued | processing ("" before the first poll). */
   status?: string;
+  onSkip?: () => void;
+  onGoToPortfolio?: () => void;
 }
 
 
@@ -21,9 +25,14 @@ const GENERATING_MESSAGES = [
   "Almost there! Just a few more seconds.",
 ];
 
-export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCardProps) {
+export default function DesignGeneratingCard({
+  status = "",
+  onSkip,
+  onGoToPortfolio,
+}: DesignGeneratingCardProps) {
+  const dispatch = useDispatch();
   const reduceMotion = useReducedMotion() ?? false;
-  const { entries } = useSelector((state: RootState) => state.enterprise);
+  const { entries, isSkipped } = useSelector((state: RootState) => state.enterprise);
   const original = entries.find((entry) => entry.type === "original");
   const {dc_name}= useSelector((state:RootState)=>state.chat)
   const currentStatus = original?.status || status;
@@ -52,6 +61,15 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
   }, [isGenerating]);
 
   const subtitle = GENERATING_MESSAGES[messageIndex];
+
+  const handleSkip = () => {
+    dispatch(setIsSkipped(true));
+    onSkip?.();
+  };
+
+  if (isSkipped) {
+    return <AiConceptSkippedCard dcName={dc_name ?? undefined} onGoToPortfolio={onGoToPortfolio} />;
+  }
 
   if (!isGenerating) {
     return null;
@@ -86,18 +104,34 @@ export default function DesignGeneratingCard({ status = "" }: DesignGeneratingCa
               </strong>{" "}
               Before I do, I would love to show you a quick design idea based on everything you’ve shared with me.
             </p>
-            {/* <AnimatePresence mode="wait">
-              <motion.p
-                key={messageIndex}
-                initial={{ opacity: 0, y: 3 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -3 }}
-                transition={{ duration: 0.25 }}
-                className="mt-0.5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400"
-              >
-                {subtitle}
-              </motion.p>
-            </AnimatePresence> */}
+          </div>
+        </div>
+
+        {/* Skip AI Concept section */}
+        <div className="mt-4 flex flex-col items-center justify-center gap-1.5 text-center">
+          <button
+            type="button"
+            onClick={handleSkip}
+            className="min-w-[190px] sm:min-w-[210px] rounded-xl border border-[#8B2C5D] bg-white px-8 py-2.5 text-xs font-medium text-[#8B2C5D] shadow-sm transition hover:bg-[#8B2C5D]/5 active:scale-95 dark:border-[#B24D7E] dark:bg-zinc-900 dark:text-[#E07A9E] dark:hover:bg-[#8B2C5D]/15"
+          >
+            Skip AI Concept
+          </button>
+          <div className="flex items-center justify-center gap-1 text-[11.5px] sm:text-xs text-zinc-500 dark:text-zinc-400">
+            <svg
+              className="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-500"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            <span>AI concepts are optional and will not affect your designer&apos;s review.</span>
           </div>
         </div>
 

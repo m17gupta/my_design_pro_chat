@@ -93,4 +93,14 @@ describe("enterpriseSlice extraReducers", () => {
       notes: "add sitting area",
     });
   });
+
+  it("handles setIsSkipped and resetEnterprise correctly", () => {
+    let state = enterpriseReducer(initialState, { type: "enterprise/setIsSkipped", payload: true });
+    expect(state.isSkipped).toBe(true);
+    expect(state.lifecycle).toBe("idle");
+
+    state = enterpriseReducer(state, { type: "enterprise/resetEnterprise" });
+    expect(state.isSkipped).toBe(false);
+    expect(state.entries).toEqual([]);
+  });
 });

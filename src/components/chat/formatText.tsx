@@ -11,16 +11,32 @@ function sanitizeText(text: string): string {
 }
 
 /** Renders markdown bold inline segments or full HTML strings with tags. */
-export function renderInline(text: string): ReactNode {
+export function renderInline(text: string, className?: string): ReactNode {
   if (!text) return null;
   const clean = sanitizeText(text);
   if (!clean) return null;
 
   if (/<[a-z][\s\S]*>/i.test(clean)) {
-    return <span dangerouslySetInnerHTML={{ __html: clean }} />;
+    return <span className={className} dangerouslySetInnerHTML={{ __html: clean }} />;
   }
 
   const parts = clean.split(/\*\*(.+?)\*\*/g);
+  if (className) {
+    return (
+      <span className={className}>
+        {parts.map((part, i) =>
+          i % 2 === 1 ? (
+            <strong key={i} className="font-semibold">
+              {part}
+            </strong>
+          ) : (
+            <Fragment key={i}>{part}</Fragment>
+          )
+        )}
+      </span>
+    );
+  }
+
   return (
     <>
       {parts.map((part, i) =>

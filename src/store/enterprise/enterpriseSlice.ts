@@ -13,14 +13,16 @@ export interface EnterpriseState {
   /** Lifecycle of the last `generateEnterpriseDesign`/`fetchEnterpriseStatus` dispatch. */
   lifecycle: "idle" | "loading" | "succeeded" | "failed" | "pending";
   error: string | null;
-  editId:string | null;
+  editId: string | null;
+  isSkipped?: boolean;
 }
 
 const initialState: EnterpriseState = {
   entries: [],
   lifecycle: "idle",
   error: null,
-  editId:null 
+  editId: null,
+  isSkipped: false,
 };
 
 /** The most recently submitted design entry, if any. */
@@ -49,6 +51,12 @@ const enterpriseSlice = createSlice({
     }, 
     resetEditId(state) {
       state.editId = null;
+    },
+    setIsSkipped(state, action: PayloadAction<boolean>) {
+      state.isSkipped = action.payload;
+      if (action.payload) {
+        state.lifecycle = "idle";
+      }
     },
     removeFailedRevision(state, action: PayloadAction<{ round?: number; id?: string } | undefined>) {
       const round = action?.payload?.round;
@@ -209,7 +217,7 @@ const enterpriseSlice = createSlice({
   },
 });
 
-export const { resetEnterprise, setEntries, setEditId, resetEditId, removeFailedRevision } = enterpriseSlice.actions;
+export const { resetEnterprise, setEntries, setEditId, resetEditId, setIsSkipped, removeFailedRevision } = enterpriseSlice.actions;
 
 export const selectEditId = (state: { enterprise: EnterpriseState }) => state.enterprise.editId;
 

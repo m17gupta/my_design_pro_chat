@@ -554,30 +554,112 @@ function QuestionCard({
                 />
               )}
 
-              {field.kind === "radio" && (
-                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={fieldLabel || "Options"}>
-                  {field.options.map((option) => {
-                    const selected = radioByField[i] === option;
-                    return (
-                      <button
-                        key={option}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        onClick={() => setRadioByField((prev) => ({ ...prev, [i]: option }))}
-                        disabled={disabled}
-                        className={`rounded-full border px-4 py-2 text-sm font-medium shadow-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
-                          selected
-                            ? "border-emerald-500 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25"
-                            : "border-emerald-200 bg-white text-emerald-800 hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-zinc-950 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
-                        }`}
-                      >
-                        {option}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              {field.kind === "radio" && (() => {
+                const hasCardOptions = field.options.some((o) =>
+                  /<br\s*\/?>|\n/i.test(o)
+                );
+
+                if (hasCardOptions) {
+                  const gridCols =
+                    field.options.length === 2
+                      ? "grid-cols-1 sm:grid-cols-2"
+                      : field.options.length === 3
+                      ? "grid-cols-1 sm:grid-cols-3"
+                      : field.options.length === 4
+                      ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+                      : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3";
+
+                  return (
+                    <div
+                      className={`grid ${gridCols} gap-3 sm:gap-4 w-full`}
+                      role="radiogroup"
+                      aria-label={fieldLabel || "Options"}
+                    >
+                      {field.options.map((option) => {
+                        const selected = radioByField[i] === option;
+                        const match = option.match(
+                          /^(.*?)(?:<br\s*\/?>|\n)([\s\S]*)$/i
+                        );
+                        const titlePart = match ? match[1].trim() : option.trim();
+                        const descPart = match ? match[2].trim() : "";
+
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() =>
+                              setRadioByField((prev) => ({ ...prev, [i]: option }))
+                            }
+                            disabled={disabled}
+                            className={`flex flex-col items-center justify-center rounded-2xl border p-4 sm:p-3 text-center shadow-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 min-h-[110px] sm:min-h-[120px] ${
+                              selected
+                                ? "border-emerald-500 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25 ring-2 ring-emerald-500/20"
+                                : "border-zinc-200/90 bg-white text-zinc-800 hover:border-emerald-400 hover:bg-emerald-50/20 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:border-emerald-500/30"
+                            }`}
+                          >
+                            <div
+                              className={`text-sm sm:text-base font-semibold leading-snug tracking-tight text-center ${
+                                selected
+                                  ? "text-white"
+                                  : "text-zinc-900 dark:text-zinc-100"
+                              }`}
+                            >
+                              {renderInline(titlePart, "text-center [&_*]:text-center")}
+                            </div>
+                            {descPart && (
+                              <div
+                                className={`mt-1.5 text-xs sm:text-sm font-normal leading-relaxed text-center ${
+                                  selected
+                                    ? "text-white/90"
+                                    : "text-zinc-500 dark:text-zinc-400"
+                                }`}
+                              >
+                                {renderInline(descPart, "text-center [&_*]:text-center")}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    className="flex flex-wrap gap-2"
+                    role="radiogroup"
+                    aria-label={fieldLabel || "Options"}
+                  >
+                    {field.options.map((option) => {
+                      const selected = radioByField[i] === option;
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() =>
+                            setRadioByField((prev) => ({ ...prev, [i]: option }))
+                          }
+                          disabled={disabled}
+                          className={`rounded-full border px-5 py-2.5 text-sm font-medium shadow-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 text-center ${
+                            selected
+                              ? "border-emerald-500 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25"
+                              : "border-emerald-200 bg-white text-emerald-800 hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-zinc-950 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                          }`}
+                        >
+                          {renderInline(
+                            option,
+                            "block w-full text-center leading-snug [&_*]:text-center [&_p]:m-0"
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               {field.kind === "checkbox" && (
                 <div className="space-y-3">
@@ -599,7 +681,7 @@ function QuestionCard({
                             });
                           }}
                           disabled={disabled}
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium shadow-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium shadow-sm transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 text-center ${
                             selected
                               ? "border-emerald-500 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25"
                               : "border-emerald-200 bg-white text-emerald-800 hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-zinc-950 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
@@ -620,7 +702,9 @@ function QuestionCard({
                               <path d="M20 6L9 17l-5-5" />
                             </svg>
                           )}
-                          {option}
+                          <span className="text-center [&_*]:text-center [&_p]:m-0">
+                            {renderInline(option)}
+                          </span>
                         </button>
                       );
                     })}

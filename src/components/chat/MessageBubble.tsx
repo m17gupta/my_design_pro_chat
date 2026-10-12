@@ -49,6 +49,8 @@ interface MessageBubbleProps {
   onDesignAllINeed?: () => void
   onDesignRegenerate?: () => void
   onDesignEngage?: () => void
+  onDesignSkip?: () => void
+  onDesignGoToPortfolio?: () => void
   /** Revision loop — per-round wiring for `ep-revision-summary[-N]` messages. */
   isCurrentRevision?: boolean
   /** Fallback comments (notes + files) until this round's entry exists. */
@@ -223,6 +225,8 @@ export const MessageBubble = ({
   onDesignAllINeed,
   onDesignRegenerate,
   onDesignEngage,
+  onDesignSkip,
+  onDesignGoToPortfolio,
   isCurrentRevision = false,
   revisionNotes = '',
   revisionFiles = [],
@@ -252,7 +256,7 @@ export const MessageBubble = ({
   const isUser = message.role === 'user'
   const reduceMotion = useReducedMotion() ?? false
   const typingConfig = useSelector(selectTypingConfig)
-  const { entries } = useSelector((state: RootState) => state.enterprise)
+  const { entries, isSkipped } = useSelector((state: RootState) => state.enterprise)
   const projectAddress = useSelector((state: RootState) => state.chat.project_address)
   const role = useSelector((state: RootState) => state.chat.role)
   const isPropertyVerified =
@@ -649,8 +653,12 @@ export const MessageBubble = ({
                 onChanges={onSummaryChanges ?? (() => {})}
                 onEditQuestion={onSummaryEditQuestion}
               />
-              <DesignGeneratingCard status={designStatus} />
-              {originalEntry?.url && (
+              <DesignGeneratingCard
+                status={designStatus}
+                onSkip={onDesignSkip}
+                onGoToPortfolio={onDesignGoToPortfolio}
+              />
+              {originalEntry?.url && !isSkipped && (
                 <div className='mt-3'>
                   <DesignResultCard
                     imageUrl={originalEntry.url}

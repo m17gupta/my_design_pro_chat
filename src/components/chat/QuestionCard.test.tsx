@@ -109,4 +109,41 @@ describe("QuestionCard - enterprise-client assessment_confirmation hiding", () =
     expect(html).toContain("Lot Size");
     expect(html).toContain("Under 0.25 acres");
   });
+
+  it("renders radio options with HTML properly and with center text alignment", () => {
+    const store = createMockStore("client");
+    const htmlSpec: QuestionCardSpec = {
+      id: "open_design_extent_on_project",
+      title: "",
+      description: "How much are you open to changing in your project?",
+      fields: [
+        {
+          kind: "radio",
+          options: [
+            "<strong>Refresh</strong> <br />Keep the existing design with simple updates.",
+            "<strong>Redesign</strong> <br />Make noticeable changes while keeping some existing elements.",
+            "<strong>Reimagine</strong> <br />Completely transform the existing design.",
+          ],
+        },
+      ],
+    };
+    const html = renderToString(
+      <Provider store={store}>
+        <QuestionCard
+          spec={htmlSpec}
+          questionId="open_design_extent_on_project"
+          onSubmit={() => {}}
+        />
+      </Provider>
+    );
+
+    // Verify HTML title is rendered as actual HTML elements, not escaped entities
+    expect(html).toContain("<strong>Refresh</strong>");
+    expect(html).toContain("Keep the existing design with simple updates.");
+    expect(html).not.toContain("&lt;strong&gt;Refresh&lt;/strong&gt;");
+
+    // Verify grid layout and text-center are present for card options
+    expect(html).toContain("grid-cols-1 sm:grid-cols-3");
+    expect(html).toContain("text-center");
+  });
 });
