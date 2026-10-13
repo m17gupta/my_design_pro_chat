@@ -42,6 +42,7 @@ export interface BriefState {
   revision_comment: RevisionComment
   question_sets?: QuestionSets | null
   project_address?: ProjectAddress | null
+  status?: string | null
 }
 
 /**
@@ -94,6 +95,7 @@ export function stateFromPayload (
     custom_engage_designer: payload?.custom_engage_designer ?? null,
     question_sets: payload?.question_sets ?? null,
     project_address: payload?.project_address ?? null,
+    status: payload?.status ?? null,
   }
 }
 
@@ -134,6 +136,7 @@ export function payloadFromState (
       revision: state.revision_comment,
       question_sets: state.question_sets ?? undefined,
       project_address: state.project_address ?? undefined,
+      status: state.status ?? null,
     }
   )
 }
@@ -152,7 +155,8 @@ const initialState: BriefState = {
   original: {},
   revision_comment: { files: [], notes: '' },
   question_sets: null,
-  project_address: null
+  project_address: null,
+  status: null,
 }
 
 const briefSlice = createSlice({
@@ -237,6 +241,12 @@ const briefSlice = createSlice({
         state.question_sets = action.payload.question_sets
       if (action.payload.project_address !== undefined)
         state.project_address = action.payload.project_address
+      if (action.payload.status !== undefined)
+        state.status = action.payload.status
+    },
+    /** Set/update status directly. */
+    setStatus (state, action: PayloadAction<string | null>) {
+      state.status = action.payload
     },
     /** Set/update project address directly. */
     setProjectAddress (state, action: PayloadAction<ProjectAddress | null>) {
@@ -265,6 +275,7 @@ const briefSlice = createSlice({
 export const {
   answerQuestion,
   setContext,
+  setStatus,
   setProjectAddress,
   setRevision,
   resetBrief,

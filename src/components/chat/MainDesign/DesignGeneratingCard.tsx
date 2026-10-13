@@ -34,7 +34,7 @@ export default function DesignGeneratingCard({
   const reduceMotion = useReducedMotion() ?? false;
   const { entries, isSkipped } = useSelector((state: RootState) => state.enterprise);
   const original = entries.find((entry) => entry.type === "original");
-  const {dc_name}= useSelector((state:RootState)=>state.chat)
+  const { dc_name, status: briefStatus } = useSelector((state: RootState) => state.chat);
   const currentStatus = original?.status || status;
   const isGenerating =
     original &&
@@ -42,6 +42,12 @@ export default function DesignGeneratingCard({
       currentStatus === "queued" ||
       currentStatus === "processing" ||
       currentStatus === "");
+
+  useEffect(() => {
+    if ((briefStatus === "skip" || status === "skip") && !isSkipped) {
+      dispatch(setIsSkipped(true));
+    }
+  }, [briefStatus, status, isSkipped, dispatch]);
 
   const [messageIndex, setMessageIndex] = useState(0);
 
@@ -67,7 +73,7 @@ export default function DesignGeneratingCard({
     onSkip?.();
   };
 
-  if (isSkipped) {
+  if (isSkipped || briefStatus === "skip" || status === "skip") {
     return <AiConceptSkippedCard dcName={dc_name ?? undefined} onGoToPortfolio={onGoToPortfolio} />;
   }
 

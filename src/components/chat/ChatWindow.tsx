@@ -126,7 +126,7 @@ export default function ChatWindow() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<number | null>(null);
-  const {watermark, image_url, work_type, projectId: id, original:chat_original, user_type, dc_name, role, custom_engage_designer, question_sets,project_address:userAddress} = briefPayload;
+  const {watermark, image_url, work_type, projectId: id, original:chat_original, user_type, dc_name, role, custom_engage_designer, question_sets,project_address:userAddress, status} = briefPayload;
   const busyRef = useRef(false);
   const [messageEpisodes, setMessageEpisodes] = useState<Record<string, string>>({});
 
@@ -1014,17 +1014,18 @@ export default function ChatWindow() {
         action,
       };
       postToHost({ action: HOST_ACTION_SUBMIT_PROJECT, data });
-      if (action === "engage_designer") {
-        setIsEngagingDesigner(true);
-      } 
       if (action === "ai_concept_skip") {
-         console.log("called skip content")
-      } 
-      else {
+        console.log("called skip content");
+        dispatch(setContext({ status: "skip" }));
+      } else if (action === "engage_designer") {
+        setIsEngagingDesigner(true);
+        dispatch(setContext({ status: "engage_designer" }));
+      } else {
         setSubmittedAction(action);
+        dispatch(setContext({ status: "all_i_need" }));
       }
     },
-    [id, chat_original, entries,userAddress]
+    [id, chat_original, entries, userAddress, dispatch]
   );
 
   const handleDesignSkip = useCallback(() => {
@@ -1052,7 +1053,8 @@ export default function ChatWindow() {
     console.log("handle cancel all need called ----> entries count:", currentEntries.length);
     setIsEngagingDesigner(false);
     setSubmittedAction(null);
-  }, []);
+    dispatch(setContext({ status: null }));
+  }, [dispatch]);
 
   const handleEngageDesignerThankYou = useCallback((message?: string) => {
     setIsEngagingDesigner(false);

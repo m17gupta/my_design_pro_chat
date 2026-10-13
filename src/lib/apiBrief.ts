@@ -37,6 +37,7 @@ export interface BriefContext {
   revision?: RevisionComment
   question_sets?: QuestionSets
   project_address?: ProjectAddress | null
+  status?: string| null,
 }
 
 export interface ApiBriefItem {
@@ -71,6 +72,7 @@ export interface ApiBriefPayload {
   revision_comment: RevisionComment
   question_sets?: QuestionSets
   project_address?: ProjectAddress | null
+  status?: string | null
 }
 
 export const DEFAULT_WATERMARK = 'http://mydesigns.pro/img/luna-logo.png'
@@ -187,6 +189,7 @@ export function buildApiPayload (
     original,
     revision_comment: context.revision ?? { files: [], notes: '' },
     question_sets: context.question_sets,
-    project_address: context.project_address ?? undefined
+    project_address: context.project_address ?? undefined,
+    status: context.status ?? null
   }
 }

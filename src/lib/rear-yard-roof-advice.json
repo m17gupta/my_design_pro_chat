@@ -1,0 +1,59 @@
+{
+  "projectId": 138719,
+  "watermark": "https://mydesigns.pro/img/luna-logo.png",
+  "work_type": "rear_yard",
+  "image_url": "https://dzinlyv2.s3.us-east-2.amazonaws.com/luna-ai/138719/premium_design_e2cb9226-2799-42d3-8238-9167cf047029.png",
+  "user_type": "",
+  "dc_name": "",
+  "role": null,
+  "original": {
+    "project_goals_or_brief_description": {
+      "name": "Project Goals/Brief Description",
+      "question": "<p>In a few sentences, tell me what you'd love to accomplish with this project. Feel free to share any goals, challenges, or ideas you already have in mind.</p>",
+      "answer": "transform our rear yard into a beautiful, functional outdoor living space that's easy to maintain. Our goal is to create areas for relaxing, entertaining family and friends, and adding more greenery for privacy and a peaceful atmosphere."
+    },
+    "landscape_design_style_preference": {
+      "name": "Landscape Design Style Preference",
+      "question": "<p>Does your client have a preferred style they’re drawn to? For example, clean and modern, classic and timeless, natural and relaxed, or something else?</p><p class='mt-3'>Feel free to upload up to 4 inspirational images that help show the style or look your client has in mind.</p>",
+      "answer": {
+        "files": [],
+        "notes": "prefers a clean, modern, and natural style with warm, inviting outdoor living spaces. They’re drawn to contemporary landscaping with lush greenery, elegant hardscaping, and a relaxed resort-like atmosphere."
+      }
+    },
+    "hardscape_material_preferences": {
+      "name": "Hardscape / Material Preferences",
+      "question": "<p>Are there any specific hardscape materials or styles you’d like us to keep in mind for this design?</p><p class='mt-3'>Feel free to upload up to 4 inspirational images that help show the style or look your client has in mind.</p>",
+      "answer": {
+        "files": [],
+        "notes": "We'd like the design to feature large-format concrete or porcelain pavers, natural stone accents, and warm wood or composite decking"
+      }
+    },
+    "softscape_planting_preferences": {
+      "name": "Softscape / Planting Preferences",
+      "question": "<p>Are there any plant styles, colors, or types you’d like us to keep in mind?</p><p class='mt-3'>Feel free to upload up to 4 inspirational images of plants, planting styles, or landscapes that reflect what your client has in mind.</p>",
+      "answer": {
+        "files": [],
+        "notes": "We'd like a lush, modern planting style with layered greenery and a few flowering accents. Evergreen shrubs, ornamental grasses, small feature trees, and white or soft purple blooms are preferred for a calm, elegant look"
+      }
+    },
+    "budget": {
+      "name": "Budget",
+      "question": "<p>What investment range feels most comfortable for this project?</p>",
+      "answer": "$75,000-$150,000"
+    },
+    "important_proprty_information": {
+      "name": "Important Property Information",
+      "question": "<p>Is there anything else that comes to mind on this property we should know before we wrap up?</p>",
+      "answer": {
+        "value": [
+          "Other Special considerations"
+        ],
+        "notes": ""
+      }
+    }
+  },
+  "revision_comment": {
+    "files": [],
+    "notes": "Can you advise on what roof color or material would look best with our exterior brick?"
+  }
+}

@@ -83,6 +83,7 @@ export const hydrateProject = createAsyncThunk<
             value: project.chats.value,
             question_sets: project.chats.question_sets,
             project_address: project.chats.project_address,
+            status: project.chats.status ?? null,
           })
         );
       }

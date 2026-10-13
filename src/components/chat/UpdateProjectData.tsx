@@ -33,7 +33,7 @@ const UpdateProjectData = () => {
         if (timerRef.current) clearTimeout(timerRef.current)
         timerRef.current = setTimeout(() => {
             timerRef.current = null
-            const { id, projectId, watermark, work_type, image_url, value, original, revision_comment, user_type, dc_name, role, custom_engage_designer, question_sets, project_address } = chatRef.current
+            const { id, projectId, watermark, work_type, image_url, value, original, revision_comment, user_type, dc_name, role, custom_engage_designer, question_sets, project_address, status } = chatRef.current
             const currentProjectId = projectId || (id != null ? String(id) : "")
             if (original == null || Object.keys(original).length === 0 || !currentProjectId) return
             void dispatch(
@@ -53,6 +53,7 @@ const UpdateProjectData = () => {
                         revision_comment,
                         question_sets: question_sets ?? undefined,
                         project_address: project_address ?? undefined,
+                        status: status ?? null,
                     },
                     designData: entriesRef.current,
                 })
@@ -61,7 +62,7 @@ const UpdateProjectData = () => {
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current)
         }
-    }, [dispatch, id, original, revision_comment, entries])
+    }, [dispatch, id, original, revision_comment, entries, chat.status])
 
     return (
         null
