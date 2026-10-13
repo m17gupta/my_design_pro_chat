@@ -4,6 +4,7 @@ export const HOST_ACTION_SUBMIT_PROJECT = "submitLunaProject" as const;
 export const HOST_ACTION_CANCEL_ALL_NEED = "cancelAllNeed" as const;
 export const HOST_ACTION_CUSTOM_PROJECT = "custom" as const;
 export const HOST_ACTION_ENGAGE_DESIGNER_THANK_YOU = "engageDesignerThankYou" as const;
+export const HOST_ACTION_AI_CONCEPT_SKIP = "ai_concept_skip" as const;
 
 /** Payload of the chat → host submit message (schema-shaped brief + design history). */
 export interface SubmitLunaProjectData {

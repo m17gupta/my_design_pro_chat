@@ -24,6 +24,7 @@ import {
   revisionRoundFromMessage,
 } from "./flow";
 import {
+  HOST_ACTION_AI_CONCEPT_SKIP,
   HOST_ACTION_CANCEL_ALL_NEED,
   HOST_ACTION_CUSTOM_PROJECT,
   HOST_ACTION_ENGAGE_DESIGNER_THANK_YOU,
@@ -1093,11 +1094,13 @@ export default function ChatWindow() {
             ? event.data.data
             : undefined;
         handleEngageDesignerThankYou(msg);
+      }else if(event.data?.action === HOST_ACTION_AI_CONCEPT_SKIP) {
+          dispatch(setContext({ status: "skip" }));
       }
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [handleCancelAllNeed, handleEngageDesignerThankYou]);
+  }, [handleCancelAllNeed, handleEngageDesignerThankYou,handleDesignSkip]);
 
 
   /** "This is All I Need for Now" — the initial render is approved as-is. */
