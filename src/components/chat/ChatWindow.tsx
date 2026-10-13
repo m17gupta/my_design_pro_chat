@@ -1074,6 +1074,7 @@ export default function ChatWindow() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      console.log("evvevevv", event)
       // Only accept host commands from the embedding frame — never from an
       // arbitrary window that happens to be able to reach us.
       if (!isFromParent(event)) return;
@@ -1095,7 +1096,7 @@ export default function ChatWindow() {
             : undefined;
         handleEngageDesignerThankYou(msg);
       }else if(event.data?.action === HOST_ACTION_AI_CONCEPT_SKIP) {
-          dispatch(setContext({ status: "skip" }));
+          // dispatch(setContext({ status: "skip" }));
       }
     };
     window.addEventListener("message", handleMessage);
