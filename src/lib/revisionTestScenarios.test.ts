@@ -65,10 +65,37 @@ describe("actual endpoint response contract", () => {
 
 describe("unrelated question response", () => {
   const response = {response_type:"unrelated_question", answer:"This question isn’t related to your property design project. Please ask a project-related question.", classification:{...classified(0),intent:"unrelated",scope_supported:false,requested_changes:[]}};
+  const nestedResponse = {
+    status: "text_answer",
+    result: {
+      response_type: "text_answer",
+      answer: "This question isn’t related to your property design project. Please ask a project-related question.",
+      unsupported_changes: [],
+      classification: {
+        intent: "unrelated",
+        image_edit_confidence: 0,
+        architectural_change_requested: false,
+        scope_supported: false,
+        requested_changes: [],
+        unsupported_changes: [],
+        edit_independent: false,
+        override_attempt_detected: false,
+        question: "how are you",
+        reason: "The input is a general greeting unrelated to the project or image editing.",
+        clarification_question: "",
+      },
+    },
+  };
   it("accepts the fixed redirect and never polls it", () => {
     expect(assessResponse(200, response, find("unrelated")).verdict).toBe("pass");
     expect(shouldPoll(200,response)).toBe(false);
     expect(responseText(response)).toBe(response.answer);
+  });
+  it("accepts the nested status text_answer format when image is not generated", () => {
+    expect(assessResponse(200, nestedResponse, find("unrelated")).verdict).toBe("pass");
+    expect(shouldPoll(200, nestedResponse)).toBe(false);
+    expect(responseText(nestedResponse)).toBe(nestedResponse.result.answer);
+    expect(classificationOf(nestedResponse)?.intent).toBe("unrelated");
   });
   it("rejects a generated answer or task ID on the unrelated branch", () => {
     expect(assessResponse(200,{...response,answer:"Cricket score"},find("unrelated")).verdict).toBe("fail");

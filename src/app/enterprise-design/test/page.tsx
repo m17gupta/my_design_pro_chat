@@ -362,15 +362,26 @@ export default function EnterpriseDesignTestPage() {
   };
 
   // Response parsing helpers
+  const resultObj =
+    rawResponse?.result && typeof rawResponse.result === "object" && !Array.isArray(rawResponse.result)
+      ? (rawResponse.result as Record<string, unknown>)
+      : null;
   const responseType =
+    resultObj?.response_type ||
     rawResponse?.response_type ||
     rawResponse?.type ||
+    (rawResponse?.status === "text_answer" ? "text_answer" : null) ||
     (httpStatus === 202 ? "generation" : null);
   const classification = classificationOf(rawResponse);
   const confidence = typeof classification?.image_edit_confidence === "number"
     ? classification.image_edit_confidence : null;
-  const unsupportedChanges = Array.isArray(rawResponse?.unsupported_changes) && rawResponse.unsupported_changes.length
-    ? rawResponse.unsupported_changes : null;
+  const unsupportedChanges =
+    (Array.isArray(resultObj?.unsupported_changes) && resultObj.unsupported_changes.length
+      ? resultObj.unsupported_changes
+      : null) ||
+    (Array.isArray(rawResponse?.unsupported_changes) && rawResponse.unsupported_changes.length
+      ? rawResponse.unsupported_changes
+      : null);
   const textAnswer = rawResponse ? responseText(rawResponse) : null;
   const assessment = rawResponse && httpStatus !== null ? assessResponse(httpStatus, rawResponse, submittedPreset) : null;
 

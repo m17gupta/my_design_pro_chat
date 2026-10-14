@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const targetUrl = `${NEXUS_API_ORIGIN}/api/v1/luna/enterprise-design/test`;
+  const targetUrl = `${NEXUS_API_ORIGIN}/api/v1/luna/exterior`;
 
   try {
     const backendRes = await fetch(targetUrl, {
@@ -54,6 +54,36 @@ export async function POST(request: Request) {
       responseData = JSON.parse(responseText);
     } catch {
       responseData = { error: "Backend returned a non-JSON response", upstream_status: backendRes.status };
+    }
+
+    if (
+      backendRes.status === 200 &&
+      typeof responseData === "object" &&
+      responseData !== null &&
+      !("error" in responseData)
+    ) {
+      const dataObj = responseData as Record<string, unknown>;
+      if ("result" in dataObj && typeof dataObj.result === "object" && dataObj.result !== null) {
+        const resultObj = dataObj.result as Record<string, unknown>;
+        responseData = {
+          status: dataObj.status ?? "text_answer",
+          result: {
+            response_type: resultObj.response_type ?? "text_answer",
+            ...resultObj,
+          },
+        };
+      } else {
+        responseData = {
+          status: "text_answer",
+          result: {
+            response_type: dataObj.response_type ?? "text_answer",
+            answer: dataObj.answer ?? dataObj.question ?? "",
+            unsupported_changes: dataObj.unsupported_changes ?? [],
+            classification: dataObj.classification ?? null,
+            ...dataObj,
+          },
+        };
+      }
     }
 
     return Response.json(responseData, {
