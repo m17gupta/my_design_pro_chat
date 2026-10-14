@@ -73,7 +73,7 @@ export default function DesignGeneratingCard({
     onSkip?.();
   };
 
-  if (isSkipped || briefStatus === "skip" || status === "skip") {
+  if (isSkipped || briefStatus === "skip") {
     return <AiConceptSkippedCard dcName={dc_name ?? undefined} onGoToPortfolio={onGoToPortfolio} />;
   }
 

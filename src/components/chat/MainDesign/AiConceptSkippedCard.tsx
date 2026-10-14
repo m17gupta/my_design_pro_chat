@@ -68,7 +68,7 @@ export default function AiConceptSkippedCard({
       </motion.div>
 
       {/* ── Follow-up Assistant Bubble (Screen 2 Bottom Box) ── */}
-      <motion.div
+      {/* <motion.div
         initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 380, damping: 30, delay: 0.12 }}
@@ -97,7 +97,7 @@ export default function AiConceptSkippedCard({
             </button>
           </div>
         </div>
-      </motion.div>
+      </motion.div> */}
     </div>
   );
 }

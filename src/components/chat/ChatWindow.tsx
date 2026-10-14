@@ -1069,6 +1069,7 @@ export default function ChatWindow() {
         isRestored: true, // Render HTML content immediately without typewriter delay
       };
       setMessages((prev) => [...prev, thankYouMsg]);
+      dispatch(setContext({ status: "skip" }));
     }
   }, []);
 
@@ -1095,8 +1096,6 @@ export default function ChatWindow() {
             ? event.data.data
             : undefined;
         handleEngageDesignerThankYou(msg);
-      }else if(event.data?.action === HOST_ACTION_AI_CONCEPT_SKIP) {
-          // dispatch(setContext({ status: "skip" }));
       }
     };
     window.addEventListener("message", handleMessage);
