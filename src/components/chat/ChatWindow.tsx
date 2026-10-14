@@ -1018,7 +1018,7 @@ export default function ChatWindow() {
       if (action === "ai_concept_skip") {
          setSubmittedAction(action);
         console.log("called skip content");
-        // dispatch(setContext({ status: "skip" }));
+        dispatch(setContext({ status: "skip" }));
       } else if (action === "engage_designer") {
         setIsEngagingDesigner(true);
         dispatch(setContext({ status: "engage_designer" }));
@@ -1069,7 +1069,7 @@ export default function ChatWindow() {
         isRestored: true, // Render HTML content immediately without typewriter delay
       };
       setMessages((prev) => [...prev, thankYouMsg]);
-      dispatch(setContext({ status: "skip" }));
+  
     }
   }, []);
 
