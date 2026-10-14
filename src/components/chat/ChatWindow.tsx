@@ -800,7 +800,8 @@ export default function ChatWindow() {
       taskStatus === "completed" ||
       taskStatus === "failed" ||
       Boolean(latestEnterpriseEntry?.url) ||
-      isSkipped
+      isSkipped ||
+      status === "skip"
     ) {
       return !taskId || taskId.startsWith("pending-revision-") ? false : true;
     }
@@ -853,7 +854,7 @@ export default function ChatWindow() {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [taskId, taskStatus, latestEnterpriseEntry?.url, dispatch, stopPolling, entries, messages, revisionKey, handleRevisionFailure, isSkipped]);
+  }, [taskId, taskStatus, latestEnterpriseEntry?.url, dispatch, stopPolling, entries, messages, revisionKey, handleRevisionFailure, isSkipped, status]);
 
   // Kick off sequential polling 3s after a task_id lands; clear on unmount / task change.
   // Fast-poll every 3s after previous response returns for MAX_POLLS, then fall back
@@ -866,7 +867,8 @@ export default function ChatWindow() {
       taskStatus === "completed" ||
       taskStatus === "failed" ||
       Boolean(latestEnterpriseEntry?.url) ||
-      isSkipped
+      isSkipped ||
+      status === "skip"
     ) {
       return;
     }
@@ -893,7 +895,7 @@ export default function ChatWindow() {
       isCancelled = true;
       stopPolling();
     };
-  }, [taskId, taskStatus, latestEnterpriseEntry?.url, getStatus, stopPolling, isSkipped]);
+  }, [taskId, taskStatus, latestEnterpriseEntry?.url, getStatus, stopPolling, isSkipped, status]);
 
   // When the user returns to the tab, immediately re-check the latest task so
   // a design that completed while the tab was backgrounded reaches Redux.
@@ -903,7 +905,9 @@ export default function ChatWindow() {
       taskId.startsWith("pending-revision-") ||
       taskStatus === "completed" ||
       taskStatus === "failed" ||
-      Boolean(latestEnterpriseEntry?.url)
+      Boolean(latestEnterpriseEntry?.url) ||
+      isSkipped ||
+      status === "skip"
     ) {
       return;
     }
@@ -912,7 +916,13 @@ export default function ChatWindow() {
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [taskId, taskStatus, latestEnterpriseEntry?.url, getStatus]);
+  }, [taskId, taskStatus, latestEnterpriseEntry?.url, getStatus, isSkipped, status]);
+
+  useEffect(() => {
+    if (status === "skip") {
+      stopPolling();
+    }
+  }, [status, stopPolling]);
 
   // get status 
 
