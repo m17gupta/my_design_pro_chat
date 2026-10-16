@@ -31,14 +31,18 @@ export interface EnterpriseMaskStats {
 export interface EnterpriseStatusResult {
   task_id: string;
   generated_image_url: string;
-  work_type: string;
-  reference_image_urls: string[];
-  prompt_used_preview: string;
-  prompt_used_full: string;
+  original_image_url?: string | null;
+  work_type?: string;
+  pipeline?: string;
+  model?: string;
+  reference_image_urls?: string[];
+  prompt_used_preview?: string;
+  prompt_used_full?: string;
   // vision_data: EnterpriseVisionData;
-  mask_stats: EnterpriseMaskStats;
-  structure_warning: string | null;
-  repaint_verification: Record<string, unknown>;
+  mask_stats?: EnterpriseMaskStats | null;
+  structure_warning?: string | null;
+  repaint_verification?: Record<string, unknown>;
+  watermark_status?: string;
 }
 
 

@@ -193,6 +193,9 @@ const enterpriseSlice = createSlice({
               action.payload.result?.generated_image_url
             ) {
               entry.url = action.payload.result.generated_image_url;
+              if (action.payload.result.original_image_url) {
+                entry.original_image_url = action.payload.result.original_image_url;
+              }
             }
           }
         }

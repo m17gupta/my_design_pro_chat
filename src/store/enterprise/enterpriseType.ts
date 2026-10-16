@@ -24,6 +24,7 @@ export interface EnterpriseEntry {
   url: string;
   status: string;
   type: "original" | "revision";
+  original_image_url?: string | null;
   questions: EnterpriseQuestion[];
 }
 
