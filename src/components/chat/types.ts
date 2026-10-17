@@ -262,12 +262,15 @@ export function summaryCopyForWorkType(
       const userSection = (roleMap[normUserType] ?? roleMap[userType]) as Record<string, unknown> | undefined;
 
       let phases: unknown;
-      if (role === "enterprise-client") {
-        phases = userSection;
-      } else if (userSection && typeof userSection === "object") {
-        phases = workType ? userSection[workType] ?? userSection[workType.replace(/_/g, "-")] : undefined;
-        if (!phases && Object.keys(userSection).some((k) => k.startsWith("phase_"))) {
+      if (userSection && typeof userSection === "object") {
+        if (Object.keys(userSection).some((k) => k.startsWith("phase_"))) {
           phases = userSection;
+        } else {
+          const effectiveWorkType =
+            workType ?? (normUserType === "color-material" ? "color_material" : "front_yard");
+          phases =
+            userSection[effectiveWorkType] ??
+            userSection[effectiveWorkType.replace(/_/g, "-")];
         }
       }
 
@@ -280,8 +283,6 @@ export function summaryCopyForWorkType(
         const allowedPhases =
           questionSets?.original && questionSets.original.length > 0
             ? questionSets.original.map((k) => phaseMap[k]).filter(Boolean)
-            : role === "enterprise-client"
-            ? []
             : Object.values(phaseMap);
 
         // Look for design_summary only across allowed phases

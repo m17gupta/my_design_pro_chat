@@ -19,6 +19,7 @@ import {
   revisionRoundFromMessage,
 } from "./flow";
 import type { Message } from "./types";
+import questionsJson from "../../docs/Questions.json";
 
 /** Minimal API item — only `answer` matters for restore routing. */
 function item(answer: ApiBriefItem["answer"]): ApiBriefItem {
@@ -1324,6 +1325,51 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
     const keys = eps.map((e) => e.apiKey);
     expect(keys).toContain("property_verified");
     expect(keys).toContain("architecture_changes");
+  });
+
+  it("builds the enterprise-client flow with the new nested work_type structure (Questions.json)", () => {
+    const eps = buildEpisodesFromContext(
+      {
+        role: "enterprise-client",
+        user_type: "landscape-design",
+        work_type: "front_yard",
+        question_sets: { original: ["phase_1", "phase_2"], revision: ["phase_4"] },
+      },
+      questionsJson as Record<string, unknown>
+    );
+    const keys = eps.map((e) => e.apiKey);
+    expect(keys).toContain("additional_images_upload");
+    expect(keys).toContain("supporting_files_upload");
+    expect(keys).toContain("project_goals_or_brief_description");
+    expect(keys).toContain("landscape_design_style_preference");
+    expect(keys).toContain("hardscape_material_preferences");
+    expect(keys).toContain("softscape_planting_preferences");
+    expect(keys).toContain("budget");
+    expect(keys).toContain("important_proprty_information");
+    expect(keys).toContain("level_of_transformation");
+    expect(keys).toContain("summary");
+    expect(keys).toContain("revision");
+    expect(keys).toContain("revision-summary");
+
+    // summary card content matches design_summary from phase_2
+    const summaryEp = eps.find((e) => e.apiKey === "summary");
+    expect(summaryEp?.content).toContain("Amazing, I have logged our discussion");
+  });
+
+  it("builds color-material enterprise-client flow with work_type", () => {
+    const eps = buildEpisodesFromContext(
+      {
+        role: "enterprise-client",
+        user_type: "color-material",
+        work_type: "color_material",
+        question_sets: { original: ["phase_1", "phase_2"], revision: ["phase_4"] },
+      },
+      questionsJson as Record<string, unknown>
+    );
+    const keys = eps.map((e) => e.apiKey);
+    expect(keys).toContain("exterior_color_and_material_style");
+    expect(keys).toContain("primary_material_preferences");
+    expect(keys).toContain("summary");
   });
 
   it("applies the engage-designer variant only on the enterprise custom flow", () => {

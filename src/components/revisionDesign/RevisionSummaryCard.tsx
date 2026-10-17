@@ -49,7 +49,7 @@ export default function RevisionSummaryCard ({
   const { data: questionaire } = useAppSelector(state => state.questionnaires)
 
   const revisionnSummaryDescription = useMemo(() => {
-    if (!questionaire || !user_type || !role || (role !== 'enterprise-client' && !work_type)) return ''
+    if (!questionaire || !user_type || !role) return ''
     const roleBase = questionaire[role]
     if (!roleBase || typeof roleBase !== 'object') return ''
     const roleMap = roleBase as Record<string, unknown>
@@ -58,18 +58,26 @@ export default function RevisionSummaryCard ({
       roleMap[normalizedUserType] ??
       roleMap[user_type] ??
       roleMap[user_type.replace(/-/g, '_')]
-    const phases =
-      role === 'enterprise-client'
-        ? userSection
-        : (work_type ? (userSection as Record<string, unknown> | undefined)?.[work_type] : undefined)
+    if (!userSection || typeof userSection !== 'object') return ''
+
+    let phases: unknown
+    const userSectionObj = userSection as Record<string, unknown>
+    if (Object.keys(userSectionObj).some((k) => k.startsWith('phase_'))) {
+      phases = userSectionObj
+    } else {
+      const effectiveWorkType =
+        work_type ?? (normalizedUserType === 'color-material' ? 'color_material' : 'front_yard')
+      phases = userSectionObj[effectiveWorkType] ?? userSectionObj[effectiveWorkType.replace(/_/g, '-')]
+    }
     if (!phases || typeof phases !== 'object') return ''
-    const phaseMap = phases as Record<string, { title?: string; questions?: { details?: string }[] }>
+    const phaseMap = phases as Record<string, { title?: string; questions?: { id?: string; details?: string }[] }>
     const phaseKey =
       question_sets?.revision?.[0] ??
-      (phaseMap['phase_5'] ? 'phase_5' : phaseMap['phase_4'] ? 'phase_4' : Object.keys(phaseMap).at(-1))
+      (phaseMap['phase_4'] ? 'phase_4' : phaseMap['phase_5'] ? 'phase_5' : Object.keys(phaseMap).at(-1))
     const phase = phaseKey ? phaseMap[phaseKey] : undefined
     if (!phase || !Array.isArray(phase.questions) || phase.questions.length === 0) return ''
-    return phase.questions[1]?.details ?? phase.questions[0]?.details ?? ''
+    const summaryQ = phase.questions.find((q) => q.id === 'revision_design_summary' || q.id === 'revision-summary')
+    return summaryQ?.details ?? phase.questions[1]?.details ?? phase.questions[0]?.details ?? ''
   }, [questionaire, user_type, role, work_type, question_sets])
 
   const canEdit = showActions && !disabled && !generating

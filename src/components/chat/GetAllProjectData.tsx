@@ -107,14 +107,15 @@ const GetAllProjectData = ({ defaultRole }: GetAllProjectDataProps = {}) => {
       }
     } else if (defaultRole) {
       // Direct access fallback without URL params
+      const isEnterpriseRole = defaultRole === "enterprise" || defaultRole === "enterprise-client";
       dispatch(
         setContext({
           role: defaultRole,
           user_type: "landscape-design",
-          work_type: defaultRole === "enterprise" ? "front_yard" : undefined,
+          work_type: isEnterpriseRole ? "front_yard" : undefined,
           question_sets: {
             original: ["phase_1", "phase_2"],
-            revision: ["phase_5"],
+            revision: [isEnterpriseRole ? "phase_4" : "phase_5"],
           },
         })
       );

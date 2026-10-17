@@ -829,44 +829,29 @@ export function resolveAllQuestionFlow(
   const userType = normalizeUserType(ctx.user_type);
   let phases: Record<string, QuestionPhase> | undefined;
 
-  if (role === "enterprise-client") {
-    // enterprise-client sections are typically user_type → phase (no work_type level).
-    let section = userType ? roleMap[userType] : undefined;
-    if (!section && userType) {
-      section = roleMap[userType.replace(/-/g, "_")];
-    }
-    if (section && typeof section === "object") {
-      const sectionObj = section as Record<string, unknown>;
-      // If section directly contains phase_* keys (standard enterprise-client)
-      if (Object.keys(sectionObj).some((k) => k.startsWith("phase_"))) {
-        phases = sectionObj as Record<string, QuestionPhase>;
-      } else {
-        // Fallback: check if nested under work_type
-        const workTypeKey = normalizeWorkType(ctx.work_type ?? "front_yard");
-        let workSection = sectionObj[workTypeKey];
-        if (!workSection || typeof workSection !== "object") {
-          workSection = sectionObj[workTypeKey.replace(/_/g, "-")];
-        }
-        if (workSection && typeof workSection === "object") {
-          phases = workSection as Record<string, QuestionPhase>;
-        }
-      }
-    }
-  } else {
-    const userTypeKey = userType || userTypeForWorkType(ctx.work_type ?? undefined);
-    let userSection = roleMap[userTypeKey];
-    if (!userSection && userTypeKey) {
-      userSection = roleMap[userTypeKey.replace(/-/g, "_")];
-    }
-    if (userSection && typeof userSection === "object") {
-      const workTypeKey = normalizeWorkType(ctx.work_type ?? "front_yard");
-      let workSection = (userSection as Record<string, unknown>)[workTypeKey];
+  const userTypeKey = userType || userTypeForWorkType(ctx.work_type ?? undefined);
+  let userSection = roleMap[userTypeKey];
+  if (!userSection && userTypeKey) {
+    userSection = roleMap[userTypeKey.replace(/-/g, "_")];
+  }
+  if (userSection && typeof userSection === "object") {
+    const userSectionObj = userSection as Record<string, unknown>;
+    // Check if section directly contains phase_* keys (legacy enterprise-client)
+    if (Object.keys(userSectionObj).some((k) => k.startsWith("phase_"))) {
+      phases = userSectionObj as Record<string, QuestionPhase>;
+    } else {
+      const defaultWorkType =
+        userTypeKey === "color-material" || userTypeKey === "color_material"
+          ? "color_material"
+          : "front_yard";
+      const workTypeKey = normalizeWorkType(ctx.work_type ?? defaultWorkType);
+      let workSection = userSectionObj[workTypeKey];
       if (!workSection || typeof workSection !== "object") {
-        workSection = (userSection as Record<string, unknown>)[workTypeKey.replace(/_/g, "-")];
+        workSection = userSectionObj[workTypeKey.replace(/_/g, "-")];
       }
       if (!workSection || typeof workSection !== "object") {
-        if (Object.keys(userSection).some((k) => k.startsWith("phase_"))) {
-          workSection = userSection;
+        if (Object.keys(userSectionObj).some((k) => k.startsWith("phase_"))) {
+          workSection = userSectionObj;
         }
       }
       if (workSection && typeof workSection === "object") {
