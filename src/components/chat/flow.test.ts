@@ -1338,7 +1338,14 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
       questionsJson as Record<string, unknown>
     );
     const keys = eps.map((e) => e.apiKey);
+    expect(keys[0]).toBe("overview");
+    expect(keys[1]).toBe("photos");
+    expect(eps[1].content).toBe(
+      "First, do you have any additional photos of the house that you think are helpful for us to see?"
+    );
+    expect(keys).toContain("photos");
     expect(keys).toContain("additional_images_upload");
+    expect(keys).toContain("files");
     expect(keys).toContain("supporting_files_upload");
     expect(keys).toContain("project_goals_or_brief_description");
     expect(keys).toContain("landscape_design_style_preference");

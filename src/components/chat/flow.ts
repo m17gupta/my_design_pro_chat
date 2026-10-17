@@ -1281,11 +1281,8 @@ export function buildEpisodesFromContext(
   }
 
   // Gate the two upload cards behind the legacy Yes/No intro questions
-  // (photos / files) whenever the flow contains them — skip for enterprise-client
-  // so no static gates are injected.
-  if (!isEnterpriseClient) {
-    insertUploadGates(episodes);
-  }
+  // (photos / files) whenever the flow contains them.
+  insertUploadGates(episodes);
 
   const isCustomEngage =
     Boolean(ctx.engageDesigner) &&
