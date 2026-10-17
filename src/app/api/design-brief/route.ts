@@ -59,7 +59,9 @@ export async function POST(request: Request) {
       } else if (rawUserType === "color-material" || rawUserType === "color_material") {
         console.log("calling client color-material");
         endpointPath = "/api/v1/luna/color-material";
-        outgoingBody = buildEnterpriseClientPayload(payload as Record<string, unknown>, incomingQuestionnaires);
+        // This endpoint accepts the nested questionnaire contract directly.
+        // Preserve projectId, empty answers, revision_comment, and metadata.
+        outgoingBody = payload;
       }
     }
 
@@ -85,10 +87,23 @@ export async function POST(request: Request) {
   if (!res.ok) {
     let message = `Design API error (${res.status})`;
     try {
-      const data = JSON.parse(body) as { detail?: unknown };
-      if (typeof data.detail === "string") message = data.detail;
-      else if (data.detail && typeof data.detail === "object") {
-        message = JSON.stringify(data.detail);
+      const data = JSON.parse(body) as { detail?: unknown; error?: unknown };
+      const nestedError = data.error && typeof data.error === "object"
+        ? data.error as { detail?: unknown }
+        : undefined;
+      const detail = nestedError?.detail ?? data.detail ?? data.error;
+      if (typeof detail === "string") message = detail;
+      else if (Array.isArray(detail)) {
+        // Surface field paths without forwarding input values or error context.
+        const errors = detail.map((entry: unknown) => {
+          if (!entry || typeof entry !== "object") return "";
+          const issue = entry as { loc?: unknown; msg?: unknown };
+          const path = Array.isArray(issue.loc) ? issue.loc.join(".") : "";
+          return typeof issue.msg === "string"
+            ? `${path ? `${path}: ` : ""}${issue.msg}`
+            : "";
+        }).filter(Boolean);
+        if (errors.length) message = errors.join("; ");
       }
     } catch {
       // Non-JSON error body — keep the status-based message.

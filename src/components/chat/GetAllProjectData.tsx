@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { useAppDispatch } from "../../store/hooks";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { setContext } from "../../store/briefSlice";
 import { hydrateProject } from "../../store/persistence/persistenceThunk";
 import { hydrationSkipped } from "../../store/persistence/persistenceSlice";
 import { fetchQuestionnaires } from "../../store/questionnaires/questionnaireThunk";
+import { selectQuestionnairesData } from "../../store/questionnaires/questionnaireSlice";
 
 /** Decoded shape of the base64 `?params` query string sent from the site. */
 interface ClientParams {
@@ -51,13 +52,16 @@ const GetAllProjectData = ({ defaultRole }: GetAllProjectDataProps = {}) => {
   const searchParams = useSearchParams();
 
   const dispatch = useAppDispatch();
+  const questionnairesData = useAppSelector(selectQuestionnairesData);
   const hydrationDispatchedRef = useRef(false);
 
   useEffect(() => {
     if (hydrationDispatchedRef.current) return;
     hydrationDispatchedRef.current = true;
 
-    dispatch(fetchQuestionnaires());
+    if (!questionnairesData) {
+      dispatch(fetchQuestionnaires());
+    }
 
     const storageKey = defaultRole ? `dzinly_chat_params_${defaultRole}` : "dzinly_chat_params";
     const rawParams = searchParams.get("params");
@@ -123,7 +127,7 @@ const GetAllProjectData = ({ defaultRole }: GetAllProjectDataProps = {}) => {
     } else {
       dispatch(hydrationSkipped());
     }
-  }, [searchParams, dispatch, defaultRole]);
+  }, [searchParams, dispatch, defaultRole, questionnairesData]);
 
   return null;
 };

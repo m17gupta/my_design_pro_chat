@@ -27,6 +27,12 @@ export type QuestionnairesResponse = Record<string, unknown>;
 
 export interface QuestionnairesState {
   data: QuestionnairesResponse | null;
+  /**
+   * Stable content signature of `data`. Consumers compare it to detect a real
+   * backend change (added / removed / renumbered questions) and reconcile the
+   * rendered flow, instead of tearing down on every refetch.
+   */
+  signature: string | null;
   questionnaireSequence: string[];
   lifecycle: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;

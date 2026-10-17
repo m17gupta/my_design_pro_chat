@@ -157,6 +157,11 @@ export default function ChatWindow() {
     () => buildEpisodesFromContext(flowContext, questionnaires),
     [flowContext, questionnaires]
   );
+
+  // Content signature of the resolved flow for THIS role / user_type / work_type.
+  // Scoped to the episodes actually rendered, so a change in an unrelated branch
+  // of the questionnaire payload (some other role) never triggers a rebuild.
+  const flowSignature = useMemo(() => JSON.stringify(episodes), [episodes]);
  
   // console.log("episodes => ",episodes)
 
@@ -207,21 +212,57 @@ export default function ChatWindow() {
   // `persistence.hydrated` below — never before the row has been loaded.
   const hydrated = useAppSelector((s) => s.persistence.hydrated);
   const didInitializeRef = useRef(false);
-  const hasUserInteractedRef = useRef(false);
+  // Signature of the resolved flow the rendered transcript was built from. When
+  // the backend questionnaire changes the flow for this context (signature
+  // differs) we rebuild the transcript from the Redux answers so added /
+  // removed / renumbered questions render without losing the user's progress.
+  const appliedSignatureRef = useRef<string | null>(null);
 
   // Once hydration completes (row restored or confirmed absent), rebuild the
   // transcript or start fresh. Uses restoredTranscript computed from Redux.
+  // Afterwards, reconcile on a real flow change — but never while a turn is in
+  // flight (typing / editing / generating / a pending revision round), so live
+  // UI is never clobbered mid-answer. Answers live in Redux, so rebuilding from
+  // `restoredTranscript` preserves every answered step.
   useEffect(() => {
     if (!hydrated) return;
-    if (didInitializeRef.current && hasUserInteractedRef.current) return;
-    didInitializeRef.current = true;
+    // Hold the first build until questionnaires settle so an AllQuestion flow
+    // (enterprise / enterprise-client) initializes from the resolved payload in
+    // one shot, instead of flashing the overview-only placeholder first.
+    if (isQuestionnairesLoading) return;
+
+    const firstRun = !didInitializeRef.current;
+    if (firstRun) {
+      didInitializeRef.current = true;
+      appliedSignatureRef.current = flowSignature;
+    } else {
+      if (appliedSignatureRef.current === flowSignature) return;
+      if (
+        typing ||
+        editingId !== null ||
+        generating ||
+        pendingRevisionGenerate !== null
+      ) {
+        return;
+      }
+      appliedSignatureRef.current = flowSignature;
+    }
 
     setMessages(restoredTranscript.messages);
     setCurrentId(restoredTranscript.currentId);
     setAnswers(restoredTranscript.answers);
     setCompleted(restoredTranscript.completed);
     setMessageEpisodes(restoredTranscript.messageEpisodes);
-  }, [hydrated, restoredTranscript]);
+  }, [
+    hydrated,
+    isQuestionnairesLoading,
+    restoredTranscript,
+    flowSignature,
+    typing,
+    editingId,
+    generating,
+    pendingRevisionGenerate,
+  ]);
 
   const clearTypingTimeout = useCallback(() => {
     if (timeoutRef.current !== null) {
@@ -330,7 +371,6 @@ export default function ChatWindow() {
     ) => {
       if (typing || busyRef.current) return;
       busyRef.current = true;
-      hasUserInteractedRef.current = true;
       const ep = episodeById(currentId, episodes);
 
       if (currentId === "overview") {
@@ -1152,7 +1192,6 @@ export default function ChatWindow() {
     setTyping(false);
     setEditingId(null);
     announcedIdRef.current = null;
-    hasUserInteractedRef.current = true;
     const hasRevisionConfigured =
       episodes.some((e) => e.apiKey === revisionKey) ||
       revisionKey === "revision";
@@ -1180,7 +1219,6 @@ export default function ChatWindow() {
    */
   const handleRevisionGenerate = useCallback(
     async (round: number, overrideComment?: { files: string[]; notes: string }) => {
-      hasUserInteractedRef.current = true;
       if (pendingRevisionGenerate !== null) return;
       setPendingRevisionGenerate(round);
       const revisions = entries.filter((entry) => entry.type === "revision");
@@ -1228,7 +1266,6 @@ export default function ChatWindow() {
       busyRef.current = false;
       setTyping(false);
       announcedIdRef.current = null;
-      hasUserInteractedRef.current = true;
 
       const commentId = episodeMessageId(revisionKey, round);
       const revisions = entries.filter((entry) => entry.type === "revision");
