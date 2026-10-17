@@ -732,6 +732,32 @@ export default function ChatWindow() {
     [dispatch, revisionKey, episodes, questionnaires, flowContext]
   );
 
+    const submitLunaProject = useCallback(
+    (action: SubmitAction, rating: number) => {
+      const data = {
+        id,
+        original: chat_original,
+        design: entries,
+        project_address:userAddress,
+        rating,
+        action,
+      };
+      postToHost({ action: HOST_ACTION_SUBMIT_PROJECT, data });
+      if (action === "ai_concept_skip") {
+         setSubmittedAction(action);
+        console.log("called skip content");
+        dispatch(setContext({ status: "skip" }));
+      } else if (action === "engage_designer") {
+        setIsEngagingDesigner(true);
+        dispatch(setContext({ status: "engage_designer" }));
+      } else {
+        setSubmittedAction(action);
+        dispatch(setContext({ status: "all_i_need" }));
+      }
+    },
+    [id, chat_original, entries, userAddress, dispatch]
+  );
+
   const handleEditCancel = useCallback(() => {
     setEditingId(null);
     dispatch(resetEditId());
@@ -741,6 +767,28 @@ export default function ChatWindow() {
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
   }, [dispatch]);
+
+    /** "Engage Designer" — hand off to the human designer for review. */
+  const handleDesignEngage = useCallback(() => {
+    const originalEntry = entries.find((entry) => entry.type === "original");
+    submitLunaProject("engage_designer", ratings[originalEntry?.id ?? ""] ?? 0);
+  }, [submitLunaProject, entries, ratings]);
+
+  /**
+   * Placeholder function called when role === "enterprise" and asset selection is "Plan and Specs Only".
+   * Separate logic / API call will be implemented here later.
+   */
+const handlePlanAndSpecs = useCallback(
+  async (payload: unknown) => {
+    console.log(
+      "[handlePlanAndSpecs] 'Plan and Specs Only' selected. Payload:",
+      payload
+    );
+
+    handleDesignEngage();
+  },
+  [handleDesignEngage]
+);
 
   /** POST the assembled brief payload to the FastAPI design backend. */
   const handleGenerate = useCallback(async () => {
@@ -756,10 +804,30 @@ export default function ChatWindow() {
         work_type: work_type,
         image_url: image_url,
         revision: revisionComment,
-  
-        });
-      await dispatch(generateEnterpriseDesign({ payload })).unwrap();
-      // toast.success("Your design brief has been sent to Brooke Edwards for review!");
+       });
+
+       // Read project_scope answer from brief
+       const scopeAnswer = (() => {
+         const item = (chat_original?.project_scope ?? chat_original?.level_of_transformation) as unknown;
+         if (!item) return "";
+         if (typeof item === "string") return item;
+         if (typeof item === "object" && item !== null) {
+           const obj = item as Record<string, unknown>;
+           if (typeof obj.answer === "string") return obj.answer;
+           if (typeof obj.value === "string") return obj.value;
+         }
+         return "";
+       })().trim().toLowerCase();
+
+       // Option 0: "Plan and Specs Only" -> call custom placeholder function (do not hit AI generation API)
+       if (role === "enterprise" && scopeAnswer === "plan and specs only") {
+         await handlePlanAndSpecs(payload);
+         return;
+       }
+
+       // Option 1 / default: "Plan, Specs and Renderings" -> hit standard AI design API
+       await dispatch(generateEnterpriseDesign({ payload })).unwrap();
+       // toast.success("Your design brief has been sent to Brooke Edwards for review!");
     } catch (error) {
       toast.error(
         typeof error === "string"
@@ -771,7 +839,7 @@ export default function ChatWindow() {
     } finally {
       setGenerating(false);
     }
-  }, [dispatch, generating, id, episodes, chat_original, watermark, image_url, work_type, revisionComment, user_type, dc_name, role, custom_engage_designer, question_sets]);
+  }, [dispatch, generating, id, episodes, chat_original, watermark, image_url, work_type, revisionComment, user_type, dc_name, role, custom_engage_designer, question_sets, handlePlanAndSpecs]);
 
   /**
    * Status polling: once the POST lands a `task_id` in the store, wait 3s,
@@ -1054,31 +1122,6 @@ export default function ChatWindow() {
    * Terminal submit — posts the project back to the host with the full design
    * history and this round's rating, then locks the whole result UI.
    */
-  const submitLunaProject = useCallback(
-    (action: SubmitAction, rating: number) => {
-      const data = {
-        id,
-        original: chat_original,
-        design: entries,
-        project_address:userAddress,
-        rating,
-        action,
-      };
-      postToHost({ action: HOST_ACTION_SUBMIT_PROJECT, data });
-      if (action === "ai_concept_skip") {
-         setSubmittedAction(action);
-        console.log("called skip content");
-        dispatch(setContext({ status: "skip" }));
-      } else if (action === "engage_designer") {
-        setIsEngagingDesigner(true);
-        dispatch(setContext({ status: "engage_designer" }));
-      } else {
-        setSubmittedAction(action);
-        dispatch(setContext({ status: "all_i_need" }));
-      }
-    },
-    [id, chat_original, entries, userAddress, dispatch]
-  );
 
   const handleDesignSkip = useCallback(() => {
     console.log("calling ai skip content")
@@ -1159,11 +1202,6 @@ export default function ChatWindow() {
     submitLunaProject("this_is_all_i_need", ratings[originalEntry?.id ?? ""] ?? 0);
   }, [submitLunaProject, entries, ratings]);
 
-  /** "Engage Designer" — hand off to the human designer for review. */
-  const handleDesignEngage = useCallback(() => {
-    const originalEntry = entries.find((entry) => entry.type === "original");
-    submitLunaProject("engage_designer", ratings[originalEntry?.id ?? ""] ?? 0);
-  }, [submitLunaProject, entries, ratings]);
 
 
 
