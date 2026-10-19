@@ -1045,7 +1045,7 @@ describe("buildEpisodesFromContext (Dynamic Questionnaires)", () => {
       },
       dynamicData
     );
-    expect(eps.map((e) => e.apiKey)).toEqual(["overview", "api_q1", "summary", "api_q1"]);
+    expect(eps.map((e) => e.apiKey)).toEqual(["overview", "api_q1", "summary"]);
   });
 
   it("falls back to the legacy flow when the role has no AllQuestion.json path", () => {

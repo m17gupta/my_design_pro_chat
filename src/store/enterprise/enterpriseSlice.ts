@@ -1,3 +1,4 @@
+import { isRevisionEntry } from "./enterpriseType";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import {
   buildRevisionQuestion,
@@ -64,14 +65,14 @@ const enterpriseSlice = createSlice({
       if (id) {
         state.entries = state.entries.filter((e) => e.id !== id);
       } else if (round !== undefined && round > 0) {
-        const revisions = state.entries.filter((e) => e.type === "revision");
+        const revisions = state.entries.filter((e) => isRevisionEntry(e));
         const target = revisions[round - 1];
         if (target) {
           state.entries = state.entries.filter((e) => e !== target);
         }
       }
       state.entries = state.entries.filter(
-        (e) => !e.id.startsWith("pending-revision-") && (e.type !== "revision" || e.status !== "failed")
+        (e) => !e.id.startsWith("pending-revision-") && (!isRevisionEntry(e) || e.status !== "failed")
       );
       state.lifecycle = "idle";
       state.error = null;
@@ -98,7 +99,7 @@ const enterpriseSlice = createSlice({
           };
 
           if (round !== undefined && round > 0) {
-            const revisions = state.entries.filter((e) => e.type === "revision");
+            const revisions = state.entries.filter((e) => isRevisionEntry(e));
             const prev = revisions[round - 1];
             if (prev && prev.status !== "completed") {
               const idx = state.entries.indexOf(prev);
@@ -120,13 +121,13 @@ const enterpriseSlice = createSlice({
         }
       })
       .addCase(generateEnterpriseDesign.fulfilled, (state, action) => {
-        state.lifecycle = "pending";
-        state.error = null;
         const entry = action.payload;
+        state.lifecycle = entry.type === "text_answer" ? "succeeded" : "pending";
+        state.error = null;
 
         const round = action.meta.arg.round;
         if (round !== undefined && round > 0) {
-          const revisions = state.entries.filter((e) => e.type === "revision");
+          const revisions = state.entries.filter((e) => isRevisionEntry(e));
           const prev = revisions[round - 1];
           if (prev && prev.status !== "completed") {
             const idx = state.entries.indexOf(prev);
@@ -152,7 +153,7 @@ const enterpriseSlice = createSlice({
         state.error = action.payload ?? "Failed to submit the design brief";
         const round = action.meta.arg.round;
         if (round !== undefined && round > 0) {
-          const revisions = state.entries.filter((e) => e.type === "revision");
+          const revisions = state.entries.filter((e) => isRevisionEntry(e));
           const prev = revisions[round - 1];
           if (prev) {
             const idx = state.entries.indexOf(prev);
@@ -169,7 +170,7 @@ const enterpriseSlice = createSlice({
           state.entries.splice(pendingIdx, 1);
         } else if (
           state.entries.length > 0 &&
-          state.entries[state.entries.length - 1].type === "revision"
+          isRevisionEntry(state.entries[state.entries.length - 1])
         ) {
           state.entries.pop();
         }
@@ -181,7 +182,7 @@ const enterpriseSlice = createSlice({
         if (entryIdx >= 0) {
           const entry = state.entries[entryIdx];
           if (action.payload.status === "failed") {
-            if (entry.type === "revision") {
+            if (isRevisionEntry(entry)) {
               state.entries.splice(entryIdx, 1);
             } else {
               entry.status = "failed";

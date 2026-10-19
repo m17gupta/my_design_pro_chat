@@ -1,6 +1,7 @@
 "use client";
+import { isRevisionEntry } from "../../store/enterprise/enterpriseType";
 
-import type { EnterpriseEntry } from "@/store/enterprise/enterpriseType";
+import type { EnterpriseEntry } from "../../store/enterprise/enterpriseType";
 import { revisionRoundFromMessage } from "../chat/flow";
 import RevisionResultCard, {
   type SubmitAction,
@@ -25,7 +26,7 @@ export function deriveRevisionRound(
 ): DerivedRevisionRound | null {
   const round = revisionRoundFromMessage(messageId);
   if (!round) return null;
-  const revisions = entries.filter((entry) => entry.type === "revision");
+  const revisions = entries.filter((entry) => isRevisionEntry(entry));
   return { round, entry: revisions[round - 1] };
 }
 

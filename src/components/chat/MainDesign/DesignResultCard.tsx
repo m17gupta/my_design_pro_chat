@@ -1,4 +1,5 @@
 "use client";
+import { isRevisionEntry } from "@/store/enterprise/enterpriseType";
 
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -45,12 +46,12 @@ export default function DesignResultCard({
   );
   const isEnterpriseClient = (role ?? "").trim().toLowerCase() === "enterprise-client";
   const resolvedInputImage = image_url;
-  const revision = entries.filter((item) => item.type === "revision");
+  const revision = entries.filter((item) => isRevisionEntry(item));
   const hasRevisionComment =
     revision_comment.notes !== "" || revision_comment.files.length > 0;
   const isGeneratingRevision = entries.some(
     (item) =>
-      item.type === "revision" &&
+      isRevisionEntry(item) &&
       (item.status === "pending" || item.status === "processing" || item.status === "queued")
   );
   const interactive =

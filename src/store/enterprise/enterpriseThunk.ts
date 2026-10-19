@@ -97,17 +97,35 @@ export const generateEnterpriseDesign = createAsyncThunk<
   { rejectValue: string }
 >(
   "enterprise/generateDesign",
-  async ({ payload }, { getState, rejectWithValue }) => {
+  async ({ payload, round }, { getState, rejectWithValue, requestId }) => {
     const { enterprise } = getState() as EnterpriseThunkState;
     try {
-      const result = await submitDesignBrief(payload);
+      const isRevision = (round !== undefined && round > 0) || enterprise.entries.length > 0;
+      const result = await submitDesignBrief(payload, { revision: isRevision });
       const data = result.data as EnterpriseResponse;
+      if (!data || typeof data !== "object") throw new Error("Invalid design API response");
+      if (data.response_type === "text_answer") {
+        if (!isRevision || typeof data.answer !== "string" || !data.answer.trim()) {
+          throw new Error("Invalid text answer from the design API");
+        }
+        return {
+          id: `text-answer-${requestId}`,
+          type: "text_answer",
+          answer: data.answer,
+          url: "",
+          status: "completed",
+          questions: [buildRevisionQuestion(payload.revision_comment)],
+        };
+      }
+      if (typeof data.task_id !== "string" || !data.task_id.trim()) {
+        throw new Error("The design API did not return a valid task ID");
+      }
       // First submission is the "original" design; every later call is a revision.
       const type: EnterpriseEntry["type"] =
-        enterprise.entries.length > 0 ? "revision" : "original";
+        isRevision ? "revision" : "original";
       return {
         id: data.task_id,
-        url: data.generatedImage,
+        url: data.generatedImage ?? "",
         status: data.status ?? "",
         type,
         questions:

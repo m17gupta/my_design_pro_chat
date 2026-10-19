@@ -51,7 +51,10 @@ export async function POST(request: Request) {
         ? ((payload as { questionnaires?: unknown }).questionnaires as Record<string, unknown> | null)
         : null;
 
-    if (rawRole === "enterprise-client") {
+    const isRevision = new URL(request.url).searchParams.get("mode") === "revision";
+    if (isRevision && (rawRole === "enterprise" || rawRole === "enterprise-client")) {
+      endpointPath = "/api/v1/luna/exterior";
+    } else if (rawRole === "enterprise-client") {
       if (rawUserType === "landscape-design" || rawUserType === "landscape_design") {
         console.log("calling client landscape-design");
         endpointPath = "/api/v1/luna/landscape-design";

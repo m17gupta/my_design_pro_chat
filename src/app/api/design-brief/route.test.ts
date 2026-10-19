@@ -57,3 +57,46 @@ describe("color-material proxy", () => {
     expect(await (await submit()).json()).toEqual({ error: "Conflicting query projectId" });
   });
 });
+
+
+describe("revision exterior proxy", () => {
+  it.each(["enterprise", "enterprise-client"])("routes %s revisions to /luna/exterior and preserves the nested brief", async (role) => {
+    const answer = { task_id: null, response_type: "text_answer", answer: "Please ask a project-related question." };
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(answer));
+    vi.stubGlobal("fetch", fetchMock);
+    const { POST } = await import("./route");
+    const revision = { ...payload, role, user_type: "landscape-design", revision_comment: { files: [], notes: "A question" } };
+    const response = await POST(new Request("https://app.example.com/api/design-brief?mode=revision", {
+      method: "POST", body: JSON.stringify(revision), headers: { "Content-Type": "application/json" },
+    }));
+    expect(await response.json()).toEqual(answer);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://backend.example.com/luna/exterior");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual(revision);
+    expect(fetchMock.mock.calls[0][1].headers["X-API-Key"]).toBe("test-key");
+  });
+});
+
+
+describe("image response compatibility", () => {
+  it.each(["enterprise", "enterprise-client"])("preserves queued image responses for %s revisions", async (role) => {
+    const queued = { task_id: "image-task", status: "queued", message: "Generating" };
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(queued, { status: 202 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { POST } = await import("./route");
+    const response = await POST(new Request("https://app.example.com/api/design-brief?mode=revision", {
+      method: "POST", body: JSON.stringify({ ...payload, role }), headers: { "Content-Type": "application/json" },
+    }));
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual(queued);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://backend.example.com/luna/exterior");
+  });
+  it("keeps enterprise original requests on enterprise-design", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ task_id: "original-task" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { POST } = await import("./route");
+    await POST(new Request("https://app.example.com/api/design-brief", {
+      method: "POST", body: JSON.stringify({ ...payload, role: "enterprise" }), headers: { "Content-Type": "application/json" },
+    }));
+    expect(fetchMock.mock.calls[0][0]).toBe("https://backend.example.com/api/v1/luna/enterprise-design");
+  });
+});

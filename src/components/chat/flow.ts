@@ -1,3 +1,4 @@
+import { isRevisionEntry } from "../../store/enterprise/enterpriseType";
 import type { ApiBriefItem } from "../../lib/apiBrief";
 import { answerToText, isAnswerEmpty } from "../../lib/briefDisplay";
 import {
@@ -837,7 +838,7 @@ export function resolveAllQuestionFlow(
   if (userSection && typeof userSection === "object") {
     const userSectionObj = userSection as Record<string, unknown>;
     // Check if section directly contains phase_* keys (legacy enterprise-client)
-    if (Object.keys(userSectionObj).some((k) => k.startsWith("phase_"))) {
+    if (Object.values(userSectionObj).some((value) => value && typeof value === "object" && Array.isArray((value as QuestionPhase).questions))) {
       phases = userSectionObj as Record<string, QuestionPhase>;
     } else {
       const defaultWorkType =
@@ -850,7 +851,7 @@ export function resolveAllQuestionFlow(
         workSection = userSectionObj[workTypeKey.replace(/_/g, "-")];
       }
       if (!workSection || typeof workSection !== "object") {
-        if (Object.keys(userSectionObj).some((k) => k.startsWith("phase_"))) {
+        if (Object.values(userSectionObj).some((value) => value && typeof value === "object" && Array.isArray((value as QuestionPhase).questions))) {
           workSection = userSectionObj;
         }
       }
@@ -862,20 +863,27 @@ export function resolveAllQuestionFlow(
 
   if (!phases) return null;
 
+  // Ignore optional metadata next to phases; only question arrays are phases.
+  phases = Object.fromEntries(Object.entries(phases).filter(([, phase]) =>
+    phase && typeof phase === "object" && Array.isArray(phase.questions)
+  ));
   const phaseKeys = Object.keys(phases);
   if (phaseKeys.length === 0) return null;
 
   const qs = ctx.question_sets;
   let originalPhases =
-    qs?.original && qs.original.length > 0
+    qs?.original !== undefined
       ? qs.original
       : defaultOriginalPhases(phases);
   let revisionPhases =
-    qs?.revision && qs.revision.length > 0
+    qs?.revision !== undefined
       ? qs.revision
       : defaultRevisionPhases(phases);
 
-  // Keep only phases that exist, preserving JSON order.
+  // Explicit phase references must be valid; never silently omit questions.
+  if ([...originalPhases, ...revisionPhases].some((key) => !phases?.[key])) return null;
+
+  // Preserve the selected phase order.
   originalPhases = originalPhases.filter((key) => phases && phases[key]);
   revisionPhases = revisionPhases.filter((key) => phases && phases[key]);
 
@@ -900,6 +908,7 @@ function summaryPhaseIndex(phases: Record<string, AllQPhase>): number {
  */
 function defaultOriginalPhases(phases: Record<string, AllQPhase>): string[] {
   const keys = Object.keys(phases);
+  if (phases.original) return ["original"];
   const summaryIdx = summaryPhaseIndex(phases);
   const end = summaryIdx >= 0 ? summaryIdx + 1 : Math.max(0, keys.length - 1);
   return keys.slice(0, end);
@@ -913,6 +922,8 @@ function defaultOriginalPhases(phases: Record<string, AllQPhase>): string[] {
  */
 function defaultRevisionPhases(phases: Record<string, AllQPhase>): string[] {
   const keys = Object.keys(phases);
+  if (phases.revision) return ["revision"];
+  if (phases.original) return [];
   const summaryIdx = summaryPhaseIndex(phases);
   const start = summaryIdx >= 0 ? summaryIdx + 1 : Math.max(0, keys.length - 1);
   return keys.slice(start);
@@ -1712,7 +1723,7 @@ export function buildRestoredTranscript(
     ? nextEpisodeId(lastId, lastAnswer, episodes)
     : list[0].apiKey;
 
-  const revisionEntries = entries.filter((e) => e.type === "revision");
+  const revisionEntries = entries.filter((e) => isRevisionEntry(e));
   // A revision comment exists in the store but hasn't been turned into an
   // entry yet (refresh mid-revision, before the design was regenerated). In
   // that case the revision summary must still be restored, or the user's

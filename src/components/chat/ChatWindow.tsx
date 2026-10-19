@@ -1,4 +1,5 @@
 "use client";
+import { isRevisionEntry } from "../../store/enterprise/enterpriseType";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -415,17 +416,24 @@ export default function ChatWindow() {
       // Revision feedback stores `{ files: [uploaded URLs], notes: text }` in
       // the brief payload so the regeneration POST carries the changes.
       if (ep.revisionStep) {
+        const revisionNotes =
+          structuredAnswer &&
+          typeof structuredAnswer === "object" &&
+          "notes" in structuredAnswer &&
+          typeof structuredAnswer.notes === "string"
+            ? structuredAnswer.notes
+            : userText.replace(/^\d+ files? uploaded(?:\r?\n|$)/i, "");
         const urls = urlsByField
           ? Object.values(urlsByField).flatMap((byKey) => Object.values(byKey))
           : [];
         latestRevisionFiles = Array.from(new Set([...(revisionComment.files ?? []), ...urls]));
         if (ep.apiKey === "revision" || ep.apiKey === "revision_comments") {
-          latestRevisionNotes = userText;
+          latestRevisionNotes = revisionNotes;
           latestRevisionFiles = urls.length > 0 ? urls : (revisionComment.files ?? []);
           dispatch(setRevision({ files: latestRevisionFiles, notes: latestRevisionNotes }));
         } else {
           const qName = ep.api?.name || ep.card?.title || ep.apiKey;
-          const entry = `${qName}: ${userText}`;
+          const entry = `${qName}: ${revisionNotes}`;
           const currentNotes = revisionComment.notes?.trim() ?? "";
           const newNotes = currentNotes ? `${currentNotes}\n${entry}` : entry;
           latestRevisionNotes = newNotes;
@@ -847,7 +855,7 @@ const handlePlanAndSpecs = useCallback(
    * state (completed / failed). On any error we stop polling and surface a
    * toast instead of hammering the API.
    */
-  const taskId = latestEnterpriseEntry?.id;
+  const taskId = latestEnterpriseEntry?.type === "text_answer" ? undefined : latestEnterpriseEntry?.id;
   /** Backend task lifecycle (queued | processing | completed | failed) — drives the loader text. */
   const taskStatus = latestEnterpriseEntry?.status;
   const pollRef = useRef<number | null>(null);
@@ -923,7 +931,7 @@ const handlePlanAndSpecs = useCallback(
         stopPolling();
         setPendingRevisionGenerate(null);
         if (res.status === "failed") {
-          const isRevision = entries.some((e) => e.id === taskId && e.type === "revision");
+          const isRevision = entries.some((e) => e.id === taskId && isRevisionEntry(e));
           if (isRevision) {
             const revRound = countRevisionRounds(messages, revisionKey);
             handleRevisionFailure(revRound || 1, res.error ?? "Design generation failed. Please try again.");
@@ -942,7 +950,7 @@ const handlePlanAndSpecs = useCallback(
       if (pollErrorCountRef.current >= 3) {
         pollErrorCountRef.current = 0;
         stopPolling();
-        const isRevision = entries.some((e) => e.id === taskId && e.type === "revision");
+        const isRevision = entries.some((e) => e.id === taskId && isRevisionEntry(e));
         const msg =
           typeof error === "string"
             ? error
@@ -1259,7 +1267,7 @@ const handlePlanAndSpecs = useCallback(
     async (round: number, overrideComment?: { files: string[]; notes: string }) => {
       if (pendingRevisionGenerate !== null) return;
       setPendingRevisionGenerate(round);
-      const revisions = entries.filter((entry) => entry.type === "revision");
+      const revisions = entries.filter((entry) => isRevisionEntry(entry));
   
       const entry = revisions[round - 1];
       const commentToUse = overrideComment ?? revisionComment;
@@ -1277,6 +1285,7 @@ const handlePlanAndSpecs = useCallback(
       });
       try {
         await dispatch(generateEnterpriseDesign({ payload, round })).unwrap();
+        setPendingRevisionGenerate(null);
       } catch (error) {
         const msg =
           typeof error === "string"
@@ -1287,7 +1296,7 @@ const handlePlanAndSpecs = useCallback(
         handleRevisionFailure(round, msg);
       }
     },
-    [pendingRevisionGenerate, entries, revisionComment, chat_original, watermark, work_type, id, episodes, dispatch, handleRevisionFailure]
+    [pendingRevisionGenerate, entries, revisionComment, chat_original, watermark, work_type, id, role, user_type, episodes, dispatch, handleRevisionFailure]
   );
 
   useEffect(() => {
@@ -1306,7 +1315,7 @@ const handlePlanAndSpecs = useCallback(
       announcedIdRef.current = null;
 
       const commentId = episodeMessageId(revisionKey, round);
-      const revisions = entries.filter((entry) => entry.type === "revision");
+      const revisions = entries.filter((entry) => isRevisionEntry(entry));
       const entry = revisions[round - 1];
       const notes = entry?.questions[0]?.answer.notes ?? revisionComment.notes;
       const files = entry?.questions[0]?.answer.files ?? revisionComment.files;
@@ -1488,7 +1497,7 @@ const handlePlanAndSpecs = useCallback(
   // If the latest revision entry has failed (and its card is hidden), treat the
   // previous revision summary as the effective current one so its buttons remain
   // active (not locked) for the user to interact with.
-  const revisionEntries = entries.filter((e) => e.type === "revision");
+  const revisionEntries = entries.filter((e) => isRevisionEntry(e));
   const lastRevisionEntryFailed =
     revisionEntries.length > 0 &&
     revisionEntries[revisionEntries.length - 1]?.status === "failed";
@@ -1672,7 +1681,7 @@ const handlePlanAndSpecs = useCallback(
                         round = Math.max(1, revUserMsgs.length);
                       }
 
-                      const revEntries = entries.filter((e) => e.type === 'revision');
+                      const revEntries = entries.filter((e) => isRevisionEntry(e));
                       const revEntry = revEntries[round - 1];
                       const entryFiles = revEntry?.questions?.[0]?.answer?.files;
                       if (Array.isArray(entryFiles) && entryFiles.length > 0) {
@@ -1745,7 +1754,7 @@ const handlePlanAndSpecs = useCallback(
                                 const round = m.id === `ep-${revisionKey}`
                                   ? 1
                                   : parseInt(m.id.replace(`ep-${revisionKey}-`, ""), 10) || 1;
-                                const revEntry = entries.filter((e) => e.type === "revision")[round - 1];
+                                const revEntry = entries.filter((e) => isRevisionEntry(e))[round - 1];
                                 const ans = revEntry?.questions?.[0]?.answer;
                                 // If this round already has a saved entry answer, pre-fill it (edit/retry case).
                                 // For a brand-new card (no entry yet and revisionComment was just cleared),

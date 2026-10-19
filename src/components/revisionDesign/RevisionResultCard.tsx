@@ -1,12 +1,13 @@
 "use client";
+import { isRevisionEntry } from "../../store/enterprise/enterpriseType";
 
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { EnterpriseEntry } from "@/store/enterprise/enterpriseType";
+import type { EnterpriseEntry } from "../../store/enterprise/enterpriseType";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
-import CompareImage from "@/components/compareImage/CompareImage";
+import CompareImage from "../compareImage/CompareImage";
 
 /** Terminal project actions sent to the host via postMessage. */
 export type SubmitAction = "this_is_all_i_need" | "engage_designer" | "ai_concept_skip";
@@ -75,26 +76,30 @@ export default function RevisionResultCard({
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [regenerateClicked, setRegenerateClicked] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
+  const isTextAnswer = entry.type === "text_answer";
   const hasImage = Boolean(entry.url);
   const done = entry.status === "completed" || hasImage;
   const failed = entry.status === "failed";
   const { entries } = useSelector((state: RootState) => state.enterprise);
   const { image_url, role } = useSelector((state: RootState) => state.chat);
   const isEnterpriseClient = (role ?? "").trim().toLowerCase() === "enterprise-client";
-  const getRevison = entries.filter((item) => item.type === "revision");
+  const getRevison = entries.filter((item) => isRevisionEntry(item));
 
   const originalEntry = entries.find((entry) => entry.type === "original");
-  const revisonlEntry = entries.filter((entry) => entry.type === "revision");
+  const revisonlEntry = entries.filter((entry) => isRevisionEntry(entry));
 
-  const resolvedInputImage =
-    round === 1
-      ? (originalEntry?.url || image_url || undefined)
-      : revisonlEntry[round - 2]?.url;
+  const entryIndex = entries.findIndex((item) => item.id === entry.id);
+  const previousImageEntry = entries.slice(0, entryIndex < 0 ? entries.length : entryIndex)
+    .filter((item) => item.url).at(-1);
+  const resolvedInputImage = previousImageEntry?.url || originalEntry?.url || image_url || undefined;
 
+  const previousImageRound = previousImageEntry
+    ? getRevison.findIndex((item) => item.id === previousImageEntry.id) + 1 : 0;
+  const inputLabel = previousImageRound > 0 ? `Revision ${previousImageRound}` : "Original design";
   const resolvedOutputImage =
     revisonlEntry[round - 1]?.url || entry.url;
 
-  const canCompare = Boolean(done && resolvedInputImage && resolvedOutputImage);
+  const canCompare = Boolean(!isTextAnswer && done && resolvedInputImage && resolvedOutputImage);
 
   const isGenerating =
     entry.status === "pending" ||
@@ -112,7 +117,7 @@ export default function RevisionResultCard({
     }
     const currentEntryIdx = entries.findIndex((e) => e.id === entry.id);
     const hasNextActiveRound = currentEntryIdx >= 0 && entries.some(
-      (e, idx) => idx > currentEntryIdx && e.type === "revision" && e.status !== "failed"
+      (e, idx) => idx > currentEntryIdx && isRevisionEntry(e) && e.status !== "failed"
     );
     if (!hasNextActiveRound) {
       setRegenerateClicked(false);
@@ -221,7 +226,7 @@ const handleDownload = async () => {
 
         <div className="mt-2 flex items-center justify-between gap-3">
           <h3 className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            My Revised Design - Based on your request
+            {isTextAnswer ? "Response to your request" : "My Revised Design - Based on your request"}
           </h3>
 
           {/* Compare Button — positioned cleanly right above the preview card on the right */}
@@ -233,9 +238,9 @@ const handleDownload = async () => {
               title={
                 isCompareMode
                   ? "Return to single image preview"
-                  : round === 1
+                  : previousImageRound === 0
                   ? "Compare revision with original design"
-                  : `Compare revision ${round} with revision ${round - 1}`
+                  : `Compare revision ${round} with revision ${previousImageRound}`
               }
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all duration-150 shadow-sm ${
                 isCompareMode
@@ -285,13 +290,15 @@ const handleDownload = async () => {
         </div>
 
         {/* Revision image — loading placeholder until the task completes, or CompareImage when in compare mode */}
-        {done && isCompareMode ? (
+        {isTextAnswer ? (
+          <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">{entry.answer}</p>
+        ) : done && isCompareMode ? (
           <div className="mt-4">
             <CompareImage
               inputImage={resolvedInputImage}
               outputImage={resolvedOutputImage}
               outputLabel={`Revision ${round}`}
-              inputLabel={round === 1 ? "Original design" : `Revision ${round - 1}`}
+              inputLabel={inputLabel}
             />
           </div>
         ) : (
@@ -435,7 +442,7 @@ const handleDownload = async () => {
               Regenerate With Comments
             </motion.button>
 
-            {!isEnterpriseClient && (
+            {(!isEnterpriseClient || isTextAnswer) && (
               <motion.button
                 type="button"
                 onClick={() => onEngageDesigner(rating)}

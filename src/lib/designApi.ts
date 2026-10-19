@@ -13,11 +13,12 @@ export interface SubmitBriefResult {
  * failure or a non-2xx response (surfacing the backend's error message).
  */
 export async function submitDesignBrief(
-  payload: ApiBriefPayload
+  payload: ApiBriefPayload,
+  options?: { revision?: boolean }
 ): Promise<SubmitBriefResult> {
   let res: Response;
   try {
-    res = await fetch("/api/design-brief", {
+    res = await fetch(options?.revision ? "/api/design-brief?mode=revision" : "/api/design-brief", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

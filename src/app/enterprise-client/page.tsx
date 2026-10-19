@@ -12,9 +12,10 @@ const page = () => {
         </div>
       }
     >
-      <GetAllProjectData defaultRole="enterprise-client" />
-      <UpdateProjectData />
-      <ChatWindow />
+      <GetAllProjectData defaultRole="enterprise-client">
+        <UpdateProjectData />
+        <ChatWindow />
+      </GetAllProjectData>
     </Suspense>
   );
 };
