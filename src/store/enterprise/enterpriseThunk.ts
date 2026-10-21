@@ -30,11 +30,11 @@ export interface EnterpriseMaskStats {
 /** The `result` block of a completed (or in-flight) generation task. */
 export interface EnterpriseStatusResult {
   task_id: string;
-  generated_image_url: string;
+  generated_image_url: string | null;
   original_image_url?: string | null;
-  work_type?: string;
-  pipeline?: string;
-  model?: string;
+  work_type?: string | null;
+  pipeline?: string | null;
+  model?: string | null;
   reference_image_urls?: string[];
   prompt_used_preview?: string;
   prompt_used_full?: string;
@@ -42,7 +42,9 @@ export interface EnterpriseStatusResult {
   mask_stats?: EnterpriseMaskStats | null;
   structure_warning?: string | null;
   repaint_verification?: Record<string, unknown>;
-  watermark_status?: string;
+  watermark_status?: string | null;
+  response_type?: string;
+  answer?: string;
 }
 
 
@@ -104,30 +106,102 @@ export const generateEnterpriseDesign = createAsyncThunk<
       const result = await submitDesignBrief(payload, { revision: isRevision });
       const data = result.data as EnterpriseResponse;
       if (!data || typeof data !== "object") throw new Error("Invalid design API response");
-      if (data.response_type === "text_answer") {
-        if (!isRevision || typeof data.answer !== "string" || !data.answer.trim()) {
+      const dataObj = data as unknown as Record<string, unknown>;
+      const resultObj =
+        dataObj.result && typeof dataObj.result === "object" && !Array.isArray(dataObj.result)
+          ? (dataObj.result as Record<string, unknown>)
+          : null;
+
+      const responseType = (resultObj?.response_type ?? dataObj.response_type) as string | undefined;
+
+      if (responseType === "text_answer") {
+        const answer = (resultObj?.answer ?? dataObj.answer) as string | undefined;
+        if (!isRevision || typeof answer !== "string" || !answer.trim()) {
           throw new Error("Invalid text answer from the design API");
         }
+
+        const taskId =
+          (typeof resultObj?.task_id === "string" && resultObj.task_id.trim() ? resultObj.task_id.trim() : null) ??
+          (typeof dataObj.task_id === "string" && dataObj.task_id.trim() ? dataObj.task_id.trim() : null) ??
+          `text-answer-${requestId}`;
+
+        const originalImageUrl =
+          (typeof resultObj?.original_image_url === "string" ? resultObj.original_image_url : null) ??
+          (typeof dataObj.original_image_url === "string" ? dataObj.original_image_url : null);
+
+        const entryStatus =
+          (typeof dataObj.status === "string" && dataObj.status ? dataObj.status : null) ??
+          (typeof resultObj?.status === "string" && resultObj.status ? resultObj.status : null) ??
+          "completed";
+
+        const generatedImageUrl =
+          (typeof resultObj?.generated_image_url === "string" ? resultObj.generated_image_url : null) ??
+          (typeof dataObj.generated_image_url === "string" ? dataObj.generated_image_url : null) ??
+          "";
+
         return {
-          id: `text-answer-${requestId}`,
+          id: taskId,
+          task_id: typeof resultObj?.task_id === "string" ? resultObj.task_id : (typeof dataObj.task_id === "string" ? dataObj.task_id : null),
           type: "text_answer",
-          answer: data.answer,
-          url: "",
-          status: "completed",
+          response_type: "text_answer",
+          answer,
+          url: generatedImageUrl,
+          generated_image_url: typeof resultObj?.generated_image_url === "string" ? resultObj.generated_image_url : null,
+          status: entryStatus,
+          original_image_url: originalImageUrl,
+          pipeline: typeof resultObj?.pipeline === "string" ? resultObj.pipeline : null,
+          model: typeof resultObj?.model === "string" ? resultObj.model : null,
+          work_type: typeof resultObj?.work_type === "string" ? resultObj.work_type : null,
+          reference_image_urls: Array.isArray(resultObj?.reference_image_urls) ? (resultObj.reference_image_urls as string[]) : [],
+          vision_data: resultObj?.vision_data ?? null,
+          mask_stats: (resultObj?.mask_stats as EnterpriseMaskStats | null) ?? null,
+          watermark_status: typeof resultObj?.watermark_status === "string" ? resultObj.watermark_status : null,
           questions: [buildRevisionQuestion(payload.revision_comment)],
         };
       }
-      if (typeof data.task_id !== "string" || !data.task_id.trim()) {
+
+      const taskId =
+        (typeof resultObj?.task_id === "string" && resultObj.task_id.trim() ? resultObj.task_id.trim() : null) ??
+        (typeof dataObj.task_id === "string" && dataObj.task_id.trim() ? dataObj.task_id.trim() : null);
+
+      if (!taskId) {
         throw new Error("The design API did not return a valid task ID");
       }
       // First submission is the "original" design; every later call is a revision.
       const type: EnterpriseEntry["type"] =
         isRevision ? "revision" : "original";
+
+      const generatedImageUrl =
+        (typeof resultObj?.generated_image_url === "string" ? resultObj.generated_image_url : null) ??
+        (typeof dataObj.generatedImage === "string" ? (dataObj.generatedImage as string) : null) ??
+        (typeof dataObj.generated_image_url === "string" ? (dataObj.generated_image_url as string) : null) ??
+        "";
+
+      const originalImageUrl =
+        (typeof resultObj?.original_image_url === "string" ? resultObj.original_image_url : null) ??
+        (typeof dataObj.original_image_url === "string" ? (dataObj.original_image_url as string) : null);
+
+      const status =
+        (typeof dataObj.status === "string" ? dataObj.status : null) ??
+        (typeof resultObj?.status === "string" ? resultObj.status : null) ??
+        "";
+
       return {
-        id: data.task_id,
-        url: data.generatedImage ?? "",
-        status: data.status ?? "",
+        id: taskId,
+        task_id: taskId,
+        url: generatedImageUrl,
+        generated_image_url: generatedImageUrl || null,
+        status,
         type,
+        response_type: (resultObj?.response_type ?? dataObj.response_type ?? "image_generation") as string,
+        original_image_url: originalImageUrl,
+        pipeline: typeof resultObj?.pipeline === "string" ? resultObj.pipeline : null,
+        model: typeof resultObj?.model === "string" ? resultObj.model : null,
+        work_type: typeof resultObj?.work_type === "string" ? resultObj.work_type : null,
+        reference_image_urls: Array.isArray(resultObj?.reference_image_urls) ? (resultObj.reference_image_urls as string[]) : [],
+        vision_data: resultObj?.vision_data ?? null,
+        mask_stats: (resultObj?.mask_stats as EnterpriseMaskStats | null) ?? null,
+        watermark_status: typeof resultObj?.watermark_status === "string" ? resultObj.watermark_status : null,
         questions:
           type === "original"
             ? []

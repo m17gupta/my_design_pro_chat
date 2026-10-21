@@ -59,4 +59,39 @@ describe("text-only revision results", () => {
     expect(result.type).toBe("original");
     expect(fetchMock.mock.calls[0][0]).toBe("/api/design-brief");
   });
+  it("stores the new envelope schema response in entries with result data", async () => {
+    const newSchemaResponse = {
+      status: "completed",
+      result: {
+        task_id: "e8e025ca-2db5-4420-927d-f2e8e5c34440",
+        original_image_url: "https://mydesigns.pro/tmp/WhatsApp-Image-2026_09_29-at-17.51.30_1790686108.jpeg",
+        pipeline: null,
+        model: null,
+        work_type: null,
+        reference_image_urls: [],
+        vision_data: null,
+        mask_stats: null,
+        generated_image_url: null,
+        watermark_status: "applied",
+        response_type: "text_answer",
+        answer: "You're welcome! Whenever you're ready, tell me what you'd like to change or ask about your design.",
+      },
+      error: null,
+    };
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(newSchemaResponse));
+    vi.stubGlobal("fetch", fetchMock);
+    const store = setup();
+    const result = await store.dispatch(generateEnterpriseDesign({ payload: { ...payload, role: "enterprise" }, round: 1 })).unwrap();
+    expect(result).toMatchObject({
+      id: "e8e025ca-2db5-4420-927d-f2e8e5c34440",
+      type: "text_answer",
+      answer: "You're welcome! Whenever you're ready, tell me what you'd like to change or ask about your design.",
+      status: "completed",
+      original_image_url: "https://mydesigns.pro/tmp/WhatsApp-Image-2026_09_29-at-17.51.30_1790686108.jpeg",
+      watermark_status: "applied",
+    });
+    expect(store.getState().enterprise.entries).toEqual([original, result]);
+    expect(store.getState().enterprise.lifecycle).toBe("succeeded");
+  });
 });
+

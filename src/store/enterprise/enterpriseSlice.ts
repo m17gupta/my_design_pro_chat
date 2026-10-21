@@ -189,14 +189,24 @@ const enterpriseSlice = createSlice({
             }
           } else {
             entry.status = action.payload.status;
-            if (
-              action.payload.status === "completed" &&
-              action.payload.result?.generated_image_url
-            ) {
-              entry.url = action.payload.result.generated_image_url;
-              if (action.payload.result.original_image_url) {
-                entry.original_image_url = action.payload.result.original_image_url;
+            if (action.payload.result) {
+              const res = action.payload.result;
+              if (res.generated_image_url) {
+                entry.url = res.generated_image_url;
+                entry.generated_image_url = res.generated_image_url;
               }
+              if (res.original_image_url) {
+                entry.original_image_url = res.original_image_url;
+              }
+              if (res.response_type === "text_answer" || res.answer) {
+                entry.type = "text_answer";
+                entry.response_type = "text_answer";
+                if (res.answer) entry.answer = res.answer;
+              }
+              if (res.watermark_status) entry.watermark_status = res.watermark_status;
+              if (res.pipeline) entry.pipeline = res.pipeline;
+              if (res.model) entry.model = res.model;
+              if (res.work_type) entry.work_type = res.work_type;
             }
           }
         }

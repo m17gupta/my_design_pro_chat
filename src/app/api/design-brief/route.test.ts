@@ -70,7 +70,7 @@ describe("revision exterior proxy", () => {
       method: "POST", body: JSON.stringify(revision), headers: { "Content-Type": "application/json" },
     }));
     expect(await response.json()).toEqual(answer);
-    expect(fetchMock.mock.calls[0][0]).toBe("https://backend.example.com/luna/exterior");
+    expect(fetchMock.mock.calls[0][0]).toBe("https://backend.example.com/api/v1/luna/exterior");
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual(revision);
     expect(fetchMock.mock.calls[0][1].headers["X-API-Key"]).toBe("test-key");
   });
@@ -88,7 +88,7 @@ describe("image response compatibility", () => {
     }));
     expect(response.status).toBe(202);
     expect(await response.json()).toEqual(queued);
-    expect(fetchMock.mock.calls[0][0]).toBe("https://backend.example.com/luna/exterior");
+    expect(fetchMock.mock.calls[0][0]).toBe("https://backend.example.com/api/v1/luna/exterior");
   });
   it("keeps enterprise original requests on enterprise-design", async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ task_id: "original-task" }));
