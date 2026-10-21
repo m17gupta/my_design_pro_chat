@@ -871,19 +871,38 @@ export function resolveAllQuestionFlow(
   if (phaseKeys.length === 0) return null;
 
   const qs = ctx.question_sets;
-  let originalPhases =
-    qs?.original !== undefined
-      ? qs.original
-      : defaultOriginalPhases(phases);
-  let revisionPhases =
-    qs?.revision !== undefined
-      ? qs.revision
-      : defaultRevisionPhases(phases);
+  let originalPhases: string[];
+  let revisionPhases: string[];
 
-  // Explicit phase references must be valid; never silently omit questions.
-  if ([...originalPhases, ...revisionPhases].some((key) => !phases?.[key])) return null;
+  // When the questionnaire uses the "original" and "revision" structure,
+  // use only "original" for the main chat and "revision" for revision requests.
+  if (phases.original) {
+    originalPhases = ["original"];
+    revisionPhases =
+      qs?.revision !== undefined && qs.revision.length === 0
+        ? []
+        : phases.revision
+        ? ["revision"]
+        : [];
+  } else {
+    const hasValidExplicitOriginal =
+      qs?.original !== undefined &&
+      qs.original.length > 0 &&
+      qs.original.every((key) => Boolean(phases[key]));
+    const hasValidExplicitRevision =
+      qs?.revision !== undefined &&
+      qs.revision.every((key) => Boolean(phases[key]));
 
-  // Preserve the selected phase order.
+    if (hasValidExplicitOriginal && hasValidExplicitRevision) {
+      originalPhases = qs.original;
+      revisionPhases = qs.revision ?? [];
+    } else {
+      originalPhases = defaultOriginalPhases(phases);
+      revisionPhases = defaultRevisionPhases(phases);
+    }
+  }
+
+  // Preserve the selected phase order and ensure phase existence.
   originalPhases = originalPhases.filter((key) => phases && phases[key]);
   revisionPhases = revisionPhases.filter((key) => phases && phases[key]);
 

@@ -28,10 +28,10 @@ describe("questionnaire context resolution", () => {
     expect(result.context?.question_sets.revision).toEqual([]);
     expect(buildEpisodesFromContext(result.context!, data).some((ep) => ep.revisionStep)).toBe(false);
   });
-  it("rejects nonexistent phases rather than silently omitting them", () => {
-    const result = resolveQuestionnaireContext(data, { role: "enterprise-client", question_sets: { original: ["phase_1"], revision: ["revision"] } });
-    expect(result.context).toBeNull();
-    expect(result.error).toContain("invalid");
+  it("uses original and revision phases even when outdated question_sets are passed", () => {
+    const result = resolveQuestionnaireContext(data, { role: "enterprise-client", question_sets: { original: ["phase_1"], revision: ["phase_4"] } });
+    expect(result.context).not.toBeNull();
+    expect(result.context?.question_sets).toEqual({ original: ["original"], revision: ["revision"] });
   });
   it("keeps numbered-phase inference compatible", () => {
     const numbered = { enterprise: { "landscape-design": { front_yard: { phase_1: phase("goals"), phase_2: { title: "Summary", questions: [{ id: "design_summary", type: "display" }] }, phase_3: phase("changes") } } } };
@@ -58,5 +58,40 @@ describe("questionnaire context resolution", () => {
     const ctx = resolveQuestionnaireContext(data, { role: "enterprise-client" }).context!;
     const updated = { ...data, "enterprise-client": { "landscape-design": { front_yard: { ...branch, original: phase("new_question") } } } };
     expect(buildEpisodesFromContext(ctx, updated).map((ep) => ep.apiKey)).toContain("new_question");
+  });
+  it("resolves enterprise role with original and revision structure when question_sets has phase_1/phase_4", () => {
+    const enterpriseData = {
+      enterprise: {
+        "color-material": {
+          color_material: {
+            original: {
+              title: "Color and Materials",
+              questions: [
+                { id: "project_scope", name: "Select The Asset", type: "radio" },
+                { id: "project_goals_or_brief_description", name: "Project goals", type: "textarea" },
+              ],
+            },
+            revision: {
+              title: "Revision Requests",
+              questions: [
+                { id: "revision_comments", name: "Revision Comments", type: "files_with_description" },
+                { id: "revision_design_summary", name: "Revision Design Summary", type: "display" },
+              ],
+            },
+          },
+        },
+      },
+    };
+    const result = resolveQuestionnaireContext(enterpriseData, {
+      role: "enterprise",
+      user_type: "color-material",
+      work_type: "color_material",
+      question_sets: { original: ["phase_1"], revision: ["phase_4"] },
+    });
+    expect(result.error).toBeNull();
+    expect(result.context).not.toBeNull();
+    expect(result.context?.question_sets).toEqual({ original: ["original"], revision: ["revision"] });
+    const episodes = buildEpisodesFromContext(result.context!, enterpriseData);
+    expect(episodes.map((e) => e.apiKey)).toEqual(["overview", "project_scope", "project_goals_or_brief_description", "summary", "revision", "revision-summary"]);
   });
 });

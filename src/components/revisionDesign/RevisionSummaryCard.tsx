@@ -72,8 +72,8 @@ export default function RevisionSummaryCard ({
     if (!phases || typeof phases !== 'object') return ''
     const phaseMap = phases as Record<string, { title?: string; questions?: { id?: string; details?: string }[] }>
     const phaseKey =
-      question_sets?.revision?.[0] ??
-      (phaseMap['phase_4'] ? 'phase_4' : phaseMap['phase_5'] ? 'phase_5' : Object.keys(phaseMap).at(-1))
+      (question_sets?.revision?.[0] && phaseMap[question_sets.revision[0]] ? question_sets.revision[0] : undefined) ??
+      (phaseMap['revision'] ? 'revision' : phaseMap['phase_4'] ? 'phase_4' : phaseMap['phase_5'] ? 'phase_5' : Object.keys(phaseMap).at(-1))
     const phase = phaseKey ? phaseMap[phaseKey] : undefined
     if (!phase || !Array.isArray(phase.questions) || phase.questions.length === 0) return ''
     const summaryQ = phase.questions.find((q) => q.id === 'revision_design_summary' || q.id === 'revision-summary')

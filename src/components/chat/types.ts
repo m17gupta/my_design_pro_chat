@@ -281,7 +281,9 @@ export function summaryCopyForWorkType(
         >;
 
         const allowedPhases =
-          questionSets?.original && questionSets.original.length > 0
+          phaseMap.original
+            ? [phaseMap.original]
+            : questionSets?.original && questionSets.original.length > 0 && questionSets.original.some((k) => phaseMap[k])
             ? questionSets.original.map((k) => phaseMap[k]).filter(Boolean)
             : Object.values(phaseMap);
 
