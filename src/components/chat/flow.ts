@@ -885,17 +885,19 @@ export function resolveAllQuestionFlow(
         ? ["revision"]
         : [];
   } else {
+    const explicitOriginal = qs?.original;
+    const explicitRevision = qs?.revision;
     const hasValidExplicitOriginal =
-      qs?.original !== undefined &&
-      qs.original.length > 0 &&
-      qs.original.every((key) => Boolean(phases[key]));
+      explicitOriginal !== undefined &&
+      explicitOriginal.length > 0 &&
+      explicitOriginal.every((key) => Boolean(phases[key]));
     const hasValidExplicitRevision =
-      qs?.revision !== undefined &&
-      qs.revision.every((key) => Boolean(phases[key]));
+      explicitRevision !== undefined &&
+      explicitRevision.every((key) => Boolean(phases[key]));
 
-    if (hasValidExplicitOriginal && hasValidExplicitRevision) {
-      originalPhases = qs.original;
-      revisionPhases = qs.revision ?? [];
+    if (hasValidExplicitOriginal && hasValidExplicitRevision && explicitOriginal) {
+      originalPhases = explicitOriginal;
+      revisionPhases = explicitRevision ?? [];
     } else {
       originalPhases = defaultOriginalPhases(phases);
       revisionPhases = defaultRevisionPhases(phases);
