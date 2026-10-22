@@ -1,11 +1,10 @@
-import { isRevisionEntry } from "./enterpriseType";
+import { EnterpriseEntry, isRevisionEntry, normalizeTaskStatus } from "./enterpriseType";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import {
   buildRevisionQuestion,
   fetchEnterpriseStatus,
   generateEnterpriseDesign,
 } from "./enterpriseThunk";
-import { EnterpriseEntry } from "./enterpriseType";
 
 
 export interface EnterpriseState {
@@ -178,17 +177,18 @@ const enterpriseSlice = createSlice({
       .addCase(fetchEnterpriseStatus.fulfilled, (state, action) => {
         // Keep the matching entry in sync with the backend task lifecycle
         // until it reaches a terminal state (completed / failed).
+        const normalizedStatus = normalizeTaskStatus(action.payload.status);
         const entryIdx = state.entries.findIndex((e) => e.id === action.meta.arg);
         if (entryIdx >= 0) {
           const entry = state.entries[entryIdx];
-          if (action.payload.status === "failed") {
+          if (normalizedStatus === "failed") {
             if (isRevisionEntry(entry)) {
               state.entries.splice(entryIdx, 1);
             } else {
               entry.status = "failed";
             }
           } else {
-            entry.status = action.payload.status;
+            entry.status = normalizedStatus;
             if (action.payload.result) {
               const res = action.payload.result;
               if (res.generated_image_url) {
@@ -210,13 +210,13 @@ const enterpriseSlice = createSlice({
             }
           }
         }
-        if (action.payload.status === "completed") {
+        if (normalizedStatus === "completed") {
           // Clear any stale error on success — the backend may include a
           // non-null `error` field even in a completed response (e.g. a
           // diagnostic/connection note). Never surface that as a UI error.
           state.error = null;
           state.lifecycle = "succeeded";
-        } else if (action.payload.status === "failed") {
+        } else if (normalizedStatus === "failed") {
           // Only record the error from the payload on a true failure.
           state.error = action.payload.error ?? "Design generation failed";
           state.lifecycle = "failed";

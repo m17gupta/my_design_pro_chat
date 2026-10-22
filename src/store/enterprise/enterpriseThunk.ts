@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { ApiBriefPayload, RevisionComment } from "../../lib/apiBrief";
 import { fetchDesignStatus, submitDesignBrief } from "../../lib/designApi";
-import { EnterpriseEntry, EnterpriseQuestion, EnterpriseResponse, EnterpriseStatusResponse } from "./enterpriseType";
+import { EnterpriseEntry, EnterpriseQuestion, EnterpriseResponse, EnterpriseStatusResponse, normalizeTaskStatus } from "./enterpriseType";
 
 
 
@@ -181,10 +181,14 @@ export const generateEnterpriseDesign = createAsyncThunk<
         (typeof resultObj?.original_image_url === "string" ? resultObj.original_image_url : null) ??
         (typeof dataObj.original_image_url === "string" ? (dataObj.original_image_url as string) : null);
 
-      const status =
+      const rawStatus =
         (typeof dataObj.status === "string" ? dataObj.status : null) ??
         (typeof resultObj?.status === "string" ? resultObj.status : null) ??
         "";
+
+      const status =
+        normalizeTaskStatus(rawStatus) ||
+        (generatedImageUrl ? "completed" : "processing");
 
       return {
         id: taskId,
@@ -224,7 +228,14 @@ export const fetchEnterpriseStatus = createAsyncThunk<
   { rejectValue: string }
 >("enterprise/fetchStatus", async (taskId, { rejectWithValue }) => {
   try {
-    return (await fetchDesignStatus(taskId)) as EnterpriseStatusResponse;
+    const raw = (await fetchDesignStatus(taskId)) as EnterpriseStatusResponse;
+    if (raw && typeof raw === "object") {
+      return {
+        ...raw,
+        status: normalizeTaskStatus(raw.status),
+      };
+    }
+    return raw;
   } catch (error) {
     return rejectWithValue(
       error instanceof Error ? error.message : "Failed to fetch design status"

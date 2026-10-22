@@ -78,6 +78,20 @@ export interface EnterpriseEntry {
 
 
 /**
+ * Normalizes backend task statuses to standard states:
+ * "processing", "queued", "completed", "failed".
+ * Tolerates typos such as "processsing" (with 3 's's) and aliases.
+ */
+export function normalizeTaskStatus(status?: string | null): string {
+  const s = (status ?? "").trim().toLowerCase();
+  if (s === "processsing" || s === "processing" || s === "in_progress") return "processing";
+  if (s === "queued" || s === "pending") return "queued";
+  if (s === "completed" || s === "success" || s === "succeeded") return "completed";
+  if (s === "failed" || s === "error") return "failed";
+  return s;
+}
+
+/**
  * Status poll response from the FastAPI backend
  * (GET /api/v1/luna/status/{task_id}):
  * `status` — e.g. "queued" | "processing" | "completed" | "failed";
