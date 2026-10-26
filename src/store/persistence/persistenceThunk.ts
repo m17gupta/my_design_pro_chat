@@ -43,9 +43,9 @@ async function fetchApi(path: string, init?: RequestInit) {
 
 export const hydrateProject = createAsyncThunk<
   { projectId: string; row: LunaMyDesignProject | null },
-  { projectId: string },
+  { projectId: string; overrideImageUrl?: string },
   { rejectValue: string }
->("persistence/hydrateProject", async ({ projectId }, { dispatch, getState, rejectWithValue }) => {
+>("persistence/hydrateProject", async ({ projectId, overrideImageUrl }, { dispatch, getState, rejectWithValue }) => {
   try {
     const data = await fetchApi(`/api/projects/${encodeURIComponent(projectId)}`, {
       method: "GET",
@@ -59,8 +59,19 @@ export const hydrateProject = createAsyncThunk<
       if (project.chats && typeof project.chats === "object") {
         // Reject conflicting saved IDs before replacing the active brief context.
         unwrapDesignBrief(project);
-        const rootState = getState() as { questionnaires?: { data?: Record<string, unknown> | null } };
+        const rootState = getState() as {
+          questionnaires?: { data?: Record<string, unknown> | null };
+          chat?: { image_url?: string | null };
+        };
         const questionnaires = rootState.questionnaires?.data ?? null;
+        const currentImageUrl = rootState.chat?.image_url;
+        const effectiveImageUrl =
+          typeof overrideImageUrl === "string" && overrideImageUrl.trim() !== ""
+            ? overrideImageUrl.trim()
+            : typeof currentImageUrl === "string" && currentImageUrl.trim() !== ""
+              ? currentImageUrl.trim()
+              : project.chats.image_url;
+
         const restored = stateFromPayload(project.chats, questionnaires);
         const originalData =
           restored.original && Object.keys(restored.original).length > 0
@@ -79,7 +90,7 @@ export const hydrateProject = createAsyncThunk<
             role: project.chats.role,
             custom_engage_designer: project.chats.custom_engage_designer,
             watermark: project.chats.watermark,
-            image_url: project.chats.image_url,
+            image_url: effectiveImageUrl,
             value: project.chats.value,
             question_sets: project.chats.question_sets,
             project_address: project.chats.project_address,

@@ -109,7 +109,15 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
       if (!hydrationStarted.current) {
         hydrationStarted.current = true;
         dispatch(setContext({ ...params, role, projectId }));
-        dispatch(hydrateProject({ projectId })).then((action) => {
+        dispatch(
+          hydrateProject({
+            projectId,
+            overrideImageUrl:
+              typeof params?.image_url === "string" && params.image_url.trim() !== ""
+                ? params.image_url.trim()
+                : undefined,
+          })
+        ).then((action) => {
           if (hydrateProject.fulfilled.match(action) && action.payload.row?.chats) {
             const saved = action.payload.row.chats;
             setSavedContext({
@@ -136,8 +144,13 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
     if (!result.context) return;
     const context = result.context;
     initialized.current = true;
+    const paramImageUrl =
+      typeof params?.image_url === "string" && params.image_url.trim() !== ""
+        ? params.image_url.trim()
+        : undefined;
     dispatch(setContext({
       ...(savedContext ? {} : params),
+      ...(paramImageUrl ? { image_url: paramImageUrl } : {}),
       role: context.role,
       user_type: context.user_type,
       work_type: context.work_type ?? undefined,

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { payloadFromState } from "./index";
 import briefReducer, { setOriginal, stateFromPayload } from "./briefSlice";
 import type { ApiBriefPayload } from "../lib/apiBrief";
@@ -118,4 +118,60 @@ describe("persistence round-trip", () => {
     const payload = payloadFromState(state);
     expect(payload.project_address).toEqual(address);
   });
+
+  it("prioritizes overrideImageUrl and active image_url over database image_url during hydration", async () => {
+    const { configureStore } = await import("@reduxjs/toolkit");
+    const { hydrateProject } = await import("./persistence/persistenceThunk");
+    const { default: persistenceReducer } = await import("./persistence/persistenceSlice");
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        project: {
+          id: "42",
+          chats: {
+            ...SAVED,
+            image_url: "https://db.example/old.jpg",
+          },
+          design_data: [],
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    // Case 1: overrideImageUrl provided -> should win over DB
+    const store1 = configureStore({
+      reducer: { chat: briefReducer, persistence: persistenceReducer },
+    });
+    await store1.dispatch(
+      hydrateProject({
+        projectId: "42",
+        overrideImageUrl: "https://param.example/override.jpg",
+      })
+    );
+    expect(store1.getState().chat.image_url).toBe("https://param.example/override.jpg");
+
+    // Case 2: active image_url already in state -> should win over DB
+    const store2 = configureStore({
+      reducer: { chat: briefReducer, persistence: persistenceReducer },
+      preloadedState: {
+        chat: {
+          ...briefReducer(undefined, { type: "@@INIT" }),
+          image_url: "https://param.example/active.jpg",
+        },
+      },
+    });
+    await store2.dispatch(hydrateProject({ projectId: "42" }));
+    expect(store2.getState().chat.image_url).toBe("https://param.example/active.jpg");
+
+    // Case 3: no override and no active state -> DB fallback wins
+    const store3 = configureStore({
+      reducer: { chat: briefReducer, persistence: persistenceReducer },
+    });
+    await store3.dispatch(hydrateProject({ projectId: "42" }));
+    expect(store3.getState().chat.image_url).toBe("https://db.example/old.jpg");
+
+    vi.unstubAllGlobals();
+  });
 });
+
