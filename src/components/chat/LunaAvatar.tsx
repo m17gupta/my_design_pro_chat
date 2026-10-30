@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion"
 
-const LUNA_LOGO = "https://mydesigns.pro/img/luna-logo.jpg"
+const LUNA_LOGO = "/images/luna-logo.jpg"
 
 interface LunaAvatarProps {
   size?: "sm" | "md"
