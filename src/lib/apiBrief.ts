@@ -21,11 +21,28 @@ export interface ProjectAddress {
   zip_code?: string | null
 }
 
+export interface BriefExtra {
+  project_id: number | null
+  project_view_id: number | null
+  tmp_project_id: number | null
+  user_id: number | null
+}
+
 export interface BriefContext {
   /** Job id from the host app / API (used by setContext for internal state). */
   id?: number | string
   /** Project id on the brief payload (mirrors schema.md's projectId). */
   projectId?: string
+  extra?: {
+    project_id?: number | string | null
+    project_view_id?: number | string | null
+    tmp_project_id?: number | string | null
+    user_id?: number | string | null
+  } | null
+  project_id?: number | string | null
+  project_view_id?: number | string | null
+  tmp_project_id?: number | string | null
+  user_id?: number | string | null
   user_type?: string | null,
   dc_name?: string | null,
   watermark?: string
@@ -38,6 +55,8 @@ export interface BriefContext {
   question_sets?: QuestionSets
   project_address?: ProjectAddress | null
   status?: string| null,
+  free_ai_credits?: number | string | null
+  access_token?: string | null
 }
 
 export interface ApiBriefItem {
@@ -60,6 +79,11 @@ export interface RevisionComment {
 /** The exact payload shape the design API expects (see schema.md). */
 export interface ApiBriefPayload {
   projectId: string
+  extra?: BriefExtra
+  project_id?: number | null
+  project_view_id?: number | null
+  tmp_project_id?: number | null
+  user_id?: number | null
   user_type?: string | null
   dc_name?: string | null
   role?: string | null
@@ -73,6 +97,8 @@ export interface ApiBriefPayload {
   question_sets?: QuestionSets
   project_address?: ProjectAddress | null
   status?: string | null
+  free_ai_credits?: number | null
+  access_token?: string | null
 }
 
 export const DEFAULT_WATERMARK = 'http://mydesigns.pro/img/luna-logo.png'
@@ -190,6 +216,39 @@ export function buildApiPayload (
     revision_comment: context.revision ?? { files: [], notes: '' },
     question_sets: context.question_sets,
     project_address: context.project_address ?? undefined,
-    status: context.status ?? null
+    status: context.status ?? null,
+    free_ai_credits:
+      context.free_ai_credits != null &&
+      !Number.isNaN(Number(context.free_ai_credits))
+        ? Number(context.free_ai_credits)
+        : null,
+    access_token: context.access_token ?? null,
+    extra: {
+      project_id:
+        context.extra?.project_id != null && !Number.isNaN(Number(context.extra.project_id))
+          ? Number(context.extra.project_id)
+          : context.project_id != null && !Number.isNaN(Number(context.project_id))
+          ? Number(context.project_id)
+          : null,
+      project_view_id:
+        context.extra?.project_view_id != null && !Number.isNaN(Number(context.extra.project_view_id))
+          ? Number(context.extra.project_view_id)
+          : context.project_view_id != null && !Number.isNaN(Number(context.project_view_id))
+          ? Number(context.project_view_id)
+          : null,
+      tmp_project_id:
+        context.extra?.tmp_project_id != null && !Number.isNaN(Number(context.extra.tmp_project_id))
+          ? Number(context.extra.tmp_project_id)
+          : context.tmp_project_id != null && !Number.isNaN(Number(context.tmp_project_id))
+          ? Number(context.tmp_project_id)
+          : null,
+      user_id:
+        context.extra?.user_id != null && !Number.isNaN(Number(context.extra.user_id))
+          ? Number(context.extra.user_id)
+          : context.user_id != null && !Number.isNaN(Number(context.user_id))
+          ? Number(context.user_id)
+          : null
+    }
+    
   }
 }

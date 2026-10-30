@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { configureStore } from "@reduxjs/toolkit";
 import reducer, { setEntries } from "./enterpriseSlice";
-import { generateEnterpriseDesign } from "./enterpriseThunk";
+import { fetchEnterpriseStatus, generateEnterpriseDesign } from "./enterpriseThunk";
 import { isRevisionEntry, type EnterpriseEntry } from "./enterpriseType";
 
 const original: EnterpriseEntry = { id: "original-task", type: "original", status: "completed", url: "https://example.com/original.jpg", questions: [] };
@@ -93,5 +93,107 @@ describe("text-only revision results", () => {
     expect(store.getState().enterprise.entries).toEqual([original, result]);
     expect(store.getState().enterprise.lifecycle).toBe("succeeded");
   });
+
+  it("handles revision with 'processsing' status and polls until completed text_answer arrives", async () => {
+    const processingResponse = {
+      status: "processsing",
+      result: {
+        task_id: "7e1388b0-e4a5-429b-a086-ec308cfa0619",
+        original_image_url:
+          "https://dzinlyv2.s3.us-east-2.amazonaws.com/luna-ai/vendor_images/132/design_753f56c8-6537-4b77-bff3-4492827db62d.png",
+        pipeline: null,
+        model: null,
+        work_type: null,
+        reference_image_urls: [],
+        vision_data: null,
+        mask_stats: null,
+        generated_image_url: null,
+        watermark_status: "applied",
+        response_type: "text_answer",
+        answer: "You're welcome! I'm here if you'd like to explore another idea.",
+        extra: {
+          project_id: 132,
+          project_view_id: 132,
+          tmp_project_id: 132,
+          user_id: 12365,
+          type: "chat",
+          question: {
+            files: [],
+            notes: "how are you",
+          },
+        },
+      },
+      error: null,
+    };
+
+    const completedStatusResponse = {
+      status: "completed",
+      result: {
+        task_id: "7e1388b0-e4a5-429b-a086-ec308cfa0619",
+        original_image_url:
+          "https://dzinlyv2.s3.us-east-2.amazonaws.com/luna-ai/vendor_images/5/design_7a0f016b-a886-4c39-84f7-c9000a0fe60f.png",
+        pipeline: null,
+        model: null,
+        work_type: null,
+        reference_image_urls: [],
+        vision_data: null,
+        mask_stats: null,
+        generated_image_url: null,
+        watermark_status: "applied",
+        response_type: "text_answer",
+        answer:
+          "The house in the image resembles a Craftsman style. This is evident from the use of timber beams, the gabled roof, and the combination of stone and siding materials.",
+        extra: {
+          project_id: 0,
+          project_view_id: 0,
+          tmp_project_id: 5,
+          user_id: 7235,
+          type: "chat",
+          question: {
+            files: [],
+            notes: "What architectural style does this house resemble?",
+          },
+        },
+      },
+      error: null,
+    };
+
+    // 1. Initial hit to /api/design-brief?mode=revision
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(Response.json(processingResponse))
+    );
+    const store = setup();
+    const initialEntry = await store
+      .dispatch(generateEnterpriseDesign({ payload, round: 1 }))
+      .unwrap();
+
+    expect(initialEntry).toMatchObject({
+      id: "7e1388b0-e4a5-429b-a086-ec308cfa0619",
+      task_id: "7e1388b0-e4a5-429b-a086-ec308cfa0619",
+      status: "processing", // normalized from "processsing"
+      type: "text_answer",
+      response_type: "text_answer",
+      url: "",
+    });
+    expect(store.getState().enterprise.lifecycle).toBe("pending");
+
+    // 2. Poll status endpoint: /api/design-status/{taskId}
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(Response.json(completedStatusResponse))
+    );
+    await store
+      .dispatch(fetchEnterpriseStatus("7e1388b0-e4a5-429b-a086-ec308cfa0619"))
+      .unwrap();
+
+    const state = store.getState().enterprise;
+    expect(state.lifecycle).toBe("succeeded");
+    const updatedEntry = state.entries[1];
+    expect(updatedEntry.status).toBe("completed");
+    expect(updatedEntry.type).toBe("text_answer");
+    expect(updatedEntry.answer).toBe(completedStatusResponse.result.answer);
+  });
 });
+
 

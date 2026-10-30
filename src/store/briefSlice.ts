@@ -13,13 +13,14 @@ import {
   type ApiBriefItem,
   type ApiBriefPayload,
   type BriefContext,
+  type BriefExtra,
   type RevisionComment,
   type QuestionSets,
   type ProjectAddress
 } from '../lib/apiBrief'
 import { isAnswerEmpty } from '../lib/briefDisplay'
 
-export type { ProjectAddress }
+export type { ProjectAddress, BriefExtra }
 
 /**
  * Brief state mirrors the schema.md payload: one fully-assembled item
@@ -43,6 +44,13 @@ export interface BriefState {
   question_sets?: QuestionSets | null
   project_address?: ProjectAddress | null
   status?: string | null
+  free_ai_credits?: number | null
+  access_token?: string | null
+  extra?: BriefExtra | null
+  project_id?: number | null
+  project_view_id?: number | null
+  tmp_project_id?: number | null
+  user_id?: number | null
 }
 
 /**
@@ -80,6 +88,33 @@ export function stateFromPayload (
       original[q.apiKey] = item
     }
   })
+
+  const rawExtra: Partial<BriefExtra> = payload.extra || {}
+  const project_id =
+    rawExtra.project_id != null && !Number.isNaN(Number(rawExtra.project_id))
+      ? Number(rawExtra.project_id)
+      : payload.project_id != null && !Number.isNaN(Number(payload.project_id))
+      ? Number(payload.project_id)
+      : null
+  const project_view_id =
+    rawExtra.project_view_id != null && !Number.isNaN(Number(rawExtra.project_view_id))
+      ? Number(rawExtra.project_view_id)
+      : payload.project_view_id != null && !Number.isNaN(Number(payload.project_view_id))
+      ? Number(payload.project_view_id)
+      : null
+  const tmp_project_id =
+    rawExtra.tmp_project_id != null && !Number.isNaN(Number(rawExtra.tmp_project_id))
+      ? Number(rawExtra.tmp_project_id)
+      : payload.tmp_project_id != null && !Number.isNaN(Number(payload.tmp_project_id))
+      ? Number(payload.tmp_project_id)
+      : null
+  const user_id =
+    rawExtra.user_id != null && !Number.isNaN(Number(rawExtra.user_id))
+      ? Number(rawExtra.user_id)
+      : payload.user_id != null && !Number.isNaN(Number(payload.user_id))
+      ? Number(payload.user_id)
+      : null
+
   return {
     id: payload.projectId ? String(payload.projectId) : null,
     projectId: payload.projectId ? String(payload.projectId) : null,
@@ -96,6 +131,18 @@ export function stateFromPayload (
     question_sets: payload?.question_sets ?? null,
     project_address: payload?.project_address ?? null,
     status: payload?.status ?? null,
+    free_ai_credits: payload?.free_ai_credits ?? null,
+    access_token: payload?.access_token ?? null,
+    extra: {
+      project_id,
+      project_view_id,
+      tmp_project_id,
+      user_id,
+    },
+    project_id,
+    project_view_id,
+    tmp_project_id,
+    user_id,
   }
 }
 
@@ -137,6 +184,18 @@ export function payloadFromState (
       question_sets: state.question_sets ?? undefined,
       project_address: state.project_address ?? undefined,
       status: state.status ?? null,
+      free_ai_credits: state.free_ai_credits ?? null,
+      access_token: state.access_token ?? null,
+      extra: state.extra ?? {
+        project_id: state.project_id ?? null,
+        project_view_id: state.project_view_id ?? null,
+        tmp_project_id: state.tmp_project_id ?? null,
+        user_id: state.user_id ?? null,
+      },
+      project_id: state.extra?.project_id ?? state.project_id ?? null,
+      project_view_id: state.extra?.project_view_id ?? state.project_view_id ?? null,
+      tmp_project_id: state.extra?.tmp_project_id ?? state.tmp_project_id ?? null,
+      user_id: state.extra?.user_id ?? state.user_id ?? null,
     }
   )
 }
@@ -157,6 +216,14 @@ const initialState: BriefState = {
   question_sets: null,
   project_address: null,
   status: null,
+  free_ai_credits: null,
+  access_token: null,
+  extra: {
+    project_id: null,
+    project_view_id: null,
+    tmp_project_id: null,
+    user_id: null,
+  },
 }
 
 const briefSlice = createSlice({
@@ -243,6 +310,104 @@ const briefSlice = createSlice({
         state.project_address = action.payload.project_address
       if (action.payload.status !== undefined)
         state.status = action.payload.status
+      if (action.payload.free_ai_credits !== undefined)
+        state.free_ai_credits =
+          action.payload.free_ai_credits != null &&
+          !Number.isNaN(Number(action.payload.free_ai_credits))
+            ? Number(action.payload.free_ai_credits)
+            : null
+      if (action.payload.access_token !== undefined)
+        state.access_token = action.payload.access_token
+      if (!state.extra) {
+        state.extra = {
+          project_id: null,
+          project_view_id: null,
+          tmp_project_id: null,
+          user_id: null,
+        }
+      }
+      if (action.payload.extra) {
+        if (action.payload.extra.project_id !== undefined) {
+          const val =
+            action.payload.extra.project_id != null &&
+            !Number.isNaN(Number(action.payload.extra.project_id))
+              ? Number(action.payload.extra.project_id)
+              : null
+          state.extra.project_id = val
+          state.project_id = val
+        }
+        if (action.payload.extra.project_view_id !== undefined) {
+          const val =
+            action.payload.extra.project_view_id != null &&
+            !Number.isNaN(Number(action.payload.extra.project_view_id))
+              ? Number(action.payload.extra.project_view_id)
+              : null
+          state.extra.project_view_id = val
+          state.project_view_id = val
+        }
+        if (action.payload.extra.tmp_project_id !== undefined) {
+          const val =
+            action.payload.extra.tmp_project_id != null &&
+            !Number.isNaN(Number(action.payload.extra.tmp_project_id))
+              ? Number(action.payload.extra.tmp_project_id)
+              : null
+          state.extra.tmp_project_id = val
+          state.tmp_project_id = val
+        }
+        if (action.payload.extra.user_id !== undefined) {
+          const val =
+            action.payload.extra.user_id != null &&
+            !Number.isNaN(Number(action.payload.extra.user_id))
+              ? Number(action.payload.extra.user_id)
+              : null
+          state.extra.user_id = val
+          state.user_id = val
+        }
+      }
+      if (action.payload.project_id !== undefined) {
+        const val =
+          action.payload.project_id != null &&
+          !Number.isNaN(Number(action.payload.project_id))
+            ? Number(action.payload.project_id)
+            : null
+        state.extra.project_id = val
+        state.project_id = val
+      }
+      if (action.payload.project_view_id !== undefined) {
+        const val =
+          action.payload.project_view_id != null &&
+          !Number.isNaN(Number(action.payload.project_view_id))
+            ? Number(action.payload.project_view_id)
+            : null
+        state.extra.project_view_id = val
+        state.project_view_id = val
+      }
+      if (action.payload.tmp_project_id !== undefined) {
+        const val =
+          action.payload.tmp_project_id != null &&
+          !Number.isNaN(Number(action.payload.tmp_project_id))
+            ? Number(action.payload.tmp_project_id)
+            : null
+        state.extra.tmp_project_id = val
+        state.tmp_project_id = val
+      }
+      if (action.payload.user_id !== undefined) {
+        const val =
+          action.payload.user_id != null &&
+          !Number.isNaN(Number(action.payload.user_id))
+            ? Number(action.payload.user_id)
+            : null
+        state.extra.user_id = val
+        state.user_id = val
+      }
+    },
+    /** Set/update free AI credits directly. */
+    setFreeAiCredits (state, action: PayloadAction<number | null>) {
+      state.free_ai_credits = action.payload
+    },
+    /** Set/update access token directly. */
+    setAccessToken (state, action: PayloadAction<string | null>) {
+      state.access_token = action.payload
     },
     /** Set/update status directly. */
     setStatus (state, action: PayloadAction<string | null>) {
@@ -280,7 +445,9 @@ export const {
   setRevision,
   resetBrief,
   setBriefState,
-  setOriginal
+  setOriginal,
+  setFreeAiCredits,
+  setAccessToken
 } = briefSlice.actions
 export default briefSlice.reducer
 
@@ -308,4 +475,25 @@ export const selectBriefPayload = createSelector(
 
 export const selectProjectAddress = (state: BriefSliceState | { chat: BriefState }) =>
   state?.chat?.project_address ?? null
+
+export const selectFreeAiCredits = (state: BriefSliceState | { chat: BriefState }) =>
+  state?.chat?.free_ai_credits ?? null
+
+export const selectBriefExtra = (state: BriefSliceState | { chat: BriefState }) =>
+  state?.chat?.extra ?? null
+
+export const selectBriefNumericProjectId = (state: BriefSliceState | { chat: BriefState }) =>
+  state?.chat?.extra?.project_id ?? (state?.chat as any)?.project_id ?? null
+
+export const selectProjectViewId = (state: BriefSliceState | { chat: BriefState }) =>
+  state?.chat?.extra?.project_view_id ?? (state?.chat as any)?.project_view_id ?? null
+
+export const selectTmpProjectId = (state: BriefSliceState | { chat: BriefState }) =>
+  state?.chat?.extra?.tmp_project_id ?? (state?.chat as any)?.tmp_project_id ?? null
+
+export const selectUserId = (state: BriefSliceState | { chat: BriefState }) =>
+  state?.chat?.extra?.user_id ?? (state?.chat as any)?.user_id ?? null
+
+export const selectAccessToken = (state: BriefSliceState | { chat: BriefState }) =>
+  state?.chat?.access_token ?? null
 

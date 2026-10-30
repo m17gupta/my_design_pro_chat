@@ -21,6 +21,7 @@ interface ClientParams {
   dc_name?: string;
   role?: string | null;
   custom_engage_designer?: boolean;
+  access_token?: string | null;
   question_sets?: {
     original?: string[];
     revision?: string[];
@@ -31,6 +32,18 @@ interface ClientParams {
     state?: string | null;
     zip_code?: string | null;
   };
+  status?: string | null;
+  free_ai_credits?: number | string | null;
+  extra?: {
+    project_id?: number | string | null;
+    project_view_id?: number | string | null;
+    tmp_project_id?: number | string | null;
+    user_id?: number | string | null;
+  } | null;
+  project_id?: number | string | null;
+  project_view_id?: number | string | null;
+  tmp_project_id?: number | string | null;
+  user_id?: number | string | null;
 }
 
 /** URL-safe base64 → JSON object; returns undefined when absent/malformed. */
@@ -42,13 +55,31 @@ function decodeClientParams(raw: string | null): ClientParams | undefined {
     const decoded: unknown = JSON.parse(atob(padded));
     if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) return undefined;
     const params = decoded as ClientParams;
-    if ([params.role, params.user_type, params.work_type, params.projectId].some(
+    if ([params.role, params.user_type, params.work_type, params.projectId, params.access_token].some(
       (value) => value != null && typeof value !== "string"
     )) return undefined;
     if (params.question_sets != null) {
       if (typeof params.question_sets !== "object" || Array.isArray(params.question_sets)) return undefined;
       for (const phases of [params.question_sets.original, params.question_sets.revision]) {
         if (phases !== undefined && (!Array.isArray(phases) || phases.some((key) => typeof key !== "string"))) return undefined;
+      }
+    }
+    if (params.free_ai_credits !== undefined && params.free_ai_credits !== null) {
+      const num = Number(params.free_ai_credits);
+      params.free_ai_credits = Number.isNaN(num) ? null : num;
+    }
+    if (params.extra && typeof params.extra === "object") {
+      for (const key of ["project_id", "project_view_id", "tmp_project_id", "user_id"] as const) {
+        if (params.extra[key] !== undefined && params.extra[key] !== null) {
+          const num = Number(params.extra[key]);
+          params.extra[key] = Number.isNaN(num) ? null : num;
+        }
+      }
+    }
+    for (const key of ["project_id", "project_view_id", "tmp_project_id", "user_id"] as const) {
+      if (params[key] !== undefined && params[key] !== null) {
+        const num = Number(params[key]);
+        params[key] = Number.isNaN(num) ? null : num;
       }
     }
     return params;
@@ -87,6 +118,8 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
     const storageKey = defaultRole ? `dzinly_chat_params_${defaultRole}` : "dzinly_chat_params";
     const rawParams = searchParams.get("params");
     let params = decodeClientParams(rawParams);
+
+    // console.log("pararms --->",params)
     if (rawParams && !params) {
       setError("The project parameters are invalid. Open the project again from its source.");
       return;
@@ -100,15 +133,58 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
       } catch { /* Storage is optional. */ }
     }
     const role = params?.role ?? defaultRole;
-    const projectId = params?.projectId ?? (params?.id != null
-      ? role === "enterprise-client" ? `cp-${params.id}` : String(params.id)
+    const rawFreeAiCredits = searchParams.get("free_ai_credits");
+    const freeAiCredits = params?.free_ai_credits !== undefined
+      ? (params.free_ai_credits != null && !Number.isNaN(Number(params.free_ai_credits)) ? Number(params.free_ai_credits) : null)
+      : rawFreeAiCredits !== null && !Number.isNaN(Number(rawFreeAiCredits))
+        ? Number(rawFreeAiCredits)
+        : undefined;
+    const rawAccessToken = searchParams.get("access_token");
+    const accessToken = params?.access_token !== undefined
+      ? (params.access_token ?? null)
+      : savedContext?.access_token !== undefined
+        ? savedContext.access_token
+        : rawAccessToken !== null
+          ? rawAccessToken
+          : undefined;
+    const parseNumericParam = (val: unknown, key: string) => {
+      if (val !== undefined) {
+        return val != null && !Number.isNaN(Number(val)) ? Number(val) : null;
+      }
+      const raw = searchParams.get(key);
+      return raw !== null && !Number.isNaN(Number(raw)) ? Number(raw) : undefined;
+    };
+    const projectIdNum = parseNumericParam(params?.extra?.project_id ?? params?.project_id, "project_id");
+    const projectViewId = parseNumericParam(params?.extra?.project_view_id ?? params?.project_view_id, "project_view_id");
+    const tmpProjectId = parseNumericParam(params?.extra?.tmp_project_id ?? params?.tmp_project_id, "tmp_project_id");
+    const userId = parseNumericParam(params?.extra?.user_id ?? params?.user_id, "user_id");
+    const extraPayload = {
+      project_id: projectIdNum ?? null,
+      project_view_id: projectViewId ?? null,
+      tmp_project_id: tmpProjectId ?? null,
+      user_id: userId ?? null,
+    };
+    const idValue = params?.projectId ?? (params?.id != null ? params.id : projectIdNum);
+    const projectId = params?.projectId ?? (idValue != null
+      ? role === "enterprise-client" ? `cp-${idValue}` : String(idValue)
       : undefined);
     // Load saved context before choosing a branch, including links containing
     // only a project id. Do not ask users to reselect a restored project type.
     if (projectId && !projectLoaded) {
       if (!hydrationStarted.current) {
         hydrationStarted.current = true;
-        dispatch(setContext({ ...params, role, projectId }));
+        dispatch(setContext({
+          ...params,
+          ...(freeAiCredits !== undefined ? { free_ai_credits: freeAiCredits } : {}),
+          ...(accessToken !== undefined ? { access_token: accessToken } : {}),
+          extra: extraPayload,
+          ...(projectIdNum !== undefined ? { project_id: projectIdNum } : {}),
+          ...(projectViewId !== undefined ? { project_view_id: projectViewId } : {}),
+          ...(tmpProjectId !== undefined ? { tmp_project_id: tmpProjectId } : {}),
+          ...(userId !== undefined ? { user_id: userId } : {}),
+          role,
+          projectId,
+        }));
         dispatch(
           hydrateProject({
             projectId,
@@ -119,12 +195,24 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
           })
         ).then((action) => {
           if (hydrateProject.fulfilled.match(action) && action.payload.row?.chats) {
-            const saved = action.payload.row.chats;
+            const saved = action.payload.row.chats as any;
             setSavedContext({
               role: saved.role,
               user_type: saved.user_type ?? undefined,
               work_type: saved.work_type,
               question_sets: saved.question_sets ?? undefined,
+              free_ai_credits: saved.free_ai_credits,
+              access_token: saved.access_token,
+              extra: saved.extra ?? {
+                project_id: saved.project_id ?? null,
+                project_view_id: saved.project_view_id ?? null,
+                tmp_project_id: saved.tmp_project_id ?? null,
+                user_id: saved.user_id ?? null,
+              },
+              project_id: saved.extra?.project_id ?? saved.project_id,
+              project_view_id: saved.extra?.project_view_id ?? saved.project_view_id,
+              tmp_project_id: saved.extra?.tmp_project_id ?? saved.tmp_project_id,
+              user_id: saved.extra?.user_id ?? saved.user_id,
             });
           }
           setProjectLoaded(true);
@@ -151,6 +239,13 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
     dispatch(setContext({
       ...(savedContext ? {} : params),
       ...(paramImageUrl ? { image_url: paramImageUrl } : {}),
+      ...(freeAiCredits !== undefined ? { free_ai_credits: freeAiCredits } : {}),
+      ...(accessToken !== undefined ? { access_token: accessToken } : {}),
+      extra: extraPayload,
+      ...(projectIdNum !== undefined ? { project_id: projectIdNum } : {}),
+      ...(projectViewId !== undefined ? { project_view_id: projectViewId } : {}),
+      ...(tmpProjectId !== undefined ? { tmp_project_id: tmpProjectId } : {}),
+      ...(userId !== undefined ? { user_id: userId } : {}),
       role: context.role,
       user_type: context.user_type,
       work_type: context.work_type ?? undefined,

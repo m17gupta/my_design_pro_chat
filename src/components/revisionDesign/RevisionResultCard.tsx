@@ -290,7 +290,7 @@ const handleDownload = async () => {
         </div>
 
         {/* Revision image — loading placeholder until the task completes, or CompareImage when in compare mode */}
-        {isTextAnswer ? (
+        {isTextAnswer && done ? (
           <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">{entry.answer}</p>
         ) : done && isCompareMode ? (
           <div className="mt-4">

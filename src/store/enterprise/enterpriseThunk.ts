@@ -114,25 +114,36 @@ export const generateEnterpriseDesign = createAsyncThunk<
 
       const responseType = (resultObj?.response_type ?? dataObj.response_type) as string | undefined;
 
+      const rawStatus =
+        (typeof dataObj.status === "string" ? dataObj.status : null) ??
+        (typeof resultObj?.status === "string" ? resultObj.status : null) ??
+        "";
+      const normalizedStatus = normalizeTaskStatus(rawStatus);
+
       if (responseType === "text_answer") {
         const answer = (resultObj?.answer ?? dataObj.answer) as string | undefined;
-        if (!isRevision || typeof answer !== "string" || !answer.trim()) {
+        const taskId =
+          (typeof resultObj?.task_id === "string" && resultObj.task_id.trim() ? resultObj.task_id.trim() : null) ??
+          (typeof dataObj.task_id === "string" && dataObj.task_id.trim() ? dataObj.task_id.trim() : null);
+
+        const isProcessing = normalizedStatus === "processing" || normalizedStatus === "queued";
+
+        if (!isRevision) {
+          throw new Error("Invalid text answer from the design API");
+        }
+        if (!isProcessing && !taskId && (typeof answer !== "string" || !answer.trim())) {
           throw new Error("Invalid text answer from the design API");
         }
 
-        const taskId =
-          (typeof resultObj?.task_id === "string" && resultObj.task_id.trim() ? resultObj.task_id.trim() : null) ??
-          (typeof dataObj.task_id === "string" && dataObj.task_id.trim() ? dataObj.task_id.trim() : null) ??
-          `text-answer-${requestId}`;
+        const effectiveTaskId = taskId ?? `text-answer-${requestId}`;
+
+        const entryStatus =
+          normalizedStatus ||
+          (answer ? "completed" : "processing");
 
         const originalImageUrl =
           (typeof resultObj?.original_image_url === "string" ? resultObj.original_image_url : null) ??
           (typeof dataObj.original_image_url === "string" ? dataObj.original_image_url : null);
-
-        const entryStatus =
-          (typeof dataObj.status === "string" && dataObj.status ? dataObj.status : null) ??
-          (typeof resultObj?.status === "string" && resultObj.status ? resultObj.status : null) ??
-          "completed";
 
         const generatedImageUrl =
           (typeof resultObj?.generated_image_url === "string" ? resultObj.generated_image_url : null) ??
@@ -140,11 +151,11 @@ export const generateEnterpriseDesign = createAsyncThunk<
           "";
 
         return {
-          id: taskId,
-          task_id: typeof resultObj?.task_id === "string" ? resultObj.task_id : (typeof dataObj.task_id === "string" ? dataObj.task_id : null),
+          id: effectiveTaskId,
+          task_id: taskId,
           type: "text_answer",
           response_type: "text_answer",
-          answer,
+          answer: typeof answer === "string" ? answer : "",
           url: generatedImageUrl,
           generated_image_url: typeof resultObj?.generated_image_url === "string" ? resultObj.generated_image_url : null,
           status: entryStatus,
@@ -181,13 +192,8 @@ export const generateEnterpriseDesign = createAsyncThunk<
         (typeof resultObj?.original_image_url === "string" ? resultObj.original_image_url : null) ??
         (typeof dataObj.original_image_url === "string" ? (dataObj.original_image_url as string) : null);
 
-      const rawStatus =
-        (typeof dataObj.status === "string" ? dataObj.status : null) ??
-        (typeof resultObj?.status === "string" ? resultObj.status : null) ??
-        "";
-
       const status =
-        normalizeTaskStatus(rawStatus) ||
+        normalizedStatus ||
         (generatedImageUrl ? "completed" : "processing");
 
       return {

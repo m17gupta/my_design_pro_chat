@@ -121,7 +121,8 @@ const enterpriseSlice = createSlice({
       })
       .addCase(generateEnterpriseDesign.fulfilled, (state, action) => {
         const entry = action.payload;
-        state.lifecycle = entry.type === "text_answer" ? "succeeded" : "pending";
+        const isCompleted = normalizeTaskStatus(entry.status) === "completed";
+        state.lifecycle = isCompleted ? "succeeded" : "pending";
         state.error = null;
 
         const round = action.meta.arg.round;
@@ -178,7 +179,9 @@ const enterpriseSlice = createSlice({
         // Keep the matching entry in sync with the backend task lifecycle
         // until it reaches a terminal state (completed / failed).
         const normalizedStatus = normalizeTaskStatus(action.payload.status);
-        const entryIdx = state.entries.findIndex((e) => e.id === action.meta.arg);
+        const entryIdx = state.entries.findIndex(
+          (e) => e.id === action.meta.arg || (e.task_id && e.task_id === action.meta.arg)
+        );
         if (entryIdx >= 0) {
           const entry = state.entries[entryIdx];
           if (normalizedStatus === "failed") {

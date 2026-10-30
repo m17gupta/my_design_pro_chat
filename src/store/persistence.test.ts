@@ -173,5 +173,16 @@ describe("persistence round-trip", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("preserves access_token through stateFromPayload and payloadFromState", () => {
+    const state = stateFromPayload({
+      ...SAVED,
+      access_token: "test_access_token_123",
+    });
+    expect(state.access_token).toBe("test_access_token_123");
+
+    const payload = payloadFromState(state);
+    expect(payload.access_token).toBe("test_access_token_123");
+  });
 });
 

@@ -143,7 +143,14 @@ export default function ChatWindow() {
     question_sets,
     project_address: userAddress,
     status,
+    extra,
+    user_id,
+    project_id,
+    project_view_id,
+    tmp_project_id,
+    access_token,
   } = briefPayload;
+
   const busyRef = useRef(false);
   const [messageEpisodes, setMessageEpisodes] = useState<
     Record<string, string>
@@ -917,6 +924,7 @@ export default function ChatWindow() {
         getApiQuestions(episodes),
         chat_original,
         {
+          extra,
           projectId: id,
           watermark: watermark,
           role: role,
@@ -987,10 +995,13 @@ export default function ChatWindow() {
    * state (completed / failed). On any error we stop polling and surface a
    * toast instead of hammering the API.
    */
+  const rawTaskId = latestEnterpriseEntry?.task_id || latestEnterpriseEntry?.id;
   const taskId =
-    latestEnterpriseEntry?.type === "text_answer"
-      ? undefined
-      : latestEnterpriseEntry?.id;
+    rawTaskId &&
+    !rawTaskId.startsWith("pending-revision-") &&
+    !rawTaskId.startsWith("text-answer-")
+      ? rawTaskId
+      : undefined;
   /** Backend task lifecycle (queued | processing | completed | failed) — drives the loader text. */
   const taskStatus = latestEnterpriseEntry?.status;
   const pollRef = useRef<number | null>(null);
@@ -1355,7 +1366,6 @@ export default function ChatWindow() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      
       // Only accept host commands from the embedding frame — never from an
       // arbitrary window that happens to be able to reach us.
       if (!isFromParent(event)) return;
@@ -1430,7 +1440,7 @@ export default function ChatWindow() {
         typeof e.generated_image_url === "string" &&
         e.generated_image_url.trim() !== "",
     ).length;
-    if ( revisionImagesCount >= 5) {
+    if (revisionImagesCount >= 5) {
       toast(
         "More than 5 revisions — please engage your designer for further changes.",
       );
@@ -1449,7 +1459,6 @@ export default function ChatWindow() {
    * as the original, driven from the round's own comments (or its entry's
    * questions on retry).
    */
-
 
   const handleRevisionGenerate = useCallback(
     async (
@@ -1475,6 +1484,7 @@ export default function ChatWindow() {
         getApiQuestions(episodes),
         chat_original,
         {
+          extra,
           projectId: id,
           role: role,
           user_type: user_type,
@@ -1482,6 +1492,7 @@ export default function ChatWindow() {
           work_type: work_type ?? "",
           image_url: [...entries].reverse().find((e) => e.url)?.url ?? "",
           revision: { files, notes },
+       
         },
       );
       try {

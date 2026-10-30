@@ -159,9 +159,11 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function resolveProjectId(...sources: Record<string, unknown>[]): string {
-  const ids = sources.flatMap((source) =>
-    ["projectId", "project_id"].filter((key) => key in source).map((key) => source[key])
-  );
+  const ids = sources.flatMap((source) => {
+    if ("projectId" in source && source.projectId != null) return [source.projectId];
+    if ("project_id" in source && source.project_id != null) return [source.project_id];
+    return [];
+  });
   if (!ids.length) throw new DesignPayloadError("projectId is required before generating a design");
   const values = ids.map((id) => {
     if ((typeof id !== "string" && typeof id !== "number") ||
@@ -170,10 +172,11 @@ function resolveProjectId(...sources: Record<string, unknown>[]): string {
     }
     return String(id);
   });
-  if (values.some((id) => id !== values[0])) {
+  const canonical = values.find((v) => v.startsWith("cp-")) ?? values[0];
+  if (values.some((id) => id !== canonical && `cp-${id}` !== canonical && `cp-${values[0]}` !== id)) {
     throw new DesignPayloadError("Conflicting project IDs: project_id and chats.projectId must match");
   }
-  return values[0];
+  return canonical;
 }
 
 /** Accept a brief or a saved-project wrapper without inferring IDs from image URLs. */

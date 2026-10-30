@@ -95,6 +95,27 @@ export const hydrateProject = createAsyncThunk<
             question_sets: project.chats.question_sets,
             project_address: project.chats.project_address,
             status: project.chats.status ?? null,
+            ...(project.chats.free_ai_credits !== undefined
+              ? { free_ai_credits: project.chats.free_ai_credits }
+              : {}),
+            ...(project.chats.access_token !== undefined
+              ? { access_token: project.chats.access_token }
+              : {}),
+            ...(project.chats.extra !== undefined
+              ? { extra: project.chats.extra }
+              : {}),
+            ...(project.chats.project_id !== undefined
+              ? { project_id: project.chats.project_id }
+              : {}),
+            ...(project.chats.project_view_id !== undefined
+              ? { project_view_id: project.chats.project_view_id }
+              : {}),
+            ...(project.chats.tmp_project_id !== undefined
+              ? { tmp_project_id: project.chats.tmp_project_id }
+              : {}),
+            ...(project.chats.user_id !== undefined
+              ? { user_id: project.chats.user_id }
+              : {}),
           })
         );
       }
