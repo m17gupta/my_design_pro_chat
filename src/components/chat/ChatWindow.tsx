@@ -932,6 +932,7 @@ export default function ChatWindow() {
           work_type: work_type,
           image_url: image_url,
           revision: revisionComment,
+          access_token: access_token,
         },
       );
 
@@ -1492,7 +1493,7 @@ export default function ChatWindow() {
           work_type: work_type ?? "",
           image_url: [...entries].reverse().find((e) => e.url)?.url ?? "",
           revision: { files, notes },
-       
+          access_token: access_token,
         },
       );
       try {
