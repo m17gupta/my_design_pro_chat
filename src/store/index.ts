@@ -119,7 +119,13 @@ export const store = configureStore({
   reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(persistBriefMiddleware),
-  devTools: process.env.NODE_ENV !== "production",
+  devTools: true,
 });
 
+if (isBrowser) {
+  (window as unknown as { store: typeof store; __REDUX_STORE__: typeof store }).store = store;
+  (window as unknown as { store: typeof store; __REDUX_STORE__: typeof store }).__REDUX_STORE__ = store;
+}
+
 export type AppDispatch = typeof store.dispatch;
+
