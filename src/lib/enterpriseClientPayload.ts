@@ -191,6 +191,10 @@ export function unwrapDesignBrief(value: unknown): Record<string, unknown> {
 
 export interface EnterpriseClientPayload {
   projectId: string;
+  project_id?: number | null;
+  project_view_id?: number | null;
+  tmp_project_id?: number | null;
+  user_id?: number | null;
   work_type?: string;
   watermark: string;
   image_url: string;

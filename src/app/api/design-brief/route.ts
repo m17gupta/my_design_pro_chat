@@ -56,9 +56,11 @@ export async function POST(request: Request) {
       endpointPath = "/api/v1/luna/exterior";
     } else if (rawRole === "enterprise-client") {
       if (rawUserType === "landscape-design" || rawUserType === "landscape_design") {
-        console.log("calling client landscape-design");
+        console.log("calling client landscape-design--->");
         endpointPath = "/api/v1/luna/landscape-design";
-        outgoingBody = buildEnterpriseClientPayload(payload as Record<string, unknown>, incomingQuestionnaires);
+         outgoingBody = payload;
+        // outgoingBody = buildEnterpriseClientPayload(payload as Record<string, unknown>, incomingQuestionnaires);
+        console.log("landscape-design payload:", JSON.stringify(outgoingBody, null, 2));
       } else if (rawUserType === "color-material" || rawUserType === "color_material") {
         console.log("calling client color-material");
         endpointPath = "/api/v1/luna/color-material";
