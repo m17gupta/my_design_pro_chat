@@ -16,9 +16,9 @@ const samplePayload: ApiBriefPayload = {
   revision_comment: { files: [], notes: "Sample notes" },
 };
 
-// Exact response structure provided by the user
+// Response structure returned by backend
 const asyncInitialResponse = {
-  status: "processsing",
+  status: "processing",
   result: {
     task_id: "10f74952-23a1-4976-b63c-686abe44ccbb",
     original_image_url:
@@ -46,7 +46,7 @@ function setupStore() {
 }
 
 describe("Async Image Generation & Status Polling Flow", () => {
-  it("correctly ingests initial task response with 'processsing' status and empty url", async () => {
+  it("correctly ingests initial task response with 'processing' status and empty url", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -61,7 +61,7 @@ describe("Async Image Generation & Status Polling Flow", () => {
 
     expect(entry.id).toBe("10f74952-23a1-4976-b63c-686abe44ccbb");
     expect(entry.task_id).toBe("10f74952-23a1-4976-b63c-686abe44ccbb");
-    expect(entry.status).toBe("processing"); // Normalized from "processsing"
+    expect(entry.status).toBe("processing");
     expect(entry.url).toBe("");
     expect(entry.generated_image_url).toBeNull();
     expect(entry.original_image_url).toBe(
@@ -73,6 +73,22 @@ describe("Async Image Generation & Status Polling Flow", () => {
     expect(state.lifecycle).toBe("pending");
     expect(state.entries).toHaveLength(1);
     expect(state.entries[0].status).toBe("processing");
+  });
+
+  it("also supports legacy 'processsing' typo for backwards compatibility", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json({ ...asyncInitialResponse, status: "processsing" }, { status: 200 })
+      )
+    );
+
+    const store = setupStore();
+    const entry = await store
+      .dispatch(generateEnterpriseDesign({ payload: samplePayload }))
+      .unwrap();
+
+    expect(entry.status).toBe("processing");
   });
 
   it("updates entry url and lifecycle to succeeded when status endpoint returns completed", async () => {

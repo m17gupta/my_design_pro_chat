@@ -84,7 +84,7 @@ export interface EnterpriseEntry {
  */
 export function normalizeTaskStatus(status?: string | null): string {
   const s = (status ?? "").trim().toLowerCase();
-  if (s === "processsing" || s === "processing" || s === "in_progress") return "processing";
+  if (s === "processing" || s === "processsing" || s === "in_progress") return "processing";
   if (s === "queued" || s === "pending") return "queued";
   if (s === "completed" || s === "success" || s === "succeeded") return "completed";
   if (s === "failed" || s === "error") return "failed";

@@ -94,9 +94,9 @@ describe("text-only revision results", () => {
     expect(store.getState().enterprise.lifecycle).toBe("succeeded");
   });
 
-  it("handles revision with 'processsing' status and polls until completed text_answer arrives", async () => {
+  it("handles revision with 'processing' status and polls until completed text_answer arrives", async () => {
     const processingResponse = {
-      status: "processsing",
+      status: "processing",
       result: {
         task_id: "7e1388b0-e4a5-429b-a086-ec308cfa0619",
         original_image_url:
@@ -171,7 +171,7 @@ describe("text-only revision results", () => {
     expect(initialEntry).toMatchObject({
       id: "7e1388b0-e4a5-429b-a086-ec308cfa0619",
       task_id: "7e1388b0-e4a5-429b-a086-ec308cfa0619",
-      status: "processing", // normalized from "processsing"
+      status: "processing",
       type: "text_answer",
       response_type: "text_answer",
       url: "",
