@@ -42,7 +42,7 @@ export interface BriefState {
   original: Record<string, ApiBriefItem>
   revision_comment: RevisionComment
   question_sets?: QuestionSets | null
-  project_address?: ProjectAddress | null
+  project_address?: string  | null
   status?: string | null
   free_ai_credits?: number | null
   access_token?: string | null
@@ -129,7 +129,16 @@ export function stateFromPayload (
     role: payload?.role ?? null,
     custom_engage_designer: payload?.custom_engage_designer ?? null,
     question_sets: payload?.question_sets ?? null,
-    project_address: payload?.project_address ?? null,
+    project_address:
+      typeof payload?.project_address === 'string'
+        ? payload.project_address
+        : typeof payload?.project_address === 'object' && payload.project_address !== null
+          ? [
+              payload.project_address.address,
+              payload.project_address.city,
+              [payload.project_address.state, payload.project_address.zip_code].filter(Boolean).join(' '),
+            ].filter(Boolean).join(', ') || null
+          : null,
     status: payload?.status ?? null,
     free_ai_credits: payload?.free_ai_credits ?? null,
     access_token: payload?.access_token ?? null,
@@ -306,8 +315,18 @@ const briefSlice = createSlice({
       if (action.payload.value !== undefined) state.value = action.payload.value
       if (action.payload.question_sets !== undefined)
         state.question_sets = action.payload.question_sets
-      if (action.payload.project_address !== undefined)
-        state.project_address = action.payload.project_address
+      if (action.payload.project_address !== undefined) {
+        state.project_address =
+          typeof action.payload.project_address === 'string'
+            ? action.payload.project_address
+            : typeof action.payload.project_address === 'object' && action.payload.project_address !== null
+              ? [
+                  action.payload.project_address.address,
+                  action.payload.project_address.city,
+                  [action.payload.project_address.state, action.payload.project_address.zip_code].filter(Boolean).join(' '),
+                ].filter(Boolean).join(', ') || null
+              : null
+      }
       if (action.payload.status !== undefined)
         state.status = action.payload.status
       if (action.payload.free_ai_credits !== undefined)
@@ -414,8 +433,17 @@ const briefSlice = createSlice({
       state.status = action.payload
     },
     /** Set/update project address directly. */
-    setProjectAddress (state, action: PayloadAction<ProjectAddress | null>) {
-      state.project_address = action.payload
+    setProjectAddress (state, action: PayloadAction<ProjectAddress | string | null>) {
+      state.project_address =
+        typeof action.payload === 'string'
+          ? action.payload
+          : typeof action.payload === 'object' && action.payload !== null
+            ? [
+                action.payload.address,
+                action.payload.city,
+                [action.payload.state, action.payload.zip_code].filter(Boolean).join(' '),
+              ].filter(Boolean).join(', ') || null
+            : null
     },
     /** Record the revision comments (files + notes) from the feedback step. */
     setRevision (state, action: PayloadAction<RevisionComment>) {

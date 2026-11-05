@@ -26,12 +26,7 @@ interface ClientParams {
     original?: string[];
     revision?: string[];
   };
-  project_address?: {
-    address?: string | null;
-    city?: string | null;
-    state?: string | null;
-    zip_code?: string | null;
-  };
+  project_address?: string | null;
   status?: string | null;
   free_ai_credits?: number | string | null;
   extra?: {
@@ -80,6 +75,20 @@ function decodeClientParams(raw: string | null): ClientParams | undefined {
       if (params[key] !== undefined && params[key] !== null) {
         const num = Number(params[key]);
         params[key] = Number.isNaN(num) ? null : num;
+      }
+    }
+    if (params.project_address !== undefined && params.project_address !== null) {
+      if (typeof params.project_address === "object") {
+        const addr = params.project_address as Record<string, unknown>;
+        const parts = [
+          addr.address,
+          addr.city,
+          [addr.state, addr.zip_code].filter(Boolean).join(" "),
+          addr.country,
+        ].filter(Boolean);
+        params.project_address = parts.join(", ") || null;
+      } else if (typeof params.project_address === "string") {
+        params.project_address = params.project_address.trim() || null;
       }
     }
     return params;
@@ -158,6 +167,14 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
     const projectViewId = parseNumericParam(params?.extra?.project_view_id ?? params?.project_view_id, "project_view_id");
     const tmpProjectId = parseNumericParam(params?.extra?.tmp_project_id ?? params?.tmp_project_id, "tmp_project_id");
     const userId = parseNumericParam(params?.extra?.user_id ?? params?.user_id, "user_id");
+    const rawProjectAddress = searchParams.get("project_address");
+    const projectAddress = params?.project_address !== undefined
+      ? (params.project_address ? String(params.project_address).trim() : null)
+      : savedContext?.project_address !== undefined
+        ? (savedContext.project_address ? String(savedContext.project_address).trim() : null)
+        : rawProjectAddress !== null
+          ? rawProjectAddress.trim() || null
+          : undefined;
     const extraPayload = {
       project_id: projectIdNum ?? null,
       project_view_id: projectViewId ?? null,
@@ -175,6 +192,7 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
         hydrationStarted.current = true;
         dispatch(setContext({
           ...params,
+          ...(projectAddress !== undefined ? { project_address: projectAddress } : {}),
           ...(freeAiCredits !== undefined ? { free_ai_credits: freeAiCredits } : {}),
           ...(accessToken !== undefined ? { access_token: accessToken } : {}),
           extra: extraPayload,
@@ -203,6 +221,7 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
               question_sets: saved.question_sets ?? undefined,
               free_ai_credits: saved.free_ai_credits,
               access_token: saved.access_token,
+              project_address: saved.project_address ?? params?.project_address ?? null,
               extra: saved.extra ?? {
                 project_id: saved.project_id ?? null,
                 project_view_id: saved.project_view_id ?? null,
@@ -239,6 +258,7 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
     dispatch(setContext({
       ...(savedContext ? {} : params),
       ...(paramImageUrl ? { image_url: paramImageUrl } : {}),
+      ...(projectAddress !== undefined ? { project_address: projectAddress } : {}),
       ...(freeAiCredits !== undefined ? { free_ai_credits: freeAiCredits } : {}),
       ...(accessToken !== undefined ? { access_token: accessToken } : {}),
       extra: extraPayload,

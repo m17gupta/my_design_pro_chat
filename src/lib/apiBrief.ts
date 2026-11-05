@@ -53,7 +53,7 @@ export interface BriefContext {
   custom_engage_designer?: boolean
   revision?: RevisionComment
   question_sets?: QuestionSets
-  project_address?: ProjectAddress | null
+  project_address?: ProjectAddress | string | null
   status?: string| null,
   free_ai_credits?: number | string | null
   access_token?: string | null
@@ -95,7 +95,7 @@ export interface ApiBriefPayload {
   original: Record<string, ApiBriefItem>
   revision_comment: RevisionComment
   question_sets?: QuestionSets
-  project_address?: ProjectAddress | null
+  project_address?: ProjectAddress | string | null
   status?: string | null
   free_ai_credits?: number | null
   access_token?: string | null

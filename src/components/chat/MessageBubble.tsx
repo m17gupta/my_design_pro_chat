@@ -466,22 +466,11 @@ export const MessageBubble = ({
                           <span className='block text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400'>
                             Property Address
                           </span>
-                          {projectAddress?.address ? (
+                          {projectAddress && typeof projectAddress === 'string' && projectAddress.trim() ? (
                             <p className='mt-0.5 text-sm font-semibold capitalize text-zinc-900 dark:text-zinc-100'>
-                              {projectAddress.address}
+                              {projectAddress}
                             </p>
-                          ) : null}
-                          {(projectAddress?.city || projectAddress?.state || projectAddress?.zip_code) ? (
-                            <p className='text-xs text-zinc-600 capitalize dark:text-zinc-400'>
-                              {[
-                                projectAddress.city,
-                                [projectAddress.state, projectAddress.zip_code].filter(Boolean).join(' '),
-                              ]
-                                .filter(Boolean)
-                                .join(', ')}
-                            </p>
-                          ) : null}
-                          {!projectAddress?.address && !projectAddress?.city && !projectAddress?.state && !projectAddress?.zip_code && (
+                          ) : (
                             <p className='mt-0.5 text-sm italic text-zinc-500 dark:text-zinc-400'>
                               No address provided
                             </p>

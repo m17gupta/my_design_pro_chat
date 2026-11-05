@@ -200,6 +200,7 @@ export interface EnterpriseClientPayload {
   image_url: string;
   original: Record<string, unknown>;
   revisions: Record<string, unknown>;
+  project_address?: unknown;
 }
 
 /**
@@ -295,5 +296,6 @@ export function buildEnterpriseClientPayload(
     image_url: typeof payload.image_url === "string" ? payload.image_url : "",
     original,
     revisions,
+    ...(payload.project_address ? { project_address: payload.project_address } : {}),
   };
 }

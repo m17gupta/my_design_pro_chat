@@ -62,7 +62,7 @@ const UpdateProjectData = () => {
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current)
         }
-    }, [dispatch, id, original, revision_comment, entries, chat.status])
+    }, [dispatch, id, original, revision_comment, entries, chat.status, chat.project_address])
 
     return (
         null
