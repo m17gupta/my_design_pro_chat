@@ -192,5 +192,16 @@ describe("persistence round-trip", () => {
     const payload = payloadFromState(state);
     expect(payload.access_token).toBe("test_access_token_123");
   });
+
+  it("preserves company_name through stateFromPayload and payloadFromState", () => {
+    const state = stateFromPayload({
+      ...SAVED,
+      company_name: "Overgrown & Underpaid",
+    });
+    expect(state.company_name).toBe("Overgrown & Underpaid");
+
+    const payload = payloadFromState(state);
+    expect(payload.company_name).toBe("Overgrown & Underpaid");
+  });
 });
 

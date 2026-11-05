@@ -51,6 +51,7 @@ export interface BriefState {
   project_view_id?: number | null
   tmp_project_id?: number | null
   user_id?: number | null
+  company_name?: string | null
 }
 
 /**
@@ -146,6 +147,7 @@ export function stateFromPayload (
     project_view_id,
     tmp_project_id,
     user_id,
+    company_name: payload?.company_name ?? null,
   }
 }
 
@@ -199,6 +201,7 @@ export function payloadFromState (
       project_view_id: state.extra?.project_view_id ?? state.project_view_id ?? null,
       tmp_project_id: state.extra?.tmp_project_id ?? state.tmp_project_id ?? null,
       user_id: state.extra?.user_id ?? state.user_id ?? null,
+      company_name: state.company_name ?? null,
     }
   )
 }
@@ -221,6 +224,7 @@ const initialState: BriefState = {
   status: null,
   free_ai_credits: null,
   access_token: null,
+  company_name: null,
   extra: {
     project_id: null,
     project_view_id: null,
@@ -325,6 +329,8 @@ const briefSlice = createSlice({
             : null
       if (action.payload.access_token !== undefined)
         state.access_token = action.payload.access_token
+      if (action.payload.company_name !== undefined)
+        state.company_name = action.payload.company_name
       if (!state.extra) {
         state.extra = {
           project_id: null,
@@ -416,6 +422,10 @@ const briefSlice = createSlice({
     setAccessToken (state, action: PayloadAction<string | null>) {
       state.access_token = action.payload
     },
+    /** Set/update company name directly. */
+    setCompanyName (state, action: PayloadAction<string | null>) {
+      state.company_name = action.payload
+    },
     /** Set/update status directly. */
     setStatus (state, action: PayloadAction<string | null>) {
       state.status = action.payload
@@ -457,7 +467,8 @@ export const {
   setBriefState,
   setOriginal,
   setFreeAiCredits,
-  setAccessToken
+  setAccessToken,
+  setCompanyName
 } = briefSlice.actions
 export default briefSlice.reducer
 
@@ -506,4 +517,7 @@ export const selectUserId = (state: BriefSliceState | { chat: BriefState }) =>
 
 export const selectAccessToken = (state: BriefSliceState | { chat: BriefState }) =>
   state?.chat?.access_token ?? null
+
+export const selectCompanyName = (state: BriefSliceState | { chat: BriefState }) =>
+  state?.chat?.company_name ?? null
 

@@ -201,6 +201,7 @@ export interface EnterpriseClientPayload {
   original: Record<string, unknown>;
   revisions: Record<string, unknown>;
   project_address?: unknown;
+  company_name?: string | null;
 }
 
 /**
@@ -297,5 +298,6 @@ export function buildEnterpriseClientPayload(
     original,
     revisions,
     ...(payload.project_address ? { project_address: payload.project_address } : {}),
+    ...(payload.company_name !== undefined ? { company_name: (payload.company_name as string | null) } : {}),
   };
 }

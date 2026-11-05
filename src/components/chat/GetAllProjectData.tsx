@@ -22,6 +22,8 @@ interface ClientParams {
   role?: string | null;
   custom_engage_designer?: boolean;
   access_token?: string | null;
+  "access-token"?: string | null;
+  company_name?: string | null;
   question_sets?: {
     original?: string[];
     revision?: string[];
@@ -55,8 +57,16 @@ function decodeClientParams(raw: string | null): ClientParams | undefined {
     const padded = standard.padEnd(standard.length + ((4 - (standard.length % 4)) % 4), "=");
     const decoded: unknown = JSON.parse(atob(padded));
     if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) return undefined;
+    const rawRecord = decoded as Record<string, unknown>;
+    const hyphenToken = rawRecord["access-token"];
+    if (typeof hyphenToken === "string" && !rawRecord.access_token) {
+      rawRecord.access_token = hyphenToken;
+    }
     const params = decoded as ClientParams;
-    if ([params.role, params.user_type, params.work_type, params.projectId, params.access_token].some(
+    if (typeof params.company_name === "string") {
+      params.company_name = params.company_name.trim();
+    }
+    if ([params.role, params.user_type, params.work_type, params.projectId, params.access_token, params.company_name].some(
       (value) => value != null && typeof value !== "string"
     )) return undefined;
     if (params.question_sets != null) {
@@ -132,7 +142,7 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
     const rawParams = searchParams.get("params");
     let params = decodeClientParams(rawParams);
 
-    // console.log("pararms --->",params)
+     console.log("pararms --->",params)
     if (rawParams && !params) {
       setError("The project parameters are invalid. Open the project again from its source.");
       return;
@@ -152,13 +162,21 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
       : rawFreeAiCredits !== null && !Number.isNaN(Number(rawFreeAiCredits))
         ? Number(rawFreeAiCredits)
         : undefined;
-    const rawAccessToken = searchParams.get("access_token");
+    const rawAccessToken = searchParams.get("access_token") ?? searchParams.get("access-token");
     const accessToken = params?.access_token !== undefined
       ? (params.access_token ?? null)
       : savedContext?.access_token !== undefined
         ? savedContext.access_token
         : rawAccessToken !== null
           ? rawAccessToken
+          : undefined;
+    const rawCompanyName = searchParams.get("company_name");
+    const companyName = params?.company_name !== undefined
+      ? (params.company_name ?? null)
+      : savedContext?.company_name !== undefined
+        ? savedContext.company_name
+        : rawCompanyName !== null
+          ? rawCompanyName
           : undefined;
     const parseNumericParam = (val: unknown, key: string) => {
       if (val !== undefined) {
@@ -237,6 +255,7 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
           ...(projectAddress !== undefined ? { project_address: projectAddress } : {}),
           ...(freeAiCredits !== undefined ? { free_ai_credits: freeAiCredits } : {}),
           ...(accessToken !== undefined ? { access_token: accessToken } : {}),
+          ...(companyName !== undefined ? { company_name: companyName } : {}),
           extra: extraPayload,
           ...(projectIdNum !== undefined ? { project_id: projectIdNum } : {}),
           ...(projectViewId !== undefined ? { project_view_id: projectViewId } : {}),
@@ -263,6 +282,7 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
               question_sets: saved.question_sets ?? undefined,
               free_ai_credits: saved.free_ai_credits,
               access_token: saved.access_token,
+              company_name: saved.company_name ?? params?.company_name ?? null,
               project_address: saved.project_address ?? params?.project_address ?? null,
               extra: saved.extra ?? {
                 project_id: saved.project_id ?? null,
@@ -303,6 +323,7 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
       ...(projectAddress !== undefined ? { project_address: projectAddress } : {}),
       ...(freeAiCredits !== undefined ? { free_ai_credits: freeAiCredits } : {}),
       ...(accessToken !== undefined ? { access_token: accessToken } : {}),
+      ...(companyName !== undefined ? { company_name: companyName } : {}),
       extra: extraPayload,
       ...(projectIdNum !== undefined ? { project_id: projectIdNum } : {}),
       ...(projectViewId !== undefined ? { project_view_id: projectViewId } : {}),

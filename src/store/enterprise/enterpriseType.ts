@@ -1,3 +1,4 @@
+import { ProjectAddress } from "@/lib/apiBrief";
 import type { EnterpriseMaskStats, EnterpriseStatusResult } from "./enterpriseThunk";
 
  
@@ -74,6 +75,7 @@ export interface EnterpriseEntry {
   mask_stats?: EnterpriseMaskStats | null;
   watermark_status?: string | null;
   questions: EnterpriseQuestion[];
+  project_address?:ProjectAddress
 }
 
 

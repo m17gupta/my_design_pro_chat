@@ -144,11 +144,8 @@ export default function ChatWindow() {
     project_address: userAddress,
     status,
     extra,
-    user_id,
-    project_id,
-    project_view_id,
-    tmp_project_id,
     access_token,
+    company_name,
   } = briefPayload;
 
   const busyRef = useRef(false);
@@ -863,6 +860,7 @@ export default function ChatWindow() {
         original: chat_original,
         design: entries,
         project_address: userAddress,
+        company_name,
         rating,
         action,
       };
@@ -879,7 +877,7 @@ export default function ChatWindow() {
         dispatch(setContext({ status: "all_i_need" }));
       }
     },
-    [id, chat_original, entries, userAddress, dispatch],
+    [id, chat_original, entries, userAddress, company_name, dispatch],
   );
 
   const handleEditCancel = useCallback(() => {
@@ -933,6 +931,8 @@ export default function ChatWindow() {
           image_url: image_url,
           revision: revisionComment,
           access_token: access_token,
+          project_address: userAddress,
+          company_name: company_name,
         },
       );
 
@@ -1334,11 +1334,12 @@ export default function ChatWindow() {
       original: chat_original,
       design: entries,
       project_address: userAddress,
+      company_name,
       rating: 0,
       action: "go_to_portfolio",
     };
     postToHost({ action: HOST_ACTION_SUBMIT_PROJECT, data });
-  }, [id, chat_original, entries, userAddress]);
+  }, [id, chat_original, entries, userAddress, company_name]);
 
   const handleCancelAllNeed = useCallback(() => {
     const currentEntries = entriesRef.current;
@@ -1494,6 +1495,8 @@ export default function ChatWindow() {
           image_url: [...entries].reverse().find((e) => e.url)?.url ?? "",
           revision: { files, notes },
           access_token: access_token,
+          project_address: userAddress,
+          company_name: company_name,
         },
       );
       try {

@@ -101,6 +101,9 @@ export const hydrateProject = createAsyncThunk<
             ...(project.chats.access_token !== undefined
               ? { access_token: project.chats.access_token }
               : {}),
+            ...(project.chats.company_name !== undefined
+              ? { company_name: project.chats.company_name }
+              : {}),
             ...(project.chats.extra !== undefined
               ? { extra: project.chats.extra }
               : {}),

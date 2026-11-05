@@ -58,6 +58,7 @@ export interface BriefContext {
   status?: string| null,
   free_ai_credits?: number | string | null
   access_token?: string | null
+  company_name?: string | null
 }
 
 export interface ApiBriefItem {
@@ -100,6 +101,7 @@ export interface ApiBriefPayload {
   status?: string | null
   free_ai_credits?: number | null
   access_token?: string | null
+  company_name?: string | null
 }
 
 export const DEFAULT_WATERMARK = 'http://mydesigns.pro/img/luna-logo.png'
@@ -227,6 +229,7 @@ export function buildApiPayload (
         ? Number(context.free_ai_credits)
         : null,
     access_token: context.access_token ?? null,
+    company_name: context.company_name ?? null,
     extra: {
       project_id:
         context.extra?.project_id != null && !Number.isNaN(Number(context.extra.project_id))
