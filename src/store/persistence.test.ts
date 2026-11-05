@@ -103,27 +103,28 @@ describe("persistence round-trip", () => {
   });
 
   it("preserves project_address through stateFromPayload and payloadFromState", () => {
-    const addressStr = "mohan nagar jaipur, jaipur, Rajasthan 20802";
+    const addressObj = {
+      address: "mohan nagar jaipur",
+      city: "jaipur",
+      state: "Rajasthan",
+      zip_code: "20802",
+      country: "India",
+    };
     const state = stateFromPayload({
       ...SAVED,
-      project_address: addressStr,
+      project_address: addressObj,
     });
-    expect(state.project_address).toBe(addressStr);
+    expect(state.project_address).toEqual(addressObj);
 
     const payload = payloadFromState(state);
-    expect(payload.project_address).toBe(addressStr);
+    expect(payload.project_address).toEqual(addressObj);
 
-    // Also supports structured object input formatted to string
-    const stateFromObj = stateFromPayload({
+    // Also supports plain string address
+    const stateFromStr = stateFromPayload({
       ...SAVED,
-      project_address: {
-        address: "mohan nagar jaipur",
-        city: "jaipur",
-        state: "Rajasthan",
-        zip_code: "20802",
-      },
+      project_address: "123 Main St",
     });
-    expect(stateFromObj.project_address).toBe(addressStr);
+    expect(stateFromStr.project_address).toEqual({ address: "123 Main St" });
   });
 
   it("prioritizes overrideImageUrl and active image_url over database image_url during hydration", async () => {

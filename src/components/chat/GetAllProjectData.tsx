@@ -26,7 +26,13 @@ interface ClientParams {
     original?: string[];
     revision?: string[];
   };
-  project_address?: string | null;
+  project_address?: {
+    address?: string | null;
+    city?: string | null;
+    state?: string | null;
+    zip_code?: string | null;
+    country?: string | null;
+  } | string | null;
   status?: string | null;
   free_ai_credits?: number | string | null;
   extra?: {
@@ -77,18 +83,16 @@ function decodeClientParams(raw: string | null): ClientParams | undefined {
         params[key] = Number.isNaN(num) ? null : num;
       }
     }
-    if (params.project_address !== undefined && params.project_address !== null) {
-      if (typeof params.project_address === "object") {
-        const addr = params.project_address as Record<string, unknown>;
-        const parts = [
-          addr.address,
-          addr.city,
-          [addr.state, addr.zip_code].filter(Boolean).join(" "),
-          addr.country,
-        ].filter(Boolean);
-        params.project_address = parts.join(", ") || null;
-      } else if (typeof params.project_address === "string") {
-        params.project_address = params.project_address.trim() || null;
+    if (typeof params.project_address === "string") {
+      const rawAddr = params.project_address;
+      try {
+        const parsed = JSON.parse(rawAddr);
+        params.project_address =
+          typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+            ? (parsed as ClientParams["project_address"])
+            : { address: rawAddr };
+      } catch {
+        params.project_address = { address: rawAddr };
       }
     }
     return params;
@@ -168,13 +172,51 @@ const GetAllProjectData = ({ defaultRole, children }: GetAllProjectDataProps = {
     const tmpProjectId = parseNumericParam(params?.extra?.tmp_project_id ?? params?.tmp_project_id, "tmp_project_id");
     const userId = parseNumericParam(params?.extra?.user_id ?? params?.user_id, "user_id");
     const rawProjectAddress = searchParams.get("project_address");
-    const projectAddress = params?.project_address !== undefined
-      ? (params.project_address ? String(params.project_address).trim() : null)
-      : savedContext?.project_address !== undefined
-        ? (savedContext.project_address ? String(savedContext.project_address).trim() : null)
-        : rawProjectAddress !== null
-          ? rawProjectAddress.trim() || null
-          : undefined;
+    const parseProjectAddressParam = (val: unknown): ClientParams["project_address"] | undefined => {
+      if (val !== undefined) {
+        if (!val) return null;
+        if (typeof val === "object" && !Array.isArray(val)) {
+          return val as ClientParams["project_address"];
+        }
+        if (typeof val === "string") {
+          try {
+            const parsed = JSON.parse(val);
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              return parsed as ClientParams["project_address"];
+            }
+          } catch {
+            return { address: val };
+          }
+        }
+        return null;
+      }
+      if (rawProjectAddress) {
+        try {
+          const parsed = JSON.parse(rawProjectAddress);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            return parsed as ClientParams["project_address"];
+          }
+        } catch {
+          return { address: rawProjectAddress };
+        }
+      }
+      const addr = searchParams.get("address");
+      const city = searchParams.get("city");
+      const st = searchParams.get("state");
+      const zip = searchParams.get("zip_code");
+      const country = searchParams.get("country");
+      if (addr || city || st || zip || country) {
+        return {
+          address: addr ?? null,
+          city: city ?? null,
+          state: st ?? null,
+          zip_code: zip ?? null,
+          country: country ?? null,
+        };
+      }
+      return undefined;
+    };
+    const projectAddress = parseProjectAddressParam(params?.project_address ?? savedContext?.project_address);
     const extraPayload = {
       project_id: projectIdNum ?? null,
       project_view_id: projectViewId ?? null,

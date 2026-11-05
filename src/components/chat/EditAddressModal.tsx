@@ -11,7 +11,7 @@ interface EditAddressModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave?: (address: ProjectAddress) => void;
-  initialAddress?: ProjectAddress | string | null;
+  initialAddress?: ProjectAddress | null;
 }
 
 function EditAddressModal({
@@ -24,16 +24,11 @@ function EditAddressModal({
   const reduxAddress = useAppSelector(selectProjectAddress);
   const activeInitial = initialAddress ?? reduxAddress;
 
-  const initialObj: ProjectAddress =
-    typeof activeInitial === "string"
-      ? { address: activeInitial }
-      : (activeInitial ?? {});
-
   const [mounted, setMounted] = useState(false);
-  const [address, setAddress] = useState(initialObj.address ?? "");
-  const [city, setCity] = useState(initialObj.city ?? "");
-  const [state, setState] = useState(initialObj.state ?? "");
-  const [zipCode, setZipCode] = useState(initialObj.zip_code ?? "");
+  const [address, setAddress] = useState(activeInitial?.address ?? "");
+  const [city, setCity] = useState(activeInitial?.city ?? "");
+  const [state, setState] = useState(activeInitial?.state ?? "");
+  const [zipCode, setZipCode] = useState(activeInitial?.zip_code ?? "");
 
   useEffect(() => {
     setMounted(true);
@@ -42,14 +37,10 @@ function EditAddressModal({
   // Sync state whenever modal opens or activeInitial changes
   useEffect(() => {
     if (isOpen) {
-      const obj: ProjectAddress =
-        typeof activeInitial === "string"
-          ? { address: activeInitial }
-          : (activeInitial ?? {});
-      setAddress(obj.address ?? "");
-      setCity(obj.city ?? "");
-      setState(obj.state ?? "");
-      setZipCode(obj.zip_code ?? "");
+      setAddress(activeInitial?.address ?? "");
+      setCity(activeInitial?.city ?? "");
+      setState(activeInitial?.state ?? "");
+      setZipCode(activeInitial?.zip_code ?? "");
     }
   }, [isOpen, activeInitial]);
 
@@ -74,15 +65,9 @@ function EditAddressModal({
       zip_code: zipCode.trim(),
     };
 
-    const formatted = [
-      address.trim(),
-      city.trim(),
-      [state.trim(), zipCode.trim()].filter(Boolean).join(" "),
-    ].filter(Boolean).join(", ");
-
     // Update Redux state
-    dispatch(setProjectAddress(formatted || updatedAddress.address || ""));
-    dispatch(setContext({ project_address: formatted || updatedAddress.address || "" }));
+    dispatch(setProjectAddress(updatedAddress));
+    dispatch(setContext({ project_address: updatedAddress }));
 
     onSave?.(updatedAddress);
     onClose();

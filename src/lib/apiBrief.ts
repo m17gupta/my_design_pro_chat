@@ -19,6 +19,7 @@ export interface ProjectAddress {
   city?: string | null
   state?: string | null
   zip_code?: string | null
+  country?: string | null
 }
 
 export interface BriefExtra {
@@ -215,7 +216,10 @@ export function buildApiPayload (
     original,
     revision_comment: context.revision ?? { files: [], notes: '' },
     question_sets: context.question_sets,
-    project_address: context.project_address ?? undefined,
+    project_address:
+      typeof context.project_address === 'string'
+        ? { address: context.project_address }
+        : context.project_address ?? undefined,
     status: context.status ?? null,
     free_ai_credits:
       context.free_ai_credits != null &&
