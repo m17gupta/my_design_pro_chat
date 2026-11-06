@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         outgoingBody = payload;
       }
     }
-
+    console.log("URL enterprise payload -->",payload);
     res = await fetch(`${base}${endpointPath}`, {
       method: "POST",
       headers: {

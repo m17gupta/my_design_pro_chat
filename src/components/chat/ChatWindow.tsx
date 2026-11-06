@@ -931,8 +931,8 @@ export default function ChatWindow() {
           image_url: image_url,
           revision: revisionComment,
           access_token: access_token,
-          project_address: userAddress,
-          company_name: company_name,
+          // project_address: userAddress,
+          // company_name: company_name,
         },
       );
 
