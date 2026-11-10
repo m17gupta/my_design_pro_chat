@@ -298,32 +298,35 @@ export default function DesignSummaryCard({
               return (
                 <div
                   key={key}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 ${
+                  className={`flex flex-col md:flex-row lg:flex-row xl:flex-row items-center gap-3 px-3.5 py-2.5 ${
                     i > 0 ? "border-t border-zinc-200/80 dark:border-zinc-800" : ""
                   }`}
                 >
+                  <div className="flex items-center gap-3 w-full md:w-[60%] lg:w-[50%] xl:w-[50%]">
                  
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                    className="shrink-0 text-emerald-500"
-                  >
-                    <path d="M3 10.5L12 3l9 7.5" />
-                    <path d="M5 9.5V21h14V9.5" />
-                  </svg>
-                  <div className="min-w-0 flex-1 max-w-[30%]">
-                    <p className="text-sm  font-semibold text-zinc-500 dark:text-zinc-400">
-                      {name}
-                    </p>
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      className="shrink-0 text-emerald-500"
+                    >
+                      <path d="M3 10.5L12 3l9 7.5" />
+                      <path d="M5 9.5V21h14V9.5" />
+                    </svg>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm  font-semibold text-zinc-500 dark:text-zinc-400">
+                        {name}
+                      </p>
+                    </div>
                    </div>
-                 
+
+                  <div className="flex items-center gap-3 w-full">
                   {isArray && answer.length === 0 ? (
                     <p className="min-w-0 max-w-[55%] text-left text-sm text-zinc-800 dark:text-zinc-100">
                       No Upload
@@ -336,7 +339,7 @@ export default function DesignSummaryCard({
                     </p>
                   ) : typeof answer === "string" ? (
                     <div
-                      className="min-w-0 max-w-[55%] text-left text-sm text-zinc-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed [&_strong]:font-semibold"
+                      className="min-w-0 text-left text-sm text-zinc-800 dark:text-zinc-100 whitespace-pre-wrap break-words leading-relaxed [&_strong]:font-semibold"
                       title={answer.replace(/<[^>]*>/g, "")}
                     >
                       {renderInline(answer)}
@@ -358,7 +361,7 @@ export default function DesignSummaryCard({
                       if (!hasStandardFields && typeof ansObj === "object" && ansObj !== null) {
                         const entries = Object.entries(ansObj);
                         return (
-                          <div className="flex flex-col gap-1 max-w-[55%]">
+                          <div className="flex flex-col gap-1">
                             {entries.map(([k, v], idx) => {
                               const text = Array.isArray(v) ? v.join(", ") : String(v ?? "");
                               return (
@@ -372,7 +375,7 @@ export default function DesignSummaryCard({
                       }
 
                       return (
-                        <div className="flex flex-col gap-1 max-w-[55%]">
+                        <div className="flex flex-col gap-1">
                           {notes.trim() && (
                             <div
                               className="text-left text-sm text-zinc-800 dark:text-zinc-100 w-full whitespace-pre-wrap break-words leading-relaxed [&_strong]:font-semibold"
@@ -423,6 +426,7 @@ export default function DesignSummaryCard({
                       </svg>
                     </button>
                   )}
+                  </div>
                 </div>
               );
             })
