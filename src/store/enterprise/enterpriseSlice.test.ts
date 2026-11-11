@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import enterpriseReducer, { EnterpriseState } from "./enterpriseSlice";
+import enterpriseReducer, { applyWsTaskStatus, EnterpriseState } from "./enterpriseSlice";
 import { generateEnterpriseDesign } from "./enterpriseThunk";
 
 describe("enterpriseSlice extraReducers", () => {
@@ -102,5 +102,90 @@ describe("enterpriseSlice extraReducers", () => {
     state = enterpriseReducer(state, { type: "enterprise/resetEnterprise" });
     expect(state.isSkipped).toBe(false);
     expect(state.entries).toEqual([]);
+  });
+
+  it("restarts original generation from beginning when previous original entry failed", () => {
+    const failedOriginalState: EnterpriseState = {
+      entries: [
+        {
+          id: "failed-original-task",
+          task_id: "failed-original-task",
+          url: "",
+          status: "failed",
+          type: "original",
+          questions: [],
+        },
+      ],
+      lifecycle: "failed",
+      error: "Edit failed at visual_review",
+      editId: null,
+    };
+
+    // User clicks Proceed (generate without round specified)
+    const pendingAction = generateEnterpriseDesign.pending("req-id-retry", { payload });
+    const pendingState = enterpriseReducer(failedOriginalState, pendingAction);
+
+    // It should NOT create a revision entry; it clears out failed entries to restart original
+    expect(pendingState.lifecycle).toBe("loading");
+    expect(pendingState.error).toBeNull();
+    expect(pendingState.entries).toEqual([]);
+
+    // When the new original task is returned from backend
+    const fulfilledAction = generateEnterpriseDesign.fulfilled(
+      {
+        id: "new-original-task-id",
+        task_id: "new-original-task-id",
+        url: "",
+        status: "processing",
+        type: "original",
+        questions: [],
+      },
+      "req-id-retry",
+      { payload }
+    );
+
+    const finalState = enterpriseReducer(pendingState, fulfilledAction);
+    expect(finalState.entries.length).toBe(1);
+    expect(finalState.entries[0].id).toBe("new-original-task-id");
+    expect(finalState.entries[0].type).toBe("original");
+    expect(finalState.entries[0].status).toBe("processing");
+    expect(finalState.lifecycle).toBe("pending");
+  });
+
+  it("updates entry and lifecycle when applyWsTaskStatus is dispatched", () => {
+    const processingState: EnterpriseState = {
+      entries: [
+        {
+          id: "task-ws-123",
+          task_id: "task-ws-123",
+          url: "",
+          status: "processing",
+          type: "original",
+          questions: [],
+        },
+      ],
+      lifecycle: "pending",
+      error: null,
+      editId: null,
+    };
+
+    const nextState = enterpriseReducer(
+      processingState,
+      applyWsTaskStatus({
+        task_id: "task-ws-123",
+        status: "completed",
+        result: {
+          task_id: "task-ws-123",
+          generated_image_url: "https://img.example/done.png",
+          work_type: "front_yard",
+          reference_image_urls: [],
+        },
+        error: null,
+      })
+    );
+
+    expect(nextState.lifecycle).toBe("succeeded");
+    expect(nextState.entries[0].status).toBe("completed");
+    expect(nextState.entries[0].url).toBe("https://img.example/done.png");
   });
 });

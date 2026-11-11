@@ -4,6 +4,7 @@ import {
   buildRevisionQuestion,
   fetchEnterpriseStatus,
   generateEnterpriseDesign,
+  type EnterpriseMaskStats,
 } from "./enterpriseThunk";
 
 
@@ -75,7 +76,76 @@ const enterpriseSlice = createSlice({
       );
       state.lifecycle = "idle";
       state.error = null;
-    }
+    },
+    /**
+     * Apply a task status update received via WebSocket (task:status event).
+     * This mirrors the fetchEnterpriseStatus.fulfilled logic but is dispatched
+     * synchronously by the useTaskSocket hook — no HTTP round-trip needed.
+     */
+    applyWsTaskStatus(
+      state,
+      action: PayloadAction<{
+        task_id: string;
+        status: string;
+        result: {
+          generated_image_url?: string;
+          original_image_url?: string;
+          response_type?: string;
+          answer?: string;
+          watermark_status?: string | null;
+          pipeline?: string;
+          model?: string;
+          work_type?: string;
+          mask_stats?: EnterpriseMaskStats | null;
+          [key: string]: unknown;
+        } | null;
+        error: string | null;
+      }>
+    ) {
+      const { task_id, result, error } = action.payload;
+      const normalizedStatus = normalizeTaskStatus(action.payload.status);
+      const entryIdx = state.entries.findIndex(
+        (e) => e.id === task_id || (e.task_id && e.task_id === task_id)
+      );
+      if (entryIdx >= 0) {
+        const entry = state.entries[entryIdx];
+        if (normalizedStatus === "failed") {
+          if (isRevisionEntry(entry)) {
+            state.entries.splice(entryIdx, 1);
+          } else {
+            entry.status = "failed";
+          }
+        } else {
+          entry.status = normalizedStatus;
+          if (result) {
+            if (result.generated_image_url) {
+              entry.url = result.generated_image_url;
+              entry.generated_image_url = result.generated_image_url;
+            }
+            if (result.original_image_url) {
+              entry.original_image_url = result.original_image_url;
+            }
+            if (result.response_type === "text_answer" || result.answer) {
+              entry.type = "text_answer";
+              entry.response_type = "text_answer";
+              if (result.answer) entry.answer = result.answer;
+            }
+            if (result.watermark_status) entry.watermark_status = result.watermark_status;
+            if (result.pipeline) entry.pipeline = result.pipeline;
+            if (result.model) entry.model = result.model;
+            if (result.work_type) entry.work_type = result.work_type;
+            if (result.mask_stats) entry.mask_stats = result.mask_stats;
+          }
+        }
+      }
+      if (normalizedStatus === "completed") {
+        state.error = null;
+        state.lifecycle = "succeeded";
+      } else if (normalizedStatus === "failed") {
+        state.error = error ?? "Design generation failed";
+        state.lifecycle = "failed";
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -84,8 +154,11 @@ const enterpriseSlice = createSlice({
         state.error = null;
 
         const { payload, round } = action.meta.arg;
+        const hasCompletedOriginal = state.entries.some(
+          (e) => e.type === "original" && normalizeTaskStatus(e.status) === "completed"
+        );
         const isRevision =
-          state.entries.length > 0 || (round !== undefined && round > 0);
+          (round !== undefined && round > 0) || hasCompletedOriginal;
 
         if (isRevision) {
           const revisionQuestion = buildRevisionQuestion(payload.revision_comment);
@@ -117,6 +190,9 @@ const enterpriseSlice = createSlice({
           } else {
             state.entries.push(pendingEntry);
           }
+        } else {
+          // Restarting original design generation — clear any previous failed original entry
+          state.entries = [];
         }
       })
       .addCase(generateEnterpriseDesign.fulfilled, (state, action) => {
@@ -143,6 +219,13 @@ const enterpriseSlice = createSlice({
         );
         if (pendingIdx >= 0) {
           state.entries[pendingIdx] = entry;
+        } else if (entry.type === "original") {
+          const origIdx = state.entries.findIndex((e) => e.type === "original");
+          if (origIdx >= 0) {
+            state.entries[origIdx] = entry;
+          } else {
+            state.entries.unshift(entry);
+          }
         } else {
           // Append the freshly-submitted entry to the design history.
           state.entries.push(entry);
@@ -234,7 +317,7 @@ const enterpriseSlice = createSlice({
   },
 });
 
-export const { resetEnterprise, setEntries, setEditId, resetEditId, setIsSkipped, removeFailedRevision } = enterpriseSlice.actions;
+export const { resetEnterprise, setEntries, setEditId, resetEditId, setIsSkipped, removeFailedRevision, applyWsTaskStatus } = enterpriseSlice.actions;
 
 export const selectEditId = (state: { enterprise: EnterpriseState }) => state.enterprise.editId;
 

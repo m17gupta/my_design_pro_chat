@@ -102,7 +102,10 @@ export const generateEnterpriseDesign = createAsyncThunk<
   async ({ payload, round }, { getState, rejectWithValue, requestId }) => {
     const { enterprise } = getState() as EnterpriseThunkState;
     try {
-      const isRevision = (round !== undefined && round > 0) || enterprise.entries.length > 0;
+      const hasCompletedOriginal = enterprise.entries.some(
+        (e) => e.type === "original" && normalizeTaskStatus(e.status) === "completed"
+      );
+      const isRevision = (round !== undefined && round > 0) || hasCompletedOriginal;
       const result = await submitDesignBrief(payload, { revision: isRevision });
       const data = result.data as EnterpriseResponse;
       if (!data || typeof data !== "object") throw new Error("Invalid design API response");
