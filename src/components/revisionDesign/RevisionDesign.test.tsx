@@ -20,8 +20,8 @@ function render(role: string, entries: EnterpriseEntry[], round = 1, locked = fa
 }
 
 describe("revision text-answer rendering", () => {
-  it.each(["enterprise", "enterprise-client"])("shows a safe answer and all three available actions for %s", (role) => {
-    const html = render(role, [original, text]);
+  it("shows a safe answer and all three available actions for enterprise", () => {
+    const html = render("enterprise", [original, text]);
     expect(html).toContain("Please ask a project-related question.");
     expect(html).toContain("&lt;script&gt;unsafe&lt;/script&gt;");
     expect(html).toContain("This Is All I Need For Now");
@@ -31,6 +31,15 @@ describe("revision text-answer rendering", () => {
     expect(html).not.toContain("<img");
     expect(html).not.toContain("Download revised design image");
     expect(html).not.toContain("One last pass");
+  });
+  it("hides Engage Designer for enterprise-client text-answer", () => {
+    const html = render("enterprise-client", [original, text]);
+    expect(html).toContain("Please ask a project-related question.");
+    expect(html).toContain("&lt;script&gt;unsafe&lt;/script&gt;");
+    expect(html).toContain("This Is All I Need For Now");
+    expect(html).toContain("Regenerate With Comments");
+    expect(html).not.toContain("Engage Designer");
+    expect(html).not.toContain("disabled=");
   });
   it("retains the existing enterprise-client image buttons", () => {
     const image: EnterpriseEntry = { ...text, id: "image-task", type: "revision", answer: undefined, url: "https://example.com/revised.jpg" };

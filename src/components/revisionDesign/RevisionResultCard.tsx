@@ -442,7 +442,7 @@ const handleDownload = async () => {
               Regenerate With Comments
             </motion.button>
 
-            {(!isEnterpriseClient || isTextAnswer) && (
+            {!isEnterpriseClient && (
               <motion.button
                 type="button"
                 onClick={() => onEngageDesigner(rating)}
