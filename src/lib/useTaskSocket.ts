@@ -47,7 +47,7 @@ export interface TaskStatusPayload {
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "https://ws.dzinlynxt.com";
 
 /** Terminal states — once reached the socket can disconnect. */
-const TERMINAL = new Set(["completed", "failed"]);
+const TERMINAL = new Set(["completed", "failed", "success", "succeeded", "error"]);
 
 export function useTaskSocket(
   taskId: string | null | undefined,
@@ -118,7 +118,7 @@ export function useTaskSocket(
       );
       cbRef.current(data);
 
-      if (TERMINAL.has(data.status)) {
+      if (TERMINAL.has((data.status ?? "").trim().toLowerCase())) {
         doneRef.current = true;
         // Stop the websocket immediately once completed/failed
         socket.emit("task:unsubscribe", taskId);
@@ -143,3 +143,4 @@ export function useTaskSocket(
 
   return cleanup;
 }
+

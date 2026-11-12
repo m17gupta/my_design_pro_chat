@@ -118,9 +118,14 @@ const enterpriseSlice = createSlice({
         } else {
           entry.status = normalizedStatus;
           if (result) {
-            if (result.generated_image_url) {
-              entry.url = result.generated_image_url;
-              entry.generated_image_url = result.generated_image_url;
+            const generatedUrl =
+              result.generated_image_url ||
+              ((result as Record<string, unknown>).image_url as string | undefined) ||
+              ((result as Record<string, unknown>).url as string | undefined) ||
+              ((result as Record<string, unknown>).generatedImage as string | undefined);
+            if (generatedUrl) {
+              entry.url = generatedUrl;
+              entry.generated_image_url = generatedUrl;
             }
             if (result.original_image_url) {
               entry.original_image_url = result.original_image_url;

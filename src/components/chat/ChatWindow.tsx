@@ -1,5 +1,5 @@
 "use client";
-import { isRevisionEntry } from "../../store/enterprise/enterpriseType";
+import { isRevisionEntry, normalizeTaskStatus } from "../../store/enterprise/enterpriseType";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -934,8 +934,8 @@ export default function ChatWindow() {
           image_url: image_url,
           revision: revisionComment,
           access_token: access_token,
-          // project_address: userAddress,
-          // company_name: company_name,
+          project_address: userAddress,
+          company_name: company_name,
         },
       );
 
@@ -1232,11 +1232,12 @@ export default function ChatWindow() {
     (data: TaskStatusPayload) => {
       dispatch(applyWsTaskStatus(data));
 
-      if (data.status === "completed" || data.status === "failed") {
+      const norm = normalizeTaskStatus(data.status);
+      if (norm === "completed" || norm === "failed") {
         stopPolling();
         setPendingRevisionGenerate(null);
 
-        if (data.status === "failed") {
+        if (norm === "failed") {
           const isRevision = entries.some(
             (e) =>
               (e.id === data.task_id || (e.task_id && e.task_id === data.task_id)) &&
