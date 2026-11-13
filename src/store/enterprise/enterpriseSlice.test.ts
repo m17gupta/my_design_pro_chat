@@ -228,6 +228,38 @@ describe("enterpriseSlice extraReducers", () => {
       "The house resembles a Craftsman style with timber beams."
     );
   });
+
+  it("updates entry status to processing when applyWsTaskStatus receives processing via websocket", () => {
+    const initialState: EnterpriseState = {
+      entries: [
+        {
+          id: "9db27e3c-fb4a-4568-91dd-8e6ed088312f",
+          task_id: "9db27e3c-fb4a-4568-91dd-8e6ed088312f",
+          url: "",
+          status: "queued",
+          type: "revision",
+          questions: [],
+        },
+      ],
+      lifecycle: "loading",
+      error: null,
+      editId: null,
+    };
+
+    const nextState = enterpriseReducer(
+      initialState,
+      applyWsTaskStatus({
+        task_id: "",
+        status: "processing",
+        result: {
+          task_id: "9db27e3c-fb4a-4568-91dd-8e6ed088312f",
+        } as unknown as { task_id: string; generated_image_url?: string; [key: string]: unknown },
+        error: null,
+      })
+    );
+
+    expect(nextState.entries[0].status).toBe("processing");
+  });
 });
 
 

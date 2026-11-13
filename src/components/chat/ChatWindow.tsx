@@ -62,7 +62,6 @@ import { buildApiPayload } from "@/lib/apiBrief";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { useTaskSocket } from "@/lib/useTaskSocket";
-import { fetchDesignStatus } from "@/lib/designApi";
 import { describeDesignFailure } from "@/lib/designFailure";
 import type { TaskStatusPayload } from "@/lib/useTaskSocket";
 
@@ -77,8 +76,6 @@ const nextId = () => `m-${Date.now()}-${idCounter++}`;
 
 /** Max revision loop rounds — beyond this, Regenerate is capped. */
 const MAX_REVISION_ROUNDS = 5;
-
-const STATUS_CHECK_INTERVAL_MS = 30_000;
 
 // Stable empty object so memoized bubbles without uploads don't re-render.
 const EMPTY_FILES: Record<number, File[]> = {};
@@ -1046,7 +1043,12 @@ export default function ChatWindow() {
 
   const handleWsTaskStatus = useCallback(
     (data: TaskStatusPayload) => {
-      if (!taskId || data.task_id !== taskId || handledTerminalTask.current === taskId) return;
+      const incomingTaskId =
+        data.task_id ||
+        (data.result && typeof data.result === "object"
+          ? ((data.result as Record<string, unknown>).task_id as string | undefined)
+          : undefined);
+      if (!taskId || (incomingTaskId && incomingTaskId !== taskId) || handledTerminalTask.current === taskId) return;
       const norm = normalizeTaskStatus(data.status);
       if (norm === "completed" || norm === "failed") handledTerminalTask.current = taskId;
       dispatch(applyWsTaskStatus(data));
@@ -1079,41 +1081,7 @@ export default function ChatWindow() {
 
   // Connect to WebSocket for the active task — the hook auto-disconnects
   // once the task reaches a terminal state or the component unmounts.
-  useTaskSocket(taskId, null, handleWsTaskStatus);
-
-  // Reconcile with the stored job status if the push is missed. This only
-  // checks the existing task; it never submits another generation request.
-  const statusHandlerRef = useRef(handleWsTaskStatus);
-  useEffect(() => {
-    statusHandlerRef.current = handleWsTaskStatus;
-  }, [handleWsTaskStatus]);
-  useEffect(() => {
-    const current = normalizeTaskStatus(taskStatus);
-    if (!taskId || isSkipped || status === "skip" || latestEnterpriseEntry?.url ||
-        current === "completed" || current === "failed") return;
-    let cancelled = false;
-    const check = async () => {
-      try {
-        const result = await fetchDesignStatus(taskId) as Omit<TaskStatusPayload, "task_id"> | null;
-        if (cancelled || handledTerminalTask.current === taskId) return;
-        const next = normalizeTaskStatus(result?.status);
-        if (result && (next === "completed" || next === "failed")) {
-          statusHandlerRef.current({ ...result, task_id: taskId });
-          return;
-        }
-      } catch {
-        // A temporary status lookup failure is not a generation failure.
-      }
-      if (!cancelled && handledTerminalTask.current !== taskId) {
-        pollRef.current = window.setTimeout(check, STATUS_CHECK_INTERVAL_MS);
-      }
-    };
-    pollRef.current = window.setTimeout(check, STATUS_CHECK_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      stopPolling();
-    };
-  }, [taskId, taskStatus, latestEnterpriseEntry?.url, isSkipped, status, stopPolling]);
+  useTaskSocket(taskId, access_token, handleWsTaskStatus);
 
   useEffect(() => {
     if (status === "skip") {

@@ -104,11 +104,22 @@ const enterpriseSlice = createSlice({
     ) {
       const { task_id, result, error } = action.payload;
       const normalizedStatus = normalizeTaskStatus(action.payload.status);
+      const payloadObj = action.payload as Record<string, unknown>;
+      const resultObj = (result && typeof result === "object" ? result : {}) as Record<string, unknown>;
+
+      const effectiveTaskId =
+        (typeof task_id === "string" && task_id.trim() ? task_id.trim() : null) ??
+        (typeof payloadObj.task_id === "string" && (payloadObj.task_id as string).trim() ? (payloadObj.task_id as string).trim() : null) ??
+        (typeof resultObj.task_id === "string" && (resultObj.task_id as string).trim() ? (resultObj.task_id as string).trim() : null);
+
       const entryIdx = state.entries.findIndex(
-        (e) => e.id === task_id || (e.task_id && e.task_id === task_id)
+        (e) => Boolean(effectiveTaskId && (e.id === effectiveTaskId || e.task_id === effectiveTaskId))
       );
       if (entryIdx >= 0) {
         const entry = state.entries[entryIdx];
+        if (effectiveTaskId && !entry.task_id) {
+          entry.task_id = effectiveTaskId;
+        }
         if (normalizedStatus === "failed") {
           if (isRevisionEntry(entry)) {
             state.entries.splice(entryIdx, 1);
@@ -118,8 +129,6 @@ const enterpriseSlice = createSlice({
           }
         } else {
           entry.status = normalizedStatus;
-          const payloadObj = action.payload as Record<string, unknown>;
-          const resultObj = (result && typeof result === "object" ? result : {}) as Record<string, unknown>;
 
           const generatedUrl =
             (resultObj.generated_image_url as string | undefined) ||
