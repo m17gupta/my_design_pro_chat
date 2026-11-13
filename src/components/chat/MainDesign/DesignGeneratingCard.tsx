@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setIsSkipped } from "@/store/enterprise/enterpriseSlice";
+import { describeDesignFailure } from "../../../lib/designFailure";
 import AiConceptSkippedCard from "./AiConceptSkippedCard";
 
 interface DesignGeneratingCardProps {
@@ -75,6 +76,14 @@ export default function DesignGeneratingCard({
 
   if (isSkipped || briefStatus === "skip") {
     return <AiConceptSkippedCard dcName={dc_name ?? undefined} onGoToPortfolio={onGoToPortfolio} />;
+  }
+
+  if (currentStatus === "failed") {
+    return (
+      <p role="alert" className="mt-3 rounded-xl border border-zinc-200 p-4 text-sm">
+        {describeDesignFailure(original?.failure_reason)}
+      </p>
+    );
   }
 
   if (!isGenerating) {

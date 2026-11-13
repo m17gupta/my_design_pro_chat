@@ -55,7 +55,6 @@ import {
   applyWsTaskStatus,
 } from "../../store/enterprise/enterpriseSlice";
 import {
-  fetchEnterpriseStatus,
   generateEnterpriseDesign,
 } from "../../store/enterprise/enterpriseThunk";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -63,6 +62,8 @@ import { buildApiPayload } from "@/lib/apiBrief";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { useTaskSocket } from "@/lib/useTaskSocket";
+import { fetchDesignStatus } from "@/lib/designApi";
+import { describeDesignFailure } from "@/lib/designFailure";
 import type { TaskStatusPayload } from "@/lib/useTaskSocket";
 
 import {
@@ -77,17 +78,7 @@ const nextId = () => `m-${Date.now()}-${idCounter++}`;
 /** Max revision loop rounds — beyond this, Regenerate is capped. */
 const MAX_REVISION_ROUNDS = 5;
 
-/** First status poll fires 3s after the task starts; every POLL_MS after that. */
-const POLL_START_MS = 3000;
-const POLL_MS = 3000;
-/**
- * Fast-poll budget (~3 min) before falling back to a slow background poll.
- * Design generations can take minutes, so this is not a hard stop — see
- * SLOW_POLL_MS below.
- */
-const MAX_POLLS = 60;
-/** Slow background cadence used after the fast budget is exhausted. */
-const SLOW_POLL_MS = 30000;
+const STATUS_CHECK_INTERVAL_MS = 30_000;
 
 // Stable empty object so memoized bubbles without uploads don't re-render.
 const EMPTY_FILES: Record<number, File[]> = {};
@@ -993,14 +984,12 @@ export default function ChatWindow() {
     handlePlanAndSpecs,
   ]);
 
-  /**
-   * Status polling: once the POST lands a `task_id` in the store, wait 3s,
-   * then poll the status endpoint every 3s until the task reaches a terminal
-   * state (completed / failed). On any error we stop polling and surface a
-   * toast instead of hammering the API.
-   */
   const rawTaskId = latestEnterpriseEntry?.task_id || latestEnterpriseEntry?.id;
+  const isTerminal =
+    latestEnterpriseEntry?.status === "completed" ||
+    latestEnterpriseEntry?.status === "failed";
   const taskId =
+    !isTerminal &&
     rawTaskId &&
     !rawTaskId.startsWith("pending-revision-") &&
     !rawTaskId.startsWith("text-answer-")
@@ -1009,8 +998,7 @@ export default function ChatWindow() {
   /** Backend task lifecycle (queued | processing | completed | failed) — drives the loader text. */
   const taskStatus = latestEnterpriseEntry?.status;
   const pollRef = useRef<number | null>(null);
-  const pollCountRef = useRef(0);
-  const isFetchingRef = useRef(false);
+  const handledTerminalTask = useRef<string | null>(null);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current !== null) {
@@ -1018,8 +1006,6 @@ export default function ChatWindow() {
       pollRef.current = null;
     }
   }, []);
-
-  const pollErrorCountRef = useRef(0);
 
   const handleRevisionFailure = useCallback(
     (round: number, errorMsg?: string) => {
@@ -1058,181 +1044,12 @@ export default function ChatWindow() {
     [revisionKey, clearTypingTimeout, dispatch],
   );
 
-  /*
-  // ─── HTTP Polling (Commented out in favor of WebSocket - useTaskSocket) ───
-  // Kept here for reference / fallback if ever needed.
-  const getStatus = useCallback(async (): Promise<boolean> => {
-    if (
-      !taskId ||
-      taskId.startsWith("pending-revision-") ||
-      isFetchingRef.current ||
-      taskStatus === "completed" ||
-      taskStatus === "failed" ||
-      Boolean(latestEnterpriseEntry?.url) ||
-      isSkipped ||
-      status === "skip"
-    ) {
-      return !taskId || taskId.startsWith("pending-revision-") ? false : true;
-    }
-    isFetchingRef.current = true;
-    try {
-      const res = await dispatch(fetchEnterpriseStatus(taskId)).unwrap();
-      // Reset error counter on any successful response.
-      pollErrorCountRef.current = 0;
-      // Terminal state — stop polling and tell the user.
-      if (res.status === "completed" || res.status === "failed") {
-        stopPolling();
-        setPendingRevisionGenerate(null);
-        if (res.status === "failed") {
-          const isRevision = entries.some(
-            (e) => e.id === taskId && isRevisionEntry(e),
-          );
-          if (isRevision) {
-            const revRound = countRevisionRounds(messages, revisionKey);
-            handleRevisionFailure(
-              revRound || 1,
-              res.error ?? "Design generation failed. Please try again.",
-            );
-          } else {
-            toast.error(
-              res.error ?? "Design generation failed. Please try again.",
-            );
-          }
-        }
-        return true;
-      }
-      return false;
-    } catch (error) {
-      // Transient failure (network blip / proxy 5xx). Keep polling — the task
-      // may still complete. Only surface a toast after 3 consecutive failures
-      // so a single flaky request doesn't alarm the user.
-      pollErrorCountRef.current += 1;
-      if (pollErrorCountRef.current >= 3) {
-        pollErrorCountRef.current = 0;
-        stopPolling();
-        const isRevision = entries.some(
-          (e) => e.id === taskId && isRevisionEntry(e),
-        );
-        const msg =
-          typeof error === "string"
-            ? error
-            : error instanceof Error
-              ? error.message
-              : "Failed to check design status";
-        if (isRevision) {
-          const revRound = countRevisionRounds(messages, revisionKey);
-          handleRevisionFailure(revRound || 1, msg);
-        } else {
-          setPendingRevisionGenerate(null);
-          toast.error(msg);
-        }
-        return true;
-      }
-      return false;
-    } finally {
-      isFetchingRef.current = false;
-    }
-  }, [
-    taskId,
-    taskStatus,
-    latestEnterpriseEntry?.url,
-    dispatch,
-    stopPolling,
-    entries,
-    messages,
-    revisionKey,
-    handleRevisionFailure,
-    isSkipped,
-    status,
-  ]);
-
-  // Kick off sequential polling 3s after a task_id lands; clear on unmount / task change.
-  // Fast-poll every 3s after previous response returns for MAX_POLLS, then fall back
-  // to a slow background poll (SLOW_POLL_MS) so a long-running task still lands in Redux.
-  useEffect(() => {
-    // Do not poll for locally-generated placeholder IDs or already-finished tasks.
-    if (
-      !taskId ||
-      taskId.startsWith("pending-revision-") ||
-      taskStatus === "completed" ||
-      taskStatus === "failed" ||
-      Boolean(latestEnterpriseEntry?.url) ||
-      isSkipped ||
-      status === "skip"
-    ) {
-      return;
-    }
-    let isCancelled = false;
-    pollCountRef.current = 0;
-
-    const scheduleNext = (delay: number) => {
-      if (isCancelled) return;
-      pollRef.current = window.setTimeout(async () => {
-        if (isCancelled) return;
-        pollCountRef.current += 1;
-
-        const isDone = await getStatus();
-        if (isCancelled || isDone) return;
-
-        const nextDelay =
-          pollCountRef.current >= MAX_POLLS ? SLOW_POLL_MS : POLL_MS;
-        scheduleNext(nextDelay);
-      }, delay);
-    };
-
-    scheduleNext(POLL_START_MS);
-
-    return () => {
-      isCancelled = true;
-      stopPolling();
-    };
-  }, [
-    taskId,
-    taskStatus,
-    latestEnterpriseEntry?.url,
-    getStatus,
-    stopPolling,
-    isSkipped,
-    status,
-  ]);
-
-  // When the user returns to the tab, immediately re-check the latest task so
-  // a design that completed while the tab was backgrounded reaches Redux.
-  useEffect(() => {
-    if (
-      !taskId ||
-      taskId.startsWith("pending-revision-") ||
-      taskStatus === "completed" ||
-      taskStatus === "failed" ||
-      Boolean(latestEnterpriseEntry?.url) ||
-      isSkipped ||
-      status === "skip"
-    ) {
-      return;
-    }
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void getStatus();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [
-    taskId,
-    taskStatus,
-    latestEnterpriseEntry?.url,
-    getStatus,
-    isSkipped,
-    status,
-  ]);
-  */
-
-  // ─── WebSocket real-time task updates ──────────────────────────
-  // When a task:status event arrives via WS, dispatch it into Redux
-  // and stop polling — the WS push is the source of truth.
   const handleWsTaskStatus = useCallback(
     (data: TaskStatusPayload) => {
-      dispatch(applyWsTaskStatus(data));
-
+      if (!taskId || data.task_id !== taskId || handledTerminalTask.current === taskId) return;
       const norm = normalizeTaskStatus(data.status);
+      if (norm === "completed" || norm === "failed") handledTerminalTask.current = taskId;
+      dispatch(applyWsTaskStatus(data));
       if (norm === "completed" || norm === "failed") {
         stopPolling();
         setPendingRevisionGenerate(null);
@@ -1247,22 +1064,56 @@ export default function ChatWindow() {
             const revRound = countRevisionRounds(messages, revisionKey);
             handleRevisionFailure(
               revRound || 1,
-              data.error ?? "Design generation failed. Please try again."
+              describeDesignFailure(data.error)
             );
           } else {
             toast.error(
-              data.error ?? "Design generation failed. Please try again."
+              describeDesignFailure(data.error)
             );
           }
         }
       }
     },
-    [dispatch, stopPolling, entries, messages, revisionKey, handleRevisionFailure]
+    [taskId, dispatch, stopPolling, entries, messages, revisionKey, handleRevisionFailure]
   );
 
   // Connect to WebSocket for the active task — the hook auto-disconnects
   // once the task reaches a terminal state or the component unmounts.
   useTaskSocket(taskId, null, handleWsTaskStatus);
+
+  // Reconcile with the stored job status if the push is missed. This only
+  // checks the existing task; it never submits another generation request.
+  const statusHandlerRef = useRef(handleWsTaskStatus);
+  useEffect(() => {
+    statusHandlerRef.current = handleWsTaskStatus;
+  }, [handleWsTaskStatus]);
+  useEffect(() => {
+    const current = normalizeTaskStatus(taskStatus);
+    if (!taskId || isSkipped || status === "skip" || latestEnterpriseEntry?.url ||
+        current === "completed" || current === "failed") return;
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const result = await fetchDesignStatus(taskId) as Omit<TaskStatusPayload, "task_id"> | null;
+        if (cancelled || handledTerminalTask.current === taskId) return;
+        const next = normalizeTaskStatus(result?.status);
+        if (result && (next === "completed" || next === "failed")) {
+          statusHandlerRef.current({ ...result, task_id: taskId });
+          return;
+        }
+      } catch {
+        // A temporary status lookup failure is not a generation failure.
+      }
+      if (!cancelled && handledTerminalTask.current !== taskId) {
+        pollRef.current = window.setTimeout(check, STATUS_CHECK_INTERVAL_MS);
+      }
+    };
+    pollRef.current = window.setTimeout(check, STATUS_CHECK_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      stopPolling();
+    };
+  }, [taskId, taskStatus, latestEnterpriseEntry?.url, isSkipped, status, stopPolling]);
 
   useEffect(() => {
     if (status === "skip") {

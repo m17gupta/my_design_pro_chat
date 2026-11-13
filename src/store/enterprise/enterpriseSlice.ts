@@ -114,33 +114,40 @@ const enterpriseSlice = createSlice({
             state.entries.splice(entryIdx, 1);
           } else {
             entry.status = "failed";
+            entry.failure_reason = error;
           }
         } else {
           entry.status = normalizedStatus;
-          if (result) {
-            const generatedUrl =
-              result.generated_image_url ||
-              ((result as Record<string, unknown>).image_url as string | undefined) ||
-              ((result as Record<string, unknown>).url as string | undefined) ||
-              ((result as Record<string, unknown>).generatedImage as string | undefined);
-            if (generatedUrl) {
-              entry.url = generatedUrl;
-              entry.generated_image_url = generatedUrl;
-            }
-            if (result.original_image_url) {
-              entry.original_image_url = result.original_image_url;
-            }
-            if (result.response_type === "text_answer" || result.answer) {
-              entry.type = "text_answer";
-              entry.response_type = "text_answer";
-              if (result.answer) entry.answer = result.answer;
-            }
-            if (result.watermark_status) entry.watermark_status = result.watermark_status;
-            if (result.pipeline) entry.pipeline = result.pipeline;
-            if (result.model) entry.model = result.model;
-            if (result.work_type) entry.work_type = result.work_type;
-            if (result.mask_stats) entry.mask_stats = result.mask_stats;
+          const payloadObj = action.payload as Record<string, unknown>;
+          const resultObj = (result && typeof result === "object" ? result : {}) as Record<string, unknown>;
+
+          const generatedUrl =
+            (resultObj.generated_image_url as string | undefined) ||
+            (resultObj.image_url as string | undefined) ||
+            (resultObj.url as string | undefined) ||
+            (resultObj.generatedImage as string | undefined) ||
+            (payloadObj.generated_image_url as string | undefined) ||
+            (payloadObj.image_url as string | undefined);
+          if (generatedUrl) {
+            entry.url = generatedUrl;
+            entry.generated_image_url = generatedUrl;
           }
+          const origUrl = (resultObj.original_image_url ?? payloadObj.original_image_url) as string | undefined;
+          if (origUrl) {
+            entry.original_image_url = origUrl;
+          }
+          const respType = (resultObj.response_type ?? payloadObj.response_type) as string | undefined;
+          const ans = (resultObj.answer ?? payloadObj.answer) as string | undefined;
+          if (respType === "text_answer" || ans) {
+            entry.type = "text_answer";
+            entry.response_type = "text_answer";
+            if (ans) entry.answer = ans;
+          }
+          if (resultObj.watermark_status) entry.watermark_status = resultObj.watermark_status as string;
+          if (resultObj.pipeline) entry.pipeline = resultObj.pipeline as string;
+          if (resultObj.model) entry.model = resultObj.model as string;
+          if (resultObj.work_type) entry.work_type = resultObj.work_type as string;
+          if (resultObj.mask_stats) entry.mask_stats = resultObj.mask_stats as EnterpriseMaskStats;
         }
       }
       if (normalizedStatus === "completed") {
@@ -277,6 +284,7 @@ const enterpriseSlice = createSlice({
               state.entries.splice(entryIdx, 1);
             } else {
               entry.status = "failed";
+              entry.failure_reason = action.payload.error;
             }
           } else {
             entry.status = normalizedStatus;

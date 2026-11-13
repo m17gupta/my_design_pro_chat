@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import enterpriseReducer, { applyWsTaskStatus, EnterpriseState } from "./enterpriseSlice";
+import enterpriseReducer, { applyWsTaskStatus, EnterpriseState, setEntries } from "./enterpriseSlice";
 import { generateEnterpriseDesign } from "./enterpriseThunk";
 
 describe("enterpriseSlice extraReducers", () => {
@@ -188,4 +188,55 @@ describe("enterpriseSlice extraReducers", () => {
     expect(nextState.entries[0].status).toBe("completed");
     expect(nextState.entries[0].url).toBe("https://img.example/done.png");
   });
+
+  it("updates entry to text_answer and stores answer when applyWsTaskStatus receives text_answer", () => {
+    const processingRevisionState: EnterpriseState = {
+      entries: [
+        {
+          id: "9db27e3c-fb4a-4568-91dd-8e6ed088312f",
+          task_id: "9db27e3c-fb4a-4568-91dd-8e6ed088312f",
+          url: "",
+          status: "processing",
+          type: "revision",
+          questions: [],
+        },
+      ],
+      lifecycle: "pending",
+      error: null,
+      editId: null,
+    };
+
+    const nextState = enterpriseReducer(
+      processingRevisionState,
+      applyWsTaskStatus({
+        task_id: "9db27e3c-fb4a-4568-91dd-8e6ed088312f",
+        status: "completed",
+        result: {
+          task_id: "9db27e3c-fb4a-4568-91dd-8e6ed088312f",
+          response_type: "text_answer",
+          answer: "The house resembles a Craftsman style with timber beams.",
+        },
+        error: null,
+      })
+    );
+
+    expect(nextState.lifecycle).toBe("succeeded");
+    expect(nextState.entries[0].status).toBe("completed");
+    expect(nextState.entries[0].type).toBe("text_answer");
+    expect(nextState.entries[0].response_type).toBe("text_answer");
+    expect(nextState.entries[0].answer).toBe(
+      "The house resembles a Craftsman style with timber beams."
+    );
+  });
+});
+
+
+it("preserves an original failure reason when design history is restored", () => {
+  const task = { id: "original-visual-review", type: "original" as const, url: "", status: "processing", questions: [] };
+  const state = enterpriseReducer(undefined, setEntries([task]));
+  const failed = enterpriseReducer(state, applyWsTaskStatus({
+    task_id: task.id, status: "failed", result: null, error: "Edit failed at visual_review",
+  }));
+  const restored = enterpriseReducer(undefined, setEntries(JSON.parse(JSON.stringify(failed.entries))));
+  expect(restored.entries[0]).toMatchObject({ type: "original", status: "failed", failure_reason: "Edit failed at visual_review" });
 });

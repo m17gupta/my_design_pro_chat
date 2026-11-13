@@ -63,6 +63,7 @@ export interface EnterpriseEntry {
   url: string;
   status: string;
   type: "original" | "revision" | "text_answer";
+  failure_reason?: string | null;
   response_type?: string;
   answer?: string;
   original_image_url?: string | null;
