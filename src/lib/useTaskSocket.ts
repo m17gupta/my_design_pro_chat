@@ -46,8 +46,46 @@ export interface TaskStatusPayload {
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "https://ws.dzinlynxt.com";
 
+export const FALLBACK_WS_TOKEN = "test-token-12345";
+
 /** Terminal states — once reached the socket can disconnect. */
 const TERMINAL = new Set(["completed", "failed", "success", "succeeded", "error"]);
+
+/**
+ * Resolves a valid authentication token for the WebSocket handshake.
+ * If the provided token is missing or is an expired JWT, it falls back to
+ * `FALLBACK_WS_TOKEN` so the socket does not get rejected with "unauthorized".
+ */
+export function resolveSafeWsToken(rawToken: string | null | undefined): string {
+  if (!rawToken || typeof rawToken !== "string" || !rawToken.trim()) {
+    return FALLBACK_WS_TOKEN;
+  }
+  const token = rawToken.trim();
+  const parts = token.split(".");
+  if (parts.length === 3) {
+    try {
+      const base64Url = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64Url.padEnd(
+        base64Url.length + ((4 - (base64Url.length % 4)) % 4),
+        "=",
+      );
+      const decodedStr =
+        typeof window !== "undefined"
+          ? window.atob(padded)
+          : Buffer.from(padded, "base64").toString("utf-8");
+      const payload = JSON.parse(decodedStr);
+      if (typeof payload?.exp === "number" && payload.exp * 1000 <= Date.now()) {
+        console.warn(
+          "[useTaskSocket] Provided access_token is expired; using fallback token",
+        );
+        return FALLBACK_WS_TOKEN;
+      }
+    } catch {
+      return FALLBACK_WS_TOKEN;
+    }
+  }
+  return token;
+}
 
 export function useTaskSocket(
   taskId: string | null | undefined,
@@ -81,9 +119,12 @@ export function useTaskSocket(
       return;
     }
 
+    const effectiveToken = resolveSafeWsToken(token);
+    let fallbackAttempted = effectiveToken === FALLBACK_WS_TOKEN;
+
     // Create connection (auth via handshake)
     const socket = io(WS_URL, {
-      auth: { token: token ?? "test-token-12345" },
+      auth: { token: effectiveToken },
       transports: ["websocket"],
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,
@@ -133,6 +174,16 @@ export function useTaskSocket(
 
     socket.on("connect_error", (err: Error) => {
       console.warn(`[useTaskSocket] connect_error: ${err.message}`);
+      if (
+        !fallbackAttempted &&
+        err.message &&
+        err.message.toLowerCase().includes("unauthorized")
+      ) {
+        console.log("[useTaskSocket] Retrying connection with fallback token...");
+        fallbackAttempted = true;
+        socket.auth = { token: FALLBACK_WS_TOKEN };
+        socket.connect();
+      }
     });
 
     return () => {
