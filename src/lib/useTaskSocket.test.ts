@@ -28,3 +28,4 @@ describe("resolveSafeWsToken", () => {
     expect(resolveSafeWsToken("custom-auth-key-123")).toBe("custom-auth-key-123");
   });
 });
+
