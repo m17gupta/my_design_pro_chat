@@ -10,10 +10,10 @@ import { CadIcon } from "../CadIcon";
 import { renderInline } from "../formatText";
 
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/store";
-import { isAnswerEmpty, answerToText } from "@/lib/briefDisplay";
-import { selectQuestionnaireSequence } from "@/store/questionnaires/questionnaireSlice";
-import { setEditId } from "@/store/enterprise/enterpriseSlice";
+import { RootState } from "../../../store";
+import { isAnswerEmpty, answerToText } from "../../../lib/briefDisplay";
+import { selectQuestionnaireSequence } from "../../../store/questionnaires/questionnaireSlice";
+import { setEditId } from "../../../store/enterprise/enterpriseSlice";
 
 // ── File-type helpers ─────────────────────────────────────────────────────────
 type FileCategory = "image" | "pdf" | "doc" | "excel" | "cad" | "other";
@@ -209,7 +209,7 @@ export default function DesignSummaryCard({
 }: DesignSummaryCardProps) {
   const dispatch = useDispatch();
 
-  const { original, work_type, role, user_type, question_sets } = useSelector((state: RootState) => state.chat);
+  const { original, work_type, role, user_type, question_sets, status } = useSelector((state: RootState) => state.chat);
   const { data: questionnaire } = useSelector((state: RootState) => state.questionnaires);
   const questionnaireSequence = useSelector(selectQuestionnaireSequence);
 
@@ -217,10 +217,34 @@ export default function DesignSummaryCard({
   const { dc_name } = useSelector((state: RootState) => state.chat);
   const { entries = [] } = useSelector((state: RootState) => state.enterprise || {});
 
+  const isPlanAndSpecs = useMemo(() => {
+    if (!original) return false;
+    const scopeItem = (original.project_scope ?? original.level_of_transformation) as any;
+    const scopeVal = (
+      typeof scopeItem === "string" ? scopeItem : scopeItem?.answer ?? scopeItem?.value ?? ""
+    ).toString().trim().toLowerCase();
+
+    if (scopeVal === "plan and specs only") return true;
+
+    return Object.values(original).some((item: any) => {
+      const nameMatch = (item?.name ?? "").toString().toLowerCase().includes("select the asset");
+      const answerMatch = (item?.answer ?? "").toString().toLowerCase().includes("plan and specs only");
+      return nameMatch && answerMatch;
+    });
+  }, [original]);
+
+  const isSubmittedStatus =
+    status === "skip" || status === "engage_designer" || status === "all_i_need";
+
+  const isProceedDisabled =
+    disabled ||
+    generating ||
+    (isPlanAndSpecs && isSubmittedStatus);
+
   const isOriginalCompleted =
     entries[0]?.status === "completed" ||
     entries.some((e) => e.type === "original" && e.status === "completed");
-  const hideEditIcon = isOriginalCompleted || disabled;
+  const hideEditIcon = isOriginalCompleted || disabled || (isPlanAndSpecs && isSubmittedStatus);
 
   const handleEditClick = (key: string) => {
     if (hideEditIcon || generating) return;
@@ -463,9 +487,9 @@ export default function DesignSummaryCard({
           <motion.button
             type="button"
             onClick={onGenerate}
-            disabled={disabled || generating}
-            whileHover={disabled || generating ? undefined : { scale: 1.03 }}
-            whileTap={disabled || generating ? undefined : { scale: 0.95 }}
+            disabled={isProceedDisabled}
+            whileHover={isProceedDisabled ? undefined : { scale: 1.03 }}
+            whileTap={isProceedDisabled ? undefined : { scale: 0.95 }}
             className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-500/25 transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {generating ? (
