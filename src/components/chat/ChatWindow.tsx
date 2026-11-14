@@ -855,18 +855,18 @@ export default function ChatWindow() {
         rating,
         action,
       };
-      console.log("action===",action)
+      // console.log("action===",action)
       postToHost({ action: HOST_ACTION_SUBMIT_PROJECT, data });
       if (action === "ai_concept_skip") {
         setSubmittedAction(action);
-        console.log("called skip content");
+        // console.log("called skip content");
         dispatch(setContext({ status: "skip" }));
       } else if (action === "engage_designer") {
-        console.log("called engage designer");
+        // console.log("called engage designer");
         setIsEngagingDesigner(true);
         dispatch(setContext({ status: "engage_designer" }));
       } else {
-        console.log("called all i need");
+        // console.log("called all i need");
         setSubmittedAction(action);
         dispatch(setContext({ status: "all_i_need" }));
       }
