@@ -63,6 +63,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { useTaskSocket } from "@/lib/useTaskSocket";
 import { describeDesignFailure } from "@/lib/designFailure";
+import { fetchUserConnectsBalance } from "@/lib/connectsApi";
 import type { TaskStatusPayload } from "@/lib/useTaskSocket";
 
 import {
@@ -1015,34 +1016,71 @@ export default function ChatWindow() {
       busyRef.current = false;
       setTyping(false);
       announcedIdRef.current = null;
+      setEditingId(null);
 
-      // 1. Remove the revision messages from chat (the prompt card, user answer, and summary)
-      const revCardId = episodeMessageId(revisionKey, round);
+      const commentId = episodeMessageId(revisionKey, round);
+      const revisions = entries.filter((entry) => isRevisionEntry(entry));
+      const entry = revisions[round - 1];
+      const notes =
+        revisionComment.notes ||
+        (entry?.questions[0]?.answer?.notes ?? "");
+      const files =
+        revisionComment.files && revisionComment.files.length > 0
+          ? revisionComment.files
+          : (entry?.questions[0]?.answer?.files ?? []);
+
+      // 1. Re-open the revision comment card, preserving notes and files.
+      // Slicing to `i + 1` truncates any messages appended after this round's
+      // comment card (e.g. user reply, revision summary) so the card becomes
+      // the active last message (isCurrent = true) without duplicating cards.
       setMessages((prev) => {
-        const revCardIdx = prev.findIndex((m) => m.id === revCardId);
-        if (revCardIdx >= 0) {
-          return prev.slice(0, revCardIdx);
+        const i = prev.findIndex((m) => m.id === commentId);
+        if (i >= 0) {
+          const base = prev.slice(0, i + 1);
+          return base.map((m) =>
+            m.id === commentId
+              ? { ...m, initialAnswer: { files, notes }, isRestored: true }
+              : m,
+          );
         }
-        const summaryId = episodeMessageId("revision-summary", round);
-        return prev.filter((m) => m.id !== revCardId && m.id !== summaryId);
+        const revisionEp = episodeById(revisionKey, episodes);
+        const revisionMsg = buildMessage(revisionEp);
+        return [
+          ...prev,
+          {
+            ...revisionMsg,
+            id: commentId,
+            initialAnswer: { files, notes },
+            isRestored: true,
+          },
+        ];
       });
 
-      // 2. Clear Redux revision comment
-      dispatch(setRevision({ files: [], notes: "" }));
-
-      // 3. Remove the pending / failed revision entry from Redux entries
+      // 2. Remove the pending / failed revision entry from Redux entries
       dispatch(removeFailedRevision({ round }));
 
-      // 4. Reset currentId to previous summary
-      const prevSummaryId =
-        round > 1 ? episodeMessageId("revision-summary", round - 1) : "summary";
-      setCurrentId(prevSummaryId);
+      // 3. Reactivate the revision episode
+      setCurrentId(revisionKey);
+
+      // 4. Scroll smoothly to the reopened comment card
+      window.setTimeout(() => {
+        document
+          .getElementById(`msg-${commentId}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 60);
 
       if (errorMsg) {
         toast.error(errorMsg);
       }
     },
-    [revisionKey, clearTypingTimeout, dispatch],
+    [
+      revisionKey,
+      entries,
+      revisionComment,
+      episodes,
+      clearTypingTimeout,
+      dispatch,
+    ],
   );
 
   const handleWsTaskStatus = useCallback(
@@ -1369,6 +1407,28 @@ export default function ChatWindow() {
         },
       );
       try {
+        const userId = extra?.user_id ?? (briefPayload as any)?.user_id;
+        if (userId && access_token) {
+          try {
+            const balanceRes = await fetchUserConnectsBalance(userId, access_token);
+            const availableConnects = balanceRes.result?.available_connects ?? 0;
+            if (availableConnects <= 0) {
+              handleRevisionFailure(
+                round,
+                "You do not have enough connects to generate a revision.",
+              );
+              return;
+            }
+          } catch (balanceError) {
+            console.warn("[handleRevisionGenerate] Balance check error:", balanceError);
+            const balanceMsg =
+              balanceError instanceof Error
+                ? balanceError.message
+                : "Unable to verify connects balance. Please try again.";
+            handleRevisionFailure(round, balanceMsg);
+            return;
+          }
+        }
         await dispatch(generateEnterpriseDesign({ payload, round })).unwrap();
         setPendingRevisionGenerate(null);
       } catch (error) {
@@ -1392,6 +1452,11 @@ export default function ChatWindow() {
       role,
       user_type,
       episodes,
+      extra,
+      access_token,
+      userAddress,
+      company_name,
+      briefPayload,
       dispatch,
       handleRevisionFailure,
     ],
