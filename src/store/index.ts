@@ -5,6 +5,7 @@ import {
 } from "@reduxjs/toolkit";
 import { isPersistenceConfigured } from "../lib/persistenceConfig";
 import briefReducer, { resetBrief, payloadFromState } from "./briefSlice";
+import designerGenerateReducer from "./designerGenerate/designerGenerateSlice";
 import enterpriseReducer, { resetEnterprise } from "./enterprise/enterpriseSlice";
 import persistenceReducer from "./persistence/persistenceSlice";
 import questionnaireReducer from "./questionnaires/questionnaireSlice";
@@ -104,6 +105,7 @@ const persistBriefMiddleware: Middleware = (storeApi) => (next) => (action) => {
 
 const rootReducer = combineReducers({
   chat: briefReducer,
+  designerGenerate: designerGenerateReducer,
   enterprise: enterpriseReducer,
   persistence: persistenceReducer,
   questionnaires: questionnaireReducer,
