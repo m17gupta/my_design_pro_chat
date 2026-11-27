@@ -9,7 +9,8 @@ import designerGenerateReducer, {
   selectLatestDesignerResult,
 } from "./designerGenerateSlice";
 import {
-  DESIGNER_API_BASE_URL,
+  DESIGNER_GENERATE_ENDPOINT,
+  DESIGNER_TASK_STATUS_BASE,
   generateAndPollDesignerDesign,
 } from "./designerGenerateThunk";
 import type {
@@ -164,18 +165,16 @@ describe("designerGenerate slice & thunks", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
 
     // Verify POST URL & body
-    expect(fetchMock.mock.calls[0][0]).toBe(
-      `${DESIGNER_API_BASE_URL}/api/v1/luna/designer-generate`
-    );
+    expect(fetchMock.mock.calls[0][0]).toBe(DESIGNER_GENERATE_ENDPOINT);
     expect(fetchMock.mock.calls[0][1]?.method).toBe("POST");
     expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toEqual(SAMPLE_PAYLOAD);
 
     // Verify GET polling URL
     expect(fetchMock.mock.calls[1][0]).toBe(
-      `${DESIGNER_API_BASE_URL}/api/v1/tasks/${SAMPLE_RESULT.task_id}`
+      `${DESIGNER_TASK_STATUS_BASE}/${SAMPLE_RESULT.task_id}`
     );
     expect(fetchMock.mock.calls[2][0]).toBe(
-      `${DESIGNER_API_BASE_URL}/api/v1/tasks/${SAMPLE_RESULT.task_id}`
+      `${DESIGNER_TASK_STATUS_BASE}/${SAMPLE_RESULT.task_id}`
     );
 
     const state = store.getState();

@@ -12,9 +12,8 @@ import {
   type SubmitDesignerGenerateReturn,
 } from "./designerGenerateType";
 
-export const DESIGNER_API_BASE_URL = (
-  process.env.DESIGN_API_URL || "http://localhost:8000"
-).replace(/\/+$/, "");
+export const DESIGNER_GENERATE_ENDPOINT = "/api/designer-generate";
+export const DESIGNER_TASK_STATUS_BASE = "/api/designer-generate/tasks";
 
 const DEFAULT_POLL_INTERVAL_MS = 15_000;
 
@@ -47,7 +46,7 @@ function extractErrorMessage(data: unknown, fallback: string): string {
 }
 
 /**
- * POST http://localhost:8000/api/v1/luna/designer-generate
+ * POST /api/designer-generate -> proxies to ${DESIGN_API_URL}/api/v1/luna/designer-generate
  */
 export const submitDesignerGenerate = createAsyncThunk<
   SubmitDesignerGenerateReturn,
@@ -56,7 +55,7 @@ export const submitDesignerGenerate = createAsyncThunk<
 >(
   "designerGenerate/submit",
   async ({ versionId, payload }, { rejectWithValue, signal }) => {
-    const url = `${DESIGNER_API_BASE_URL}/api/v1/luna/designer-generate`;
+    const url = DESIGNER_GENERATE_ENDPOINT;
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -99,7 +98,7 @@ export const submitDesignerGenerate = createAsyncThunk<
 );
 
 /**
- * GET http://localhost:8000/api/v1/tasks/{task_id}
+ * GET /api/designer-generate/tasks/{task_id} -> proxies to ${DESIGN_API_URL}/api/v1/tasks/{task_id}
  */
 export const fetchDesignerTaskStatus = createAsyncThunk<
   FetchDesignerTaskStatusReturn,
@@ -108,7 +107,7 @@ export const fetchDesignerTaskStatus = createAsyncThunk<
 >(
   "designerGenerate/fetchTaskStatus",
   async ({ versionId, taskId }, { rejectWithValue, signal }) => {
-    const url = `${DESIGNER_API_BASE_URL}/api/v1/tasks/${encodeURIComponent(taskId)}`;
+    const url = `${DESIGNER_TASK_STATUS_BASE}/${encodeURIComponent(taskId)}`;
     try {
       const res = await fetch(url, {
         method: "GET",
