@@ -13,7 +13,7 @@ import {
 } from "./designerGenerateType";
 
 export const DESIGNER_API_BASE_URL = (
-  process.env.NEXT_PUBLIC_LUNA_API_URL || "http://localhost:8000"
+  process.env.DESIGN_API_URL || "http://localhost:8000"
 ).replace(/\/+$/, "");
 
 const DEFAULT_POLL_INTERVAL_MS = 15_000;
